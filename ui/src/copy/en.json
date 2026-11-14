@@ -28,7 +28,8 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
-    }
+    },
+    "skills": "Skills"
   },
   "palette": {
     "title": "Command menu",
@@ -509,7 +510,11 @@
     "memoryBody": "MEMORY.md holds the facts this bot keeps between chats. The bot reads it at the start of each run.",
     "openChat": "Open the chat",
     "loadFailed": "Fettle cannot load this bot",
-    "bySystem": "by Fettle"
+    "bySystem": "by Fettle",
+    "skills": "Skills",
+    "skillsBody": "This bot sees the name and description of each skill that is on. It loads a skill when the work needs it.",
+    "noSkills": "The library has no skills.",
+    "useSkill": "Give this bot the skill {skill}"
   },
   "settings": {
     "nav": "Settings pages",
@@ -883,5 +888,58 @@
     "composioKey": "Composio key",
     "composioAdd": "Add Composio",
     "signInFailed": "The sign-in did not finish: {reason}"
+  },
+  "skills": {
+    "title": "Skills",
+    "intro": "A skill is a SKILL.md folder with instructions and optional files. A bot with a skill sees its name and description. The bot loads the full skill when the work needs it. In a chat, type /name to start work with a skill.",
+    "library": "Library",
+    "new": "New skill",
+    "import": "Import zip",
+    "importFile": "Skill zip file",
+    "imported": "Imported {name}, version {version}.",
+    "importFailed": "Fettle cannot import this zip",
+    "save": "Save skill",
+    "saved": "Saved {name}, version {version}.",
+    "mdHint": "The frontmatter needs a name and a description. A saved name that exists makes a new version.",
+    "none": "The library has no skills. Make one, import a zip, or use Save as skill on a finished run.",
+    "loadFailed": "Fettle cannot load the skills",
+    "ownerOnly": "Only an owner can change skills.",
+    "botCount": {
+      "one": "{n} bot",
+      "other": "{n} bots"
+    },
+    "export": "Export zip",
+    "local": "made in Fettle",
+    "fromSkael": "from Skael",
+    "skaelOwned": "Skael manages this skill. Change it in Skael, then sync.",
+    "files": "Files",
+    "filesHint": "When a bot loads the skill, Fettle copies these files to {dir} in the bot's home.",
+    "bots": "Bots with this skill",
+    "give": "Give {bot} this skill",
+    "versions": "Versions",
+    "current": "current",
+    "evals": "has evals",
+    "delete": "Delete skill",
+    "confirmDelete": "Delete all versions",
+    "deleted": "Deleted {name}.",
+    "drafting": "Fettle is writing a draft from the run.",
+    "draftFailed": "Fettle cannot draft a skill from this run",
+    "draftIntro": "This draft comes from the steps of the run. Read it, change the name, the description and the steps, then save it.",
+    "draftLabel": "Draft SKILL.md",
+    "saveFromRun": "Save as skill",
+    "skael": {
+      "title": "Skael sync",
+      "intro": "Fettle can pull a set of skills from a Skael registry on a schedule. It tells Skael when a bot loads one. Put the Skael API key in the vault as a secret first.",
+      "url": "Skael URL",
+      "set": "Set",
+      "key": "API key (vault secret)",
+      "noKey": "No key",
+      "keyHint": "The vault has no secrets.",
+      "vault": "Open the vault",
+      "saved": "Saved the Skael sync.",
+      "syncNow": "Sync now",
+      "synced": "The set has {skills} skills. {updated} changed.",
+      "failed": "The Skael sync failed"
+    }
   }
 }

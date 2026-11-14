@@ -33,6 +33,7 @@ var (
 	ErrNoMD     = errors.New("the skill has no SKILL.md")
 	ErrBadMD    = errors.New("SKILL.md needs frontmatter with a name and a description")
 	ErrTooLarge = errors.New("the skill is larger than 20 MiB")
+	ErrSkael    = errors.New("Skael manages this skill; change it in Skael and sync")
 )
 
 // MaxBytes is the largest skill folder that Fettle stores.
@@ -240,6 +241,9 @@ func (s *Service) Store(ctx context.Context, actor audit.Actor, spaceID uuid.UUI
 	if err != nil {
 		return nil, nil, err
 	}
+	if sk != nil && sk.Source == "skael" && source != "skael" {
+		return nil, nil, ErrSkael
+	}
 	if sk != nil {
 		cur, err := s.Version(ctx, sk, sk.CurrentVersion)
 		if err == nil && cur.SHA256 == sum {
@@ -280,6 +284,27 @@ func (s *Service) Store(ctx context.Context, actor audit.Actor, spaceID uuid.UUI
 	}
 	sk.Description, sk.CurrentVersion, sk.Source = front.Description, version, source
 	return sk, v, nil
+}
+
+// StoreMD stores a new SKILL.md text. When the skill exists, the new version keeps the
+// other files of the current version.
+func (s *Service) StoreMD(ctx context.Context, actor audit.Actor, spaceID uuid.UUID, md string) (*Skill, *SkillVersion, error) {
+	front, _, err := ParseMD(md)
+	if err != nil {
+		return nil, nil, err
+	}
+	files := Files{}
+	if sk, err := s.ByName(ctx, spaceID, front.Name); err == nil {
+		v, err := s.Version(ctx, sk, sk.CurrentVersion)
+		if err != nil {
+			return nil, nil, err
+		}
+		if files, err = s.Files(ctx, sk, v); err != nil {
+			return nil, nil, err
+		}
+	}
+	files["SKILL.md"] = []byte(md)
+	return s.Store(ctx, actor, spaceID, files, "local", 0)
 }
 
 // Get returns a skill of a space.

@@ -4,13 +4,17 @@ import { CircleAlert, History, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
+  useAssignSkill,
   useBot,
   useBotMemory,
   useInstructionVersions,
   usePutBotMemory,
   useRestoreInstructions,
+  useSession,
+  useSkills,
   useUpdateBot,
 } from "@/api/hooks";
+import { Switch } from "@/components/ui/switch";
 import type { SchemaBotBody, SchemaBotView } from "@/api/schema";
 import { Notice, Page, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
@@ -205,6 +209,40 @@ function Versions({ botId }: { botId: string }) {
   );
 }
 
+function BotSkills({ botId }: { botId: string }) {
+  const { isOwner } = useSession();
+  const skills = useSkills();
+  const assign = useAssignSkill();
+  const list = skills.data ?? [];
+  if (skills.isError)
+    return (
+      <Notice icon={CircleAlert} tone="danger" title={t("skills.loadFailed")}>
+        {errorText(skills.error)}
+      </Notice>
+    );
+  if (list.length === 0) return <p className="text-sm text-ink-faint">{t("botPage.noSkills")}</p>;
+  return (
+    <ul aria-label={t("botPage.skills")} className="divide-y divide-rule border-b border-rule">
+      {list.map((s) => (
+        <li key={s.id} className="grid grid-cols-[1fr_auto] items-center gap-x-3 py-2">
+          <Link to="/skills/$skillId" params={{ skillId: s.id }} className="min-w-0">
+            <span className="block truncate font-mono text-sm text-ink">{s.name}</span>
+            <span className="block truncate text-xs text-ink-faint">{s.description}</span>
+          </Link>
+          <Switch
+            checked={(s.bots ?? []).includes(botId)}
+            disabled={!isOwner}
+            aria-label={t("botPage.useSkill", { skill: s.name })}
+            onCheckedChange={(on) =>
+              assign.mutate({ skill: s.id, bot: botId, on }, { onError: (err) => toast.error(errorText(err)) })
+            }
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function BotPage() {
   const { botId } = useParams({ strict: false }) as { botId: string };
   const bot = useBot(botId);
@@ -268,6 +306,10 @@ export function BotPage() {
       </Section>
       <Section id="versions" title={t("botPage.versions")}>
         <Versions botId={b.id} />
+      </Section>
+      <Section id="skills" title={t("botPage.skills")}>
+        <p className="mb-2 text-sm text-ink-soft">{t("botPage.skillsBody")}</p>
+        <BotSkills botId={b.id} />
       </Section>
       <Section id="memory" title={t("botPage.memory")}>
         <p className="mb-2 text-sm text-ink-soft">{t("botPage.memoryBody")}</p>

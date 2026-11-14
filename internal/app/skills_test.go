@@ -133,6 +133,19 @@ func TestSCN_SKL_003_ZipRoundTripAndSaveAsSkill(t *testing.T) {
 		t.Fatalf("export has %v", got)
 	}
 
+	// A new SKILL.md text keeps the other files of the skill.
+	e.MustDo("POST", e.SP("/skills"), map[string]any{"skill_md": "---\nname: triage\ndescription: Sort the inbox.\n---\n\nSort by urgency, then by sender.\n"}, nil)
+	var detail struct {
+		Versions []struct {
+			Version int      `json:"version"`
+			Files   []string `json:"files"`
+		} `json:"versions"`
+	}
+	e.MustDo("GET", e.SP("/skills/%s", sk.ID), nil, &detail)
+	if len(detail.Versions) != 2 || len(detail.Versions[0].Files) != 3 {
+		t.Fatalf("the edit lost files: %+v", detail.Versions)
+	}
+
 	// Save as skill drafts a skill with the steps of a finished run.
 	e.Fake.AddScript(fakemodel.Script{Name: "steps", Match: fakemodel.Match{User: "[[steps]]"}, Steps: []fakemodel.Step{
 		{ToolCalls: []fakemodel.ScriptCall{{Name: "search_history", Args: map[string]any{"query": "invoices"}}}}, {Text: "Found three invoices."},

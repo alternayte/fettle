@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, must } from "./client";
+import { api, ApiError, must } from "./client";
 import type {
   SchemaBotBody,
   SchemaMeView,
@@ -9,6 +9,7 @@ import type {
   SchemaTarget,
   SchemaVaultBody,
   SchemaRoutineBody,
+  SchemaSkillView,
   SchemaZoneBody,
 } from "./schema";
 
@@ -61,6 +62,8 @@ export const keys = {
   connectors: (s: string) => ["s", s, "connectors"] as const,
   catalog: ["connector-catalog"] as const,
   routineRuns: (s: string, r: string) => ["s", s, "routines", r, "runs"] as const,
+  skills: (s: string) => ["s", s, "skills"] as const,
+  skill: (s: string, k: string) => ["s", s, "skills", k] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -650,6 +653,106 @@ export function useRunRoutine() {
     mutationFn: (id: string) =>
       must(api.POST("/api/v1/spaces/{space}/routines/{routine}/run", { params: { path: { space, routine: id } } })),
     onSuccess: (_, id) => qc.invalidateQueries({ queryKey: keys.routineRuns(space, id) }),
+  });
+}
+
+// ---------------------------------------------------------------- skills
+
+export function useSkills() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.skills(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/skills", { params: { path: { space } } }))).skills ?? [],
+  });
+}
+
+export function useSkill(skill: string) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.skill(space, skill),
+    queryFn: () => must(api.GET("/api/v1/spaces/{space}/skills/{skill}", { params: { path: { space, skill } } })),
+  });
+}
+
+export function useSaveSkill() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (skillMD: string) =>
+      must(api.POST("/api/v1/spaces/{space}/skills", { params: { path: { space } }, body: { skill_md: skillMD } })),
+    onSuccess: (sk) => {
+      void qc.invalidateQueries({ queryKey: keys.skills(space) });
+      void qc.invalidateQueries({ queryKey: keys.skill(space, sk.id) });
+    },
+  });
+}
+
+export function useImportSkill() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const res = await fetch(`/api/v1/spaces/${space}/skills/import`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/zip" },
+        body: file,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new ApiError(res.status, (body as { detail?: string }).detail ?? `HTTP ${res.status}`);
+      return body as SchemaSkillView;
+    },
+    onSuccess: (sk) => {
+      void qc.invalidateQueries({ queryKey: keys.skills(space) });
+      void qc.invalidateQueries({ queryKey: keys.skill(space, sk.id) });
+    },
+  });
+}
+
+export function useDeleteSkill() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (skill: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/skills/{skill}", { params: { path: { space, skill } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.skills(space) }),
+  });
+}
+
+export function useAssignSkill() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ skill, bot, on }: { skill: string; bot: string; on: boolean }) =>
+      must(
+        api.PUT("/api/v1/spaces/{space}/skills/{skill}/bots/{bot}", {
+          params: { path: { space, skill, bot } },
+          body: { on },
+        }),
+      ),
+    onSuccess: (_, { skill }) => {
+      void qc.invalidateQueries({ queryKey: keys.skills(space) });
+      void qc.invalidateQueries({ queryKey: keys.skill(space, skill) });
+    },
+  });
+}
+
+export function useSyncSkael() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: () => must(api.POST("/api/v1/spaces/{space}/skills/sync", { params: { path: { space } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.skills(space) }),
+  });
+}
+
+export function useDraftSkill() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: async (run: string) =>
+      (await must(api.POST("/api/v1/spaces/{space}/runs/{run}/draft-skill", { params: { path: { space, run } } })))
+        .skill_md,
   });
 }
 

@@ -42,6 +42,8 @@ func skillError(err error) error {
 	switch {
 	case errors.Is(err, skills.ErrNotFound):
 		return huma.Error404NotFound(err.Error())
+	case errors.Is(err, skills.ErrSkael):
+		return huma.Error409Conflict(err.Error())
 	case errors.Is(err, skills.ErrNoMD), errors.Is(err, skills.ErrBadMD), errors.Is(err, skills.ErrTooLarge), errors.Is(err, skills.ErrNoSkael):
 		return huma.Error422UnprocessableEntity(err.Error())
 	}
@@ -145,7 +147,7 @@ func (a *App) registerSkills(api huma.API) {
 		if err != nil {
 			return nil, err
 		}
-		sk, _, err := a.Skills.Store(ctx, actorOf(p), in.Space, skills.Files{"SKILL.md": []byte(in.Body.SkillMD)}, "local", 0)
+		sk, _, err := a.Skills.StoreMD(ctx, actorOf(p), in.Space, in.Body.SkillMD)
 		if err != nil {
 			return nil, skillError(err)
 		}

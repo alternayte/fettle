@@ -194,6 +194,9 @@ func TestSCN_SKL_004_SkaelSyncAndActivations(t *testing.T) {
 		t.Fatalf("versions %+v", detail.Versions)
 	}
 
+	if code, body := e.Do("POST", e.SP("/skills"), map[string]any{"skill_md": "---\nname: acme-report\ndescription: A local edit.\n---\n\nLocal.\n"}, nil); code != 409 {
+		t.Fatalf("a local edit of a Skael skill got %d %s", code, body)
+	}
 	e.MustDo("PUT", e.SP("/skills/%s/bots/%s", list.Skills[0].ID, e.Chief().ID), map[string]any{"on": true}, nil)
 	e.Fake.AddScript(fakemodel.Script{Name: "load", Match: fakemodel.Match{User: "[[skael-load]]"}, Steps: []fakemodel.Step{
 		{ToolCalls: []fakemodel.ScriptCall{{Name: "load_skill", Args: map[string]any{"name": "acme-report"}}}}, {Text: "Loaded."},

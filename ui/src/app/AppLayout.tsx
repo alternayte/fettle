@@ -75,9 +75,11 @@ export function AppLayout() {
       ? { kind: "page", page: "runs" }
       : pathname.startsWith("/routines")
         ? { kind: "page", page: "routines" }
-        : pathname.startsWith("/settings") || pathname.startsWith("/admin")
-          ? { kind: "page", page: "settings" }
-          : null;
+        : pathname.startsWith("/skills")
+          ? { kind: "page", page: "skills" }
+          : pathname.startsWith("/settings") || pathname.startsWith("/admin")
+            ? { kind: "page", page: "settings" }
+            : null;
 
   const onNavigate = useCallback(
     (to: NavTarget) => {
@@ -85,6 +87,7 @@ export function AppLayout() {
       if (to.kind === "chat") void navigate({ to: "/chat/$chatId", params: { chatId: to.chatId } });
       else if (to.page === "runs") void navigate({ to: "/runs" });
       else if (to.page === "routines") void navigate({ to: "/routines" });
+      else if (to.page === "skills") void navigate({ to: "/skills" });
       else void navigate({ to: "/settings/models" });
     },
     [navigate],

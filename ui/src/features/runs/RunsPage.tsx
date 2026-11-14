@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { Activity, CircleAlert, Square } from "lucide-react";
+import { Activity, BookOpen, CircleAlert, Square } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
-import { LIVE_STATES, useBots, useRun, useRuns, useStopRun } from "@/api/hooks";
+import { LIVE_STATES, useBots, useRun, useRuns, useSession, useStopRun } from "@/api/hooks";
 import { Notice, Page } from "@/app/Page";
 import { useShell } from "@/app/shell-context";
 import { Btn } from "@/components/form";
@@ -105,6 +105,7 @@ export function RunPage() {
   const navigate = useNavigate();
   const q = useRun(runId);
   const stop = useStopRun();
+  const { isOwner } = useSession();
   const detail = useMemo(() => (q.data ? toRunDetail(q.data) : null), [q.data]);
   const live = !!q.data && LIVE_STATES.has(q.data.line.state);
   return (
@@ -122,6 +123,12 @@ export function RunPage() {
           >
             <Square aria-hidden className="size-3 fill-current" />
             {t("chat.composer.stop")}
+          </Btn>
+        )}
+        {q.data?.line.state === "done" && isOwner && (
+          <Btn size="sm" kind="quiet" onClick={() => void navigate({ to: "/skills", search: { from_run: runId } })}>
+            <BookOpen aria-hidden className="size-3.5" />
+            {t("skills.saveFromRun")}
           </Btn>
         )}
       </ChatHeader>

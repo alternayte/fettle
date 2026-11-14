@@ -1,0 +1,10 @@
+# A run with one tool step, for Save as skill.
+name: skill_steps
+match:
+  user: "[[skill-steps]]"
+steps:
+  - tool_calls:
+      - name: search_history
+        args:
+          query: invoices
+  - text: "Found three open invoices of Acme."

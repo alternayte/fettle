@@ -1,6 +1,7 @@
 import {
   Activity,
   AlarmClock,
+  BookOpen,
   Hourglass,
   Loader,
   Monitor,
@@ -17,7 +18,8 @@ import { cn } from "@/lib/utils";
 import { BotMark } from "@/features/chat/BotMark";
 import type { Bot, ChatSummary } from "@/features/chat/types";
 
-export type NavTarget = { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "settings" };
+export type NavTarget =
+  { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "skills" | "settings" };
 
 function Row({
   active,
@@ -170,6 +172,12 @@ export function Sidebar({
             <Row active={isPage("routines")} onClick={() => onNavigate({ kind: "page", page: "routines" })}>
               <AlarmClock aria-hidden className="size-4 text-ink-faint" />
               {t("shell.routines")}
+            </Row>
+          </li>
+          <li>
+            <Row active={isPage("skills")} onClick={() => onNavigate({ kind: "page", page: "skills" })}>
+              <BookOpen aria-hidden className="size-4 text-ink-faint" />
+              {t("shell.skills")}
             </Row>
           </li>
           {isOwner && (
