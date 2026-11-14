@@ -59,3 +59,16 @@ func LoadMasterKey(envValue, dataDir string, server bool) ([]byte, MasterKeySour
 	}
 	return k, SourceFile, nil
 }
+
+// StoreMasterKey saves a new master key where the old one came from. For the
+// environment source the caller prints the key, because Fettle cannot change the environment.
+func StoreMasterKey(src MasterKeySource, dataDir string, k []byte) error {
+	v := base64.StdEncoding.EncodeToString(k)
+	switch src {
+	case SourceKeychain:
+		return keyring.Set(keyringService, keyringUser, v)
+	case SourceFile:
+		return os.WriteFile(filepath.Join(dataDir, "master.key"), []byte(v), 0o600)
+	}
+	return nil
+}

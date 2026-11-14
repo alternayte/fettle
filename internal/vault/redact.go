@@ -125,11 +125,26 @@ func (r *Redactor) String(ctx context.Context, spaceID uuid.UUID, s string) stri
 	return rep.Replace(s)
 }
 
-// Global redacts values that are not bound to a space, such as log lines.
+// Global redacts values that are not bound to one space, such as log lines. It applies
+// the global values and the values of every space that the redactor has loaded.
 func (r *Redactor) Global(s string) string {
+	if s == "" {
+		return s
+	}
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-	for v, name := range r.global {
+	reps := make([]*strings.Replacer, 0, len(r.spaces))
+	for _, rep := range r.spaces {
+		reps = append(reps, rep)
+	}
+	global := make(map[string]string, len(r.global))
+	for v, n := range r.global {
+		global[v] = n
+	}
+	r.mu.RUnlock()
+	for _, rep := range reps {
+		s = rep.Replace(s)
+	}
+	for v, name := range global {
 		if strings.Contains(s, v) {
 			s = strings.ReplaceAll(s, v, "[secret:"+name+"]")
 		}
