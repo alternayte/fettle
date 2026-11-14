@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown, X } from "lucide-react";
-import { t, tn } from "@/lib/copy";
+import { has, t, tn } from "@/lib/copy";
 import { formatClockPrecise, formatDuration, formatTokens, formatUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { RunDetail, RunEvent } from "./types";
@@ -57,7 +57,9 @@ function EventRow({ ev, open, onToggle }: { ev: RunEvent; open: boolean; onToggl
           aria-expanded={ev.detail ? open : undefined}
           className="flex w-full min-w-0 items-baseline gap-2 text-left disabled:cursor-default"
         >
-          <span className="label-caps shrink-0 !text-ink-soft">{t(`timeline.type.${ev.type}`)}</span>
+          <span className="label-caps shrink-0 !text-ink-soft">
+            {has(`timeline.type.${ev.type}`) ? t(`timeline.type.${ev.type}`) : ev.type}
+          </span>
           {ev.lane && (
             <span className="figures shrink-0 rounded-xs border border-rule px-1 text-ink-faint">{ev.lane}</span>
           )}

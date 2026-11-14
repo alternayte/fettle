@@ -9,12 +9,15 @@ export function Composer({
   onSend,
   onStop,
   disabled,
+  onAttach,
 }: {
   botName: string;
   running: boolean;
   onSend: (text: string) => void;
   onStop?: () => void;
   disabled?: boolean;
+  /** Shows the attach button. Without it the composer has no attach action. */
+  onAttach?: () => void;
 }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -69,13 +72,16 @@ export function Composer({
           className="block max-h-60 min-h-11 w-full resize-none bg-transparent px-3.5 pt-3 pb-1 text-base text-ink outline-none placeholder:text-ink-faint focus-visible:outline-none"
         />
         <div className="flex items-center gap-1 px-2 pb-2">
-          <button
-            type="button"
-            aria-label={t("chat.composer.attach")}
-            className="inline-flex size-7 items-center justify-center rounded-sm text-ink-faint hover:bg-surface-sunk hover:text-ink"
-          >
-            <Paperclip className="size-4" aria-hidden />
-          </button>
+          {onAttach && (
+            <button
+              type="button"
+              onClick={onAttach}
+              aria-label={t("chat.composer.attach")}
+              className="inline-flex size-7 items-center justify-center rounded-sm text-ink-faint hover:bg-surface-sunk hover:text-ink"
+            >
+              <Paperclip className="size-4" aria-hidden />
+            </button>
+          )}
           <span className="figures ml-1 hidden text-ink-faint sm:inline">{t("chat.composer.hint")}</span>
           <div className="ml-auto flex items-center gap-1">
             {running && onStop && (

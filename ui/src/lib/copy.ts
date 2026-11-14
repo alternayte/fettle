@@ -14,6 +14,16 @@ function lookup(path: string): string {
   return node;
 }
 
+/** has reports whether a copy key exists, for keys built from server data. */
+export function has(path: string): boolean {
+  try {
+    lookup(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** t returns the UI string at path with {name} placeholders filled from vars. */
 export function t(path: string, vars?: Record<string, string | number>): string {
   const s = lookup(path);

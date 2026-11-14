@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef } from "react";
-import { BookOpen, Menu, PanelRight } from "lucide-react";
+import { BookOpen, Loader, Menu, PanelRight } from "lucide-react";
 import { t } from "@/lib/copy";
 import { formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ export function ChatHeader({
   onMenu,
   onPanel,
   panelOpen,
+  onMemory,
+  children,
 }: {
   title: string;
   subtitle?: string;
@@ -25,6 +27,9 @@ export function ChatHeader({
   onMenu?: () => void;
   onPanel?: () => void;
   panelOpen?: boolean;
+  onMemory?: () => void;
+  /** Extra actions at the end of the header. */
+  children?: React.ReactNode;
 }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-rule bg-ground/90 px-3 backdrop-blur-sm sm:px-5">
@@ -44,18 +49,22 @@ export function ChatHeader({
         {subtitle && <p className="hidden truncate text-sm text-ink-faint sm:block">{subtitle}</p>}
       </div>
       <div className="ml-auto flex items-center gap-0.5">
-        {bot && (
+        {children}
+        {bot?.zone && (
           <span className="figures mr-2 hidden rounded-xs border border-rule px-1.5 py-0.5 text-ink-faint lg:inline">
             {t("chat.zone", { zone: bot.zone })}
           </span>
         )}
-        <button
-          type="button"
-          aria-label={t("chat.memory")}
-          className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
-        >
-          <BookOpen className="size-4" aria-hidden />
-        </button>
+        {onMemory && (
+          <button
+            type="button"
+            onClick={onMemory}
+            aria-label={t("chat.memory")}
+            className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
+          >
+            <BookOpen className="size-4" aria-hidden />
+          </button>
+        )}
         {onPanel && (
           <button
             type="button"
@@ -82,6 +91,8 @@ export function MessageList({
   onOpenRun,
   onAnswer,
   empty,
+  onReachTop,
+  loadingOlder,
 }: {
   messages: Message[];
   bots: Record<string, Bot>;
@@ -89,15 +100,26 @@ export function MessageList({
   onOpenRun: (runId: string) => void;
   onAnswer: (cardId: string, a: CardAnswer) => void;
   empty?: React.ReactNode;
+  /** Called when the reader scrolls near the oldest loaded message. */
+  onReachTop?: () => void;
+  loadingOlder?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+  const reachTop = useRef(onReachTop);
+  const firstId = useRef<string | undefined>(undefined);
+  const lastHeight = useRef(0);
+
+  useEffect(() => {
+    reachTop.current = onReachTop;
+  });
 
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
     const onScroll = () => {
       pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      if (el.scrollTop < 240) reachTop.current?.();
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
@@ -105,7 +127,15 @@ export function MessageList({
 
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (el && pinned.current) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const first = messages[0]?.id;
+    if (pinned.current) el.scrollTop = el.scrollHeight;
+    else if (firstId.current !== undefined && first !== firstId.current) {
+      // Older messages were added above; keep the reader at the same message.
+      el.scrollTop += el.scrollHeight - lastHeight.current;
+    }
+    firstId.current = first;
+    lastHeight.current = el.scrollHeight;
   }, [messages]);
 
   return (
@@ -117,6 +147,12 @@ export function MessageList({
       aria-relevant="additions"
     >
       <div className="mx-auto w-full max-w-[calc(var(--measure)+5rem)] px-3 pt-2 pb-6 sm:px-6">
+        {loadingOlder && (
+          <p className="flex items-center justify-center gap-1.5 py-2 text-xs text-ink-faint" role="status">
+            <Loader aria-hidden className="size-3 animate-spin" />
+            {t("chat.loadingOlder")}
+          </p>
+        )}
         {messages.length === 0 && empty}
         {messages.map((m, i) => {
           const prev = messages[i - 1];
@@ -168,6 +204,10 @@ export function ChatView({
   onPanel,
   panelOpen,
   empty,
+  onMemory,
+  onReachTop,
+  loadingOlder,
+  headerActions,
 }: {
   title: string;
   subtitle?: string;
@@ -184,10 +224,24 @@ export function ChatView({
   onPanel?: () => void;
   panelOpen?: boolean;
   empty?: React.ReactNode;
+  onMemory?: () => void;
+  onReachTop?: () => void;
+  loadingOlder?: boolean;
+  headerActions?: React.ReactNode;
 }) {
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ChatHeader title={title} subtitle={subtitle} bot={bot} onMenu={onMenu} onPanel={onPanel} panelOpen={panelOpen} />
+      <ChatHeader
+        title={title}
+        subtitle={subtitle}
+        bot={bot}
+        onMenu={onMenu}
+        onPanel={onPanel}
+        panelOpen={panelOpen}
+        onMemory={onMemory}
+      >
+        {headerActions}
+      </ChatHeader>
       <MessageList
         messages={messages}
         bots={bots}
@@ -195,6 +249,8 @@ export function ChatView({
         onOpenRun={onOpenRun}
         onAnswer={onAnswer}
         empty={empty}
+        onReachTop={onReachTop}
+        loadingOlder={loadingOlder}
       />
       <Composer botName={bot?.name ?? title} running={running} onSend={onSend} onStop={onStop} />
     </section>

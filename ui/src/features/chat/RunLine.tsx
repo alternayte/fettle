@@ -57,3 +57,16 @@ export function RunLine({ run, onOpen, active }: { run: RunLineT; onOpen: (runId
     </button>
   );
 }
+
+/** RunStateLabel shows the state of a run as an icon and a word. */
+export function RunStateLabel({ run, className }: { run: Pick<RunLineT, "state" | "verified">; className?: string }) {
+  const s = stateView(run as RunLineT);
+  const Icon = s.icon;
+  const live = run.state === "running" || run.state === "verifying";
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 text-xs font-[var(--weight-medium)]", s.tone, className)}>
+      <Icon aria-hidden className={cn("size-3.5 shrink-0", live && "animate-spin [animation-duration:2.4s]")} />
+      {s.label}
+    </span>
+  );
+}

@@ -9,7 +9,8 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "format": "prettier --write src",
-    "format:check": "prettier --check src"
+    "format:check": "prettier --check src",
+    "postinstall": "echo \"module nodemodules // keeps node_modules out of the Go module\" > node_modules/go.mod"
   },
   "dependencies": {
     "@tanstack/react-form": "^1.33.5",

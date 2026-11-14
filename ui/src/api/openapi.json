@@ -5,17 +5,7 @@
         "additionalProperties": false,
         "properties": {
           "action": {
-            "enum": [
-              "allow",
-              "always",
-              "deny",
-              "answer",
-              "continue",
-              "stop",
-              "add_budget",
-              "done",
-              "not_done"
-            ],
+            "enum": ["allow", "always", "deny", "answer", "continue", "stop", "add_budget", "done", "not_done"],
             "type": "string"
           },
           "value": {
@@ -23,9 +13,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "action"
-        ],
+        "required": ["action"],
         "type": "object"
       },
       "Attachment": {
@@ -48,13 +36,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "size",
-          "type",
-          "object_key"
-        ],
+        "required": ["id", "name", "size", "type", "object_key"],
         "type": "object"
       },
       "AuditView": {
@@ -83,14 +65,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "at",
-          "actor_kind",
-          "actor_id",
-          "action",
-          "target",
-          "details"
-        ],
+        "required": ["at", "actor_kind", "actor_id", "action", "target", "details"],
         "type": "object"
       },
       "BotBody": {
@@ -118,9 +93,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object"
       },
       "BotView": {
@@ -128,11 +101,7 @@
         "properties": {
           "activity": {
             "description": "What the bot does now.",
-            "enum": [
-              "idle",
-              "working",
-              "waiting"
-            ],
+            "enum": ["idle", "working", "waiting"],
             "type": "string"
           },
           "avatar": {
@@ -167,10 +136,7 @@
             "type": "string"
           },
           "zone_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
         "required": [
@@ -196,15 +162,10 @@
             "items": {
               "$ref": "#/components/schemas/BotView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "bots"
-        ],
+        "required": ["bots"],
         "type": "object"
       },
       "Card": {
@@ -235,10 +196,7 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "preview": {
             "additionalProperties": {
@@ -259,12 +217,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "kind",
-          "status",
-          "title"
-        ],
+        "required": ["id", "kind", "status", "title"],
         "type": "object"
       },
       "ChatView": {
@@ -274,31 +227,36 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "id": {
             "type": "string"
           },
           "kind": {
-            "enum": [
-              "direct",
-              "group"
-            ],
+            "enum": ["direct", "group"],
             "type": "string"
           },
           "name": {
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "kind",
-          "name",
-          "bot_ids"
-        ],
+        "required": ["id", "kind", "name", "bot_ids"],
+        "type": "object"
+      },
+      "Check": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "pass", "reason"],
         "type": "object"
       },
       "CheckResult": {
@@ -318,11 +276,20 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "key",
-          "pass",
-          "ms"
-        ],
+        "required": ["key", "pass", "ms"],
+        "type": "object"
+      },
+      "DiagnosticsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/Check"
+            },
+            "type": ["array", "null"]
+          }
+        },
+        "required": ["checks"],
         "type": "object"
       },
       "ErrorDetail": {
@@ -347,9 +314,7 @@
         "properties": {
           "detail": {
             "description": "A human-readable explanation specific to this occurrence of the problem.",
-            "examples": [
-              "Property foo is required but is missing."
-            ],
+            "examples": ["Property foo is required but is missing."],
             "type": "string"
           },
           "errors": {
@@ -357,40 +322,29 @@
             "items": {
               "$ref": "#/components/schemas/ErrorDetail"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "instance": {
             "description": "A URI reference that identifies the specific occurrence of the problem.",
-            "examples": [
-              "https://example.com/error-log/abc123"
-            ],
+            "examples": ["https://example.com/error-log/abc123"],
             "format": "uri",
             "type": "string"
           },
           "status": {
             "description": "HTTP status code",
-            "examples": [
-              400
-            ],
+            "examples": [400],
             "format": "int64",
             "type": "integer"
           },
           "title": {
             "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
-            "examples": [
-              "Bad Request"
-            ],
+            "examples": ["Bad Request"],
             "type": "string"
           },
           "type": {
             "default": "about:blank",
             "description": "A URI reference to human-readable documentation for the error.",
-            "examples": [
-              "https://example.com/errors/example"
-            ],
+            "examples": ["https://example.com/errors/example"],
             "format": "uri",
             "type": "string"
           }
@@ -416,13 +370,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "seq",
-          "at",
-          "type",
-          "data",
-          "truncated"
-        ],
+        "required": ["seq", "at", "type", "data", "truncated"],
         "type": "object"
       },
       "HistoryRow": {
@@ -435,10 +383,7 @@
             "type": "string"
           },
           "old_value": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "revision": {
             "format": "int64",
@@ -448,13 +393,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "revision",
-          "old_value",
-          "new_value",
-          "updated_by",
-          "at"
-        ],
+        "required": ["revision", "old_value", "new_value", "updated_by", "at"],
         "type": "object"
       },
       "List-auditResponse": {
@@ -464,15 +403,10 @@
             "items": {
               "$ref": "#/components/schemas/AuditView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "entries"
-        ],
+        "required": ["entries"],
         "type": "object"
       },
       "List-chatsResponse": {
@@ -482,15 +416,10 @@
             "items": {
               "$ref": "#/components/schemas/ChatView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "chats"
-        ],
+        "required": ["chats"],
         "type": "object"
       },
       "List-instruction-versionsResponse": {
@@ -500,15 +429,10 @@
             "items": {
               "$ref": "#/components/schemas/VersionView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "versions"
-        ],
+        "required": ["versions"],
         "type": "object"
       },
       "List-model-presetsResponse": {
@@ -518,15 +442,10 @@
             "items": {
               "$ref": "#/components/schemas/Preset"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "presets"
-        ],
+        "required": ["presets"],
         "type": "object"
       },
       "List-model-providersResponse": {
@@ -536,15 +455,10 @@
             "items": {
               "$ref": "#/components/schemas/ProviderView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "providers"
-        ],
+        "required": ["providers"],
         "type": "object"
       },
       "List-model-rolesResponse": {
@@ -554,15 +468,10 @@
             "items": {
               "$ref": "#/components/schemas/RoleView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "roles"
-        ],
+        "required": ["roles"],
         "type": "object"
       },
       "List-runsResponse": {
@@ -572,15 +481,10 @@
             "items": {
               "$ref": "#/components/schemas/RunView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "runs"
-        ],
+        "required": ["runs"],
         "type": "object"
       },
       "List-settingsResponse": {
@@ -590,15 +494,10 @@
             "items": {
               "$ref": "#/components/schemas/SettingView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "settings"
-        ],
+        "required": ["settings"],
         "type": "object"
       },
       "List-vault-itemsResponse": {
@@ -608,15 +507,10 @@
             "items": {
               "$ref": "#/components/schemas/VaultItemView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "type": "object"
       },
       "LocalAuthInBody": {
@@ -627,9 +521,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token"
-        ],
+        "required": ["token"],
         "type": "object"
       },
       "LocalAuthOutBody": {
@@ -639,9 +531,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "ok"
-        ],
+        "required": ["ok"],
         "type": "object"
       },
       "MeView": {
@@ -669,25 +559,13 @@
             "items": {
               "$ref": "#/components/schemas/SpaceView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "version": {
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "name",
-          "is_admin",
-          "mode",
-          "version",
-          "spaces",
-          "setup"
-        ],
+        "required": ["id", "email", "name", "is_admin", "mode", "version", "spaces", "setup"],
         "type": "object"
       },
       "MemoryView": {
@@ -709,12 +587,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "content",
-          "bytes",
-          "limit",
-          "rev"
-        ],
+        "required": ["content", "bytes", "limit", "rev"],
         "type": "object"
       },
       "MessagePage": {
@@ -724,10 +597,7 @@
             "items": {
               "$ref": "#/components/schemas/MessageView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "next": {
             "description": "Cursor of the next older page, or empty.",
@@ -737,17 +607,10 @@
             "items": {
               "$ref": "#/components/schemas/RunLine"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "messages",
-          "runs",
-          "next"
-        ],
+        "required": ["messages", "runs", "next"],
         "type": "object"
       },
       "MessageView": {
@@ -757,10 +620,7 @@
             "items": {
               "$ref": "#/components/schemas/Attachment"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "author_id": {
             "type": "string"
@@ -800,16 +660,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "chat_id",
-          "author_kind",
-          "author_id",
-          "body",
-          "created_at",
-          "attachments",
-          "reactions"
-        ],
+        "required": ["id", "chat_id", "author_kind", "author_id", "body", "created_at", "attachments", "reactions"],
         "type": "object"
       },
       "ModelInfo": {
@@ -831,9 +682,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "id"
-        ],
+        "required": ["id"],
         "type": "object"
       },
       "Post-messageRequest": {
@@ -847,9 +696,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "body"
-        ],
+        "required": ["body"],
         "type": "object"
       },
       "Post-messageResponse": {
@@ -868,10 +715,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "message",
-          "steered"
-        ],
+        "required": ["message", "steered"],
         "type": "object"
       },
       "Preset": {
@@ -902,25 +746,14 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "api_type",
-          "base_url",
-          "auth_style",
-          "needs_key"
-        ],
+        "required": ["id", "name", "api_type", "base_url", "auth_style", "needs_key"],
         "type": "object"
       },
       "ProviderBody": {
         "additionalProperties": false,
         "properties": {
           "api_type": {
-            "enum": [
-              "openai-chat",
-              "openai-responses",
-              "anthropic-messages"
-            ],
+            "enum": ["openai-chat", "openai-responses", "anthropic-messages"],
             "type": "string"
           },
           "auth_header": {
@@ -928,12 +761,7 @@
             "type": "string"
           },
           "auth_style": {
-            "enum": [
-              "bearer",
-              "x_api_key",
-              "header",
-              "none"
-            ],
+            "enum": ["bearer", "x_api_key", "header", "none"],
             "type": "string"
           },
           "base_url": {
@@ -995,10 +823,7 @@
             "items": {
               "$ref": "#/components/schemas/ModelInfo"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "name": {
             "type": "string"
@@ -1011,10 +836,7 @@
           },
           "tested_at": {
             "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         },
         "required": [
@@ -1042,9 +864,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "content"
-        ],
+        "required": ["content"],
         "type": "object"
       },
       "Put-shared-memoryRequest": {
@@ -1055,9 +875,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "content"
-        ],
+        "required": ["content"],
         "type": "object"
       },
       "RoleView": {
@@ -1073,16 +891,10 @@
             "items": {
               "$ref": "#/components/schemas/Target"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "role",
-          "targets"
-        ],
+        "required": ["role", "targets"],
         "type": "object"
       },
       "Row": {
@@ -1112,14 +924,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "key",
-          "tokens_in",
-          "tokens_out",
-          "seconds",
-          "cost_usd",
-          "calls"
-        ],
+        "required": ["key", "tokens_in", "tokens_out", "seconds", "cost_usd", "calls"],
         "type": "object"
       },
       "RunLine": {
@@ -1160,10 +965,7 @@
             "type": "integer"
           },
           "verified": {
-            "type": [
-              "boolean",
-              "null"
-            ]
+            "type": ["boolean", "null"]
           }
         },
         "required": [
@@ -1191,26 +993,17 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "events": {
             "items": {
               "$ref": "#/components/schemas/EventView"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "finished_at": {
             "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "goal": {
             "type": "string"
@@ -1226,10 +1019,7 @@
           },
           "started_at": {
             "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "tokens_in": {
             "format": "int64",
@@ -1264,15 +1054,10 @@
             "items": {
               "$ref": "#/components/schemas/Target"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "targets"
-        ],
+        "required": ["targets"],
         "type": "object"
       },
       "Set-settingRequest": {
@@ -1280,9 +1065,7 @@
         "properties": {
           "value": {}
         },
-        "required": [
-          "value"
-        ],
+        "required": ["value"],
         "type": "object"
       },
       "Set-telemetryRequest": {
@@ -1292,9 +1075,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "enabled"
-        ],
+        "required": ["enabled"],
         "type": "object"
       },
       "Setting-historyResponse": {
@@ -1304,15 +1085,10 @@
             "items": {
               "$ref": "#/components/schemas/HistoryRow"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "history"
-        ],
+        "required": ["history"],
         "type": "object"
       },
       "SettingView": {
@@ -1333,13 +1109,7 @@
           },
           "value": {}
         },
-        "required": [
-          "key",
-          "value",
-          "revision",
-          "is_default",
-          "doc"
-        ],
+        "required": ["key", "value", "revision", "is_default", "doc"],
         "type": "object"
       },
       "SetupState": {
@@ -1352,10 +1122,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "needs_model",
-          "needs_name"
-        ],
+        "required": ["needs_model", "needs_name"],
         "type": "object"
       },
       "Smoke": {
@@ -1365,10 +1132,7 @@
             "items": {
               "$ref": "#/components/schemas/CheckResult"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "model": {
             "type": "string"
@@ -1380,12 +1144,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "model",
-          "checks",
-          "vision",
-          "tools"
-        ],
+        "required": ["model", "checks", "vision", "tools"],
         "type": "object"
       },
       "SpaceInBody": {
@@ -1418,12 +1177,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "time_zone",
-          "role"
-        ],
+        "required": ["id", "name", "time_zone", "role"],
         "type": "object"
       },
       "Target": {
@@ -1451,13 +1205,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "provider_id",
-          "model",
-          "price_in",
-          "price_out",
-          "context_window"
-        ],
+        "required": ["provider_id", "model"],
         "type": "object"
       },
       "TelemetryCounts": {
@@ -1495,17 +1243,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "version",
-          "mode",
-          "os",
-          "arch",
-          "database",
-          "spaces",
-          "bots",
-          "runs_24h",
-          "model_providers"
-        ],
+        "required": ["version", "mode", "os", "arch", "database", "spaces", "bots", "runs_24h", "model_providers"],
         "type": "object"
       },
       "TelemetryView": {
@@ -1521,21 +1259,13 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "preview": {
             "$ref": "#/components/schemas/TelemetryCounts"
           }
         },
-        "required": [
-          "enabled",
-          "endpoint",
-          "fields",
-          "preview"
-        ],
+        "required": ["enabled", "endpoint", "fields", "preview"],
         "type": "object"
       },
       "Test-model-providerRequest": {
@@ -1557,9 +1287,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object"
       },
       "Usage-viewResponse": {
@@ -1569,26 +1297,17 @@
             "items": {
               "$ref": "#/components/schemas/Row"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
-        "required": [
-          "rows"
-        ],
+        "required": ["rows"],
         "type": "object"
       },
       "VaultBody": {
         "additionalProperties": false,
         "properties": {
           "kind": {
-            "enum": [
-              "login",
-              "secret",
-              "totp"
-            ],
+            "enum": ["login", "secret", "totp"],
             "type": "string"
           },
           "name": {
@@ -1641,16 +1360,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "kind",
-          "site",
-          "username",
-          "last4",
-          "created_at",
-          "updated_at"
-        ],
+        "required": ["id", "name", "kind", "site", "username", "last4", "created_at", "updated_at"],
         "type": "object"
       },
       "VersionView": {
@@ -1677,14 +1387,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "rev",
-          "instructions",
-          "author_kind",
-          "author_id",
-          "at",
-          "current"
-        ],
+        "required": ["rev", "instructions", "author_kind", "author_id", "at", "current"],
         "type": "object"
       }
     }
@@ -1696,6 +1399,35 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/diagnostics": {
+      "get": {
+        "operationId": "diagnostics",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run the doctor checks",
+        "tags": ["admin"]
+      }
+    },
     "/api/v1/admin/telemetry": {
       "get": {
         "operationId": "get-telemetry",
@@ -1722,9 +1454,7 @@
           }
         },
         "summary": "Telemetry state and the exact counts it sends",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       },
       "put": {
         "operationId": "set-telemetry",
@@ -1761,9 +1491,7 @@
           }
         },
         "summary": "Turn telemetry on or off",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/auth/local": {
@@ -1809,9 +1537,7 @@
           }
         },
         "summary": "Exchange the local token for a UI cookie",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/me": {
@@ -1840,9 +1566,7 @@
           }
         },
         "summary": "The caller, the spaces and the first-run state",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       },
       "patch": {
         "operationId": "update-me",
@@ -1879,9 +1603,7 @@
           }
         },
         "summary": "Change the caller's name",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/model-presets": {
@@ -1910,9 +1632,7 @@
           }
         },
         "summary": "Provider presets for the form",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}": {
@@ -1953,9 +1673,7 @@
           }
         },
         "summary": "A space",
-        "tags": [
-          "spaces"
-        ]
+        "tags": ["spaces"]
       },
       "patch": {
         "operationId": "update-space",
@@ -2004,9 +1722,7 @@
           }
         },
         "summary": "Change the name or time zone of a space",
-        "tags": [
-          "spaces"
-        ]
+        "tags": ["spaces"]
       }
     },
     "/api/v1/spaces/{space}/audit": {
@@ -2067,9 +1783,7 @@
           }
         },
         "summary": "The audit log of a space, newest first. The API has no route that changes it.",
-        "tags": [
-          "audit"
-        ]
+        "tags": ["audit"]
       }
     },
     "/api/v1/spaces/{space}/bots": {
@@ -2118,9 +1832,7 @@
           }
         },
         "summary": "List the bots of a space",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       },
       "post": {
         "operationId": "create-bot",
@@ -2169,9 +1881,7 @@
           }
         },
         "summary": "Create a bot with its direct chat",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}": {
@@ -2220,9 +1930,7 @@
           }
         },
         "summary": "A bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       },
       "patch": {
         "operationId": "update-bot",
@@ -2279,9 +1987,7 @@
           }
         },
         "summary": "Change a bot. Changed instructions become a new version.",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/instructions": {
@@ -2330,9 +2036,7 @@
           }
         },
         "summary": "The instructions history of a bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/instructions/{rev}/restore": {
@@ -2391,9 +2095,7 @@
           }
         },
         "summary": "Make an old instructions version current",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/memory": {
@@ -2442,9 +2144,7 @@
           }
         },
         "summary": "The MEMORY.md of a bot",
-        "tags": [
-          "memory"
-        ]
+        "tags": ["memory"]
       },
       "put": {
         "operationId": "put-bot-memory",
@@ -2501,9 +2201,7 @@
           }
         },
         "summary": "Replace the MEMORY.md of a bot (at most 4 KB)",
-        "tags": [
-          "memory"
-        ]
+        "tags": ["memory"]
       }
     },
     "/api/v1/spaces/{space}/cards/{card}/answer": {
@@ -2562,9 +2260,7 @@
           }
         },
         "summary": "Answer a card",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       }
     },
     "/api/v1/spaces/{space}/chats": {
@@ -2605,9 +2301,7 @@
           }
         },
         "summary": "List the chats of a space",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       }
     },
     "/api/v1/spaces/{space}/chats/{chat}/messages": {
@@ -2678,9 +2372,7 @@
           }
         },
         "summary": "One page of messages, oldest first",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       },
       "post": {
         "operationId": "post-message",
@@ -2737,9 +2429,7 @@
           }
         },
         "summary": "Send a message. It starts a run, or steers the running one.",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       }
     },
     "/api/v1/spaces/{space}/chats/{chat}/stream": {
@@ -2800,10 +2490,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event bot",
                         "type": "object"
                       },
@@ -2834,10 +2521,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event delta",
                         "type": "object"
                       },
@@ -2868,9 +2552,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data"
-                        ],
+                        "required": ["data"],
                         "title": "Event message",
                         "type": "object"
                       },
@@ -2901,10 +2583,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event message_removed",
                         "type": "object"
                       },
@@ -2935,10 +2614,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event run",
                         "type": "object"
                       }
@@ -2963,9 +2639,7 @@
           }
         },
         "summary": "Server-sent events of a chat: messages, token deltas and run lines",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       }
     },
     "/api/v1/spaces/{space}/memory": {
@@ -3006,9 +2680,7 @@
           }
         },
         "summary": "The shared memory of a space",
-        "tags": [
-          "memory"
-        ]
+        "tags": ["memory"]
       },
       "put": {
         "operationId": "put-shared-memory",
@@ -3057,9 +2729,7 @@
           }
         },
         "summary": "Replace the shared memory (at most 4 KB)",
-        "tags": [
-          "memory"
-        ]
+        "tags": ["memory"]
       }
     },
     "/api/v1/spaces/{space}/model-providers": {
@@ -3100,9 +2770,7 @@
           }
         },
         "summary": "List model providers",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       },
       "post": {
         "operationId": "create-model-provider",
@@ -3151,9 +2819,7 @@
           }
         },
         "summary": "Add a model provider. The key goes into the vault.",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}/model-providers/{provider}": {
@@ -3195,9 +2861,7 @@
           }
         },
         "summary": "Delete a model provider and its key",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       },
       "patch": {
         "operationId": "update-model-provider",
@@ -3254,9 +2918,7 @@
           }
         },
         "summary": "Change a model provider",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}/model-providers/{provider}/test": {
@@ -3315,9 +2977,7 @@
           }
         },
         "summary": "Run the four provider checks",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}/model-roles": {
@@ -3366,9 +3026,7 @@
           }
         },
         "summary": "Role targets of the space, or of one bot",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}/model-roles/{role}": {
@@ -3390,13 +3048,7 @@
             "name": "role",
             "required": true,
             "schema": {
-              "enum": [
-                "router",
-                "owner",
-                "verifier",
-                "computer_use",
-                "summarizer"
-              ],
+              "enum": ["router", "owner", "verifier", "computer_use", "summarizer"],
               "type": "string"
             }
           }
@@ -3427,9 +3079,7 @@
           }
         },
         "summary": "Set the ordered targets of a role. An empty list removes a bot override.",
-        "tags": [
-          "models"
-        ]
+        "tags": ["models"]
       }
     },
     "/api/v1/spaces/{space}/runs": {
@@ -3490,9 +3140,7 @@
           }
         },
         "summary": "Recent owner runs of a space",
-        "tags": [
-          "runs"
-        ]
+        "tags": ["runs"]
       }
     },
     "/api/v1/spaces/{space}/runs/{run}": {
@@ -3552,9 +3200,7 @@
           }
         },
         "summary": "A run with its timeline events",
-        "tags": [
-          "runs"
-        ]
+        "tags": ["runs"]
       }
     },
     "/api/v1/spaces/{space}/runs/{run}/stop": {
@@ -3596,9 +3242,7 @@
           }
         },
         "summary": "Stop a run and its sub-agent runs",
-        "tags": [
-          "runs"
-        ]
+        "tags": ["runs"]
       }
     },
     "/api/v1/spaces/{space}/settings": {
@@ -3639,9 +3283,7 @@
           }
         },
         "summary": "Space settings with revisions",
-        "tags": [
-          "settings"
-        ]
+        "tags": ["settings"]
       }
     },
     "/api/v1/spaces/{space}/settings/{key}": {
@@ -3700,9 +3342,7 @@
           }
         },
         "summary": "Change a space setting",
-        "tags": [
-          "settings"
-        ]
+        "tags": ["settings"]
       }
     },
     "/api/v1/spaces/{space}/settings/{key}/history": {
@@ -3751,9 +3391,7 @@
           }
         },
         "summary": "The change history of a setting",
-        "tags": [
-          "settings"
-        ]
+        "tags": ["settings"]
       }
     },
     "/api/v1/spaces/{space}/stream": {
@@ -3806,10 +3444,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event bot",
                         "type": "object"
                       },
@@ -3840,10 +3475,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event delta",
                         "type": "object"
                       },
@@ -3874,9 +3506,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data"
-                        ],
+                        "required": ["data"],
                         "title": "Event message",
                         "type": "object"
                       },
@@ -3907,10 +3537,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event message_removed",
                         "type": "object"
                       },
@@ -3941,10 +3568,7 @@
                             "type": "integer"
                           }
                         },
-                        "required": [
-                          "data",
-                          "event"
-                        ],
+                        "required": ["data", "event"],
                         "title": "Event run",
                         "type": "object"
                       }
@@ -3969,9 +3593,7 @@
           }
         },
         "summary": "Server-sent events of a space: run lines and bot activity",
-        "tags": [
-          "chats"
-        ]
+        "tags": ["chats"]
       }
     },
     "/api/v1/spaces/{space}/usage": {
@@ -3994,15 +3616,7 @@
             "name": "by",
             "schema": {
               "default": "day",
-              "enum": [
-                "run",
-                "bot",
-                "step",
-                "role",
-                "model",
-                "day",
-                "month"
-              ],
+              "enum": ["run", "bot", "step", "role", "model", "day", "month"],
               "type": "string"
             }
           },
@@ -4042,9 +3656,7 @@
           }
         },
         "summary": "Cost view grouped by run, bot, step, role, model, day or month",
-        "tags": [
-          "usage"
-        ]
+        "tags": ["usage"]
       }
     },
     "/api/v1/spaces/{space}/vault": {
@@ -4085,9 +3697,7 @@
           }
         },
         "summary": "List vault items without values",
-        "tags": [
-          "vault"
-        ]
+        "tags": ["vault"]
       },
       "post": {
         "operationId": "create-vault-item",
@@ -4136,9 +3746,7 @@
           }
         },
         "summary": "Store a login, a secret or a TOTP seed",
-        "tags": [
-          "vault"
-        ]
+        "tags": ["vault"]
       }
     },
     "/api/v1/spaces/{space}/vault/{item}": {
@@ -4180,9 +3788,7 @@
           }
         },
         "summary": "Delete a vault item",
-        "tags": [
-          "vault"
-        ]
+        "tags": ["vault"]
       },
       "patch": {
         "operationId": "update-vault-item",
@@ -4239,9 +3845,7 @@
           }
         },
         "summary": "Change a vault item. An empty value keeps the stored value.",
-        "tags": [
-          "vault"
-        ]
+        "tags": ["vault"]
       }
     }
   }

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { exchangeHashToken } from "@/api/client";
 import { createAppRouter } from "@/app/router";
 import "./index.css";
 
@@ -11,7 +12,9 @@ const queryClient = new QueryClient({
 });
 
 async function start() {
-  const router = await createAppRouter(queryClient);
+  // A refused or failed exchange shows the signed-out page, because /me then returns 401.
+  await exchangeHashToken().catch(() => false);
+  const router = await createAppRouter();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+  "/api/v1/admin/diagnostics": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Run the doctor checks */
+    get: operations["diagnostics"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/telemetry": {
     parameters: {
       query?: never;
@@ -625,12 +642,20 @@ export interface components {
       kind: "direct" | "group";
       name: string;
     };
+    Check: {
+      name: string;
+      pass: boolean;
+      reason: string;
+    };
     CheckResult: {
       detail?: string;
       key: string;
       /** Format: int64 */
       ms: number;
       pass: boolean;
+    };
+    DiagnosticsResponse: {
+      checks: components["schemas"]["Check"][] | null;
     };
     ErrorDetail: {
       /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -928,13 +953,13 @@ export interface components {
     };
     Target: {
       /** Format: int64 */
-      context_window: number;
+      context_window?: number;
       model: string;
       params?: string;
       /** Format: double */
-      price_in: number;
+      price_in?: number;
       /** Format: double */
-      price_out: number;
+      price_out?: number;
       provider_id: string;
     };
     TelemetryCounts: {
@@ -1013,7 +1038,9 @@ export type SchemaBotView = components["schemas"]["BotView"];
 export type SchemaBotsOutBody = components["schemas"]["BotsOutBody"];
 export type SchemaCard = components["schemas"]["Card"];
 export type SchemaChatView = components["schemas"]["ChatView"];
+export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
+export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
 export type SchemaEventView = components["schemas"]["EventView"];
@@ -1065,6 +1092,35 @@ export type SchemaVaultItemView = components["schemas"]["VaultItemView"];
 export type SchemaVersionView = components["schemas"]["VersionView"];
 export type $defs = Record<string, never>;
 export interface operations {
+  diagnostics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiagnosticsResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-telemetry": {
     parameters: {
       query?: never;

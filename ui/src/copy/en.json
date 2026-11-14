@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Fettle" },
+  "app": {
+    "name": "Fettle"
+  },
   "units": {
     "seconds": "{n} s",
     "minutes": "{n} min",
@@ -22,7 +24,11 @@
     "settings": "Settings",
     "unread": "unread",
     "theme": "Theme: {theme}. Select to change it.",
-    "themes": { "system": "System", "light": "Light", "dark": "Dark" }
+    "themes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
   },
   "palette": {
     "title": "Command menu",
@@ -36,7 +42,12 @@
   },
   "bots": {
     "primary": "Primary",
-    "status": { "working": "Working", "waiting": "Waiting for you", "idle": "Idle", "archived": "Archived" }
+    "status": {
+      "working": "Working",
+      "waiting": "Waiting for you",
+      "idle": "Idle",
+      "archived": "Archived"
+    }
   },
   "chat": {
     "you": "You",
@@ -49,11 +60,25 @@
       "label": "Message to {name}",
       "placeholder": "Write to {name}",
       "steer": "Add a note for {name} while it works",
-      "hint": "Enter sends · Shift+Enter adds a line · / runs a skill",
+      "hint": "Enter sends · Shift+Enter adds a line",
       "attach": "Attach a file",
       "send": "Send",
       "stop": "Stop"
-    }
+    },
+    "empty": {
+      "title": "Start a chat with {name}",
+      "body": "Write what you need. The bot replies here and shows its work as a run."
+    },
+    "loadFailed": "Fettle cannot load this chat",
+    "loadOlderFailed": "Fettle cannot load older messages",
+    "loadingOlder": "Loading older messages",
+    "missing": {
+      "title": "Chat not found",
+      "body": "This chat does not exist in this space."
+    },
+    "sendFailed": "Fettle did not send your message",
+    "steered": "Your note goes to the run that works now.",
+    "botSettings": "Open the settings of {name}"
   },
   "card": {
     "waits": "This card waits for you",
@@ -72,20 +97,36 @@
       "deny": "Deny",
       "hardAsk": "This action always needs your approval."
     },
-    "budget": { "add": "Add {usd} and continue", "stop": "Stop" },
-    "uncertain": { "happened": "It happened", "didNot": "It did not happen", "stop": "Stop the run" },
-    "turnLimit": { "continue": "Continue for more turns", "stop": "Stop" },
-    "takeover": { "open": "Open the screen" },
+    "budget": {
+      "add": "Add {usd} and continue",
+      "stop": "Stop"
+    },
+    "uncertain": {
+      "happened": "It happened",
+      "didNot": "It did not happen",
+      "stop": "Stop the run"
+    },
+    "turnLimit": {
+      "continue": "Continue for more turns",
+      "stop": "Stop"
+    },
+    "takeover": {
+      "open": "Open the screen"
+    },
     "resolved": {
       "allowed": "Allowed",
       "denied": "Denied",
       "expired": "Expired",
       "answered": "Answer: {answer}"
-    }
+    },
+    "answerFailed": "Fettle did not save your answer"
   },
   "run": {
     "open": "Open the timeline of {label}",
-    "helpers": { "one": "{n} helper", "other": "{n} helpers" },
+    "helpers": {
+      "one": "{n} helper",
+      "other": "{n} helpers"
+    },
     "step": {
       "direct": "Reply",
       "single": "Work",
@@ -104,14 +145,20 @@
       "failed": "Failed",
       "escalated": "Needs you",
       "cancelled": "Stopped"
-    }
+    },
+    "stopFailed": "Fettle cannot stop the run"
   },
   "timeline": {
     "title": "Run timeline",
     "close": "Close the timeline",
     "events": "Run events",
     "tokens": "{n} tokens",
-    "stat": { "state": "State", "time": "Time", "cost": "Cost", "tokens": "Tokens" },
+    "stat": {
+      "state": "State",
+      "time": "Time",
+      "cost": "Cost",
+      "tokens": "Tokens"
+    },
     "type": {
       "run_started": "Start",
       "route_decision": "Route",
@@ -145,15 +192,158 @@
       "sleep_until": "Sleep",
       "cancel": "Stop",
       "run_finished": "Finish"
+    },
+    "loadFailed": "Fettle cannot load this run",
+    "truncated": "This is a preview. The full value is in storage.",
+    "summary": {
+      "calls": "Calls {tools}",
+      "switch": "{from} to {to}: {reason}",
+      "error": "error: {error}",
+      "budget": "Needs {estimate}. {left} is left.",
+      "cancel": "A person stopped the run."
     }
   },
-  "vault": { "show": "Show the value", "hide": "Hide the value" },
+  "vault": {
+    "show": "Show the value",
+    "hide": "Hide the value",
+    "title": "Vault",
+    "body": "The vault keeps logins and secrets encrypted. Bots use them without seeing the values.",
+    "add": "Add an item",
+    "created": "{name} saved",
+    "saved": "Item saved",
+    "loadFailed": "Fettle cannot load the vault",
+    "empty": {
+      "title": "The vault is empty",
+      "body": "Add a login or a secret that a bot can use."
+    },
+    "kind": "Kind",
+    "kinds": {
+      "login": "Login",
+      "secret": "Secret",
+      "totp": "One-time code"
+    },
+    "name": "Name",
+    "site": "Site",
+    "siteHint": "The site where a bot can use this item.",
+    "username": "User name",
+    "valueLabel": {
+      "login": "Password",
+      "secret": "Secret value",
+      "totp": "Code seed"
+    },
+    "valueHint": "After you save, Fettle shows only the last four characters.",
+    "valueKeep": "The stored value ends in {last4}. Leave this empty to keep it.",
+    "needName": "Type a name for the item.",
+    "needValue": "Type the value to store.",
+    "noSite": "No site",
+    "endsWith": "Value ends in {last4}",
+    "updated": "Changed {when}",
+    "delete": "Delete {name}",
+    "deleted": "{name} deleted",
+    "deleteFailed": "Fettle did not delete the item"
+  },
   "models": {
     "check": {
       "plain": "Plain answer",
       "tools": "Tool call round trip",
       "schema": "Structured output",
       "vision": "Image input"
+    },
+    "providers": "Model providers",
+    "addProvider": "Add a provider",
+    "added": "{name} added. The test starts now.",
+    "saved": "Provider saved",
+    "loadFailed": "Fettle cannot load the providers",
+    "empty": {
+      "title": "No model provider",
+      "body": "Bots need a model provider. Add one with your own key."
+    },
+    "keyLast4": "key •••• {last4}",
+    "noKey": "no key",
+    "modelCount": {
+      "one": "{n} model",
+      "other": "{n} models"
+    },
+    "delete": "Delete {name}",
+    "deleteConfirm": "Delete this provider and its key?",
+    "deleteFailed": "Fettle did not delete the provider",
+    "pickModel": "Select a model",
+    "searchModel": "Find a model or type its name",
+    "noModels": "No model has this name.",
+    "useTyped": "Use {model}",
+    "pricePerM": "{in} in · {out} out per 1M",
+    "apiType": {
+      "openai-chat": "OpenAI chat",
+      "openai-responses": "OpenAI responses",
+      "anthropic-messages": "Anthropic messages"
+    },
+    "authStyle": {
+      "bearer": "Bearer token",
+      "x_api_key": "x-api-key header",
+      "header": "Custom header",
+      "none": "No key"
+    },
+    "form": {
+      "preset": "Provider",
+      "presetHint": "The preset fills the address and the API type.",
+      "baseURL": "Base URL",
+      "key": "{provider} key",
+      "provider": "Provider",
+      "keyHint": "Fettle keeps the key encrypted in the vault. You see it only before you save.",
+      "keyKeep": "Fettle has a key that ends in {last4}. Type a new key to replace it.",
+      "more": "More options",
+      "name": "Name",
+      "apiType": "API type",
+      "authStyle": "Key style",
+      "authHeader": "Header name",
+      "add": "Add the provider",
+      "needBaseURL": "Type the base URL of the provider.",
+      "needKey": "Type the key of the provider."
+    },
+    "test": {
+      "model": "Model to test",
+      "run": "Run the test",
+      "failed": "The test did not run: {error}",
+      "at": "Last test: {model}, {when}",
+      "never": "Not tested yet."
+    },
+    "roles": {
+      "title": "Model roles",
+      "body": "Each role uses its models in order. When one model fails, the next model takes over.",
+      "owner": {
+        "name": "Owner",
+        "body": "Does the work of each run."
+      },
+      "router": {
+        "name": "Router",
+        "body": "Picks how to do the work."
+      },
+      "verifier": {
+        "name": "Checker",
+        "body": "Checks a result against its checks."
+      },
+      "computer_use": {
+        "name": "Computer use",
+        "body": "Uses the screen of a computer."
+      },
+      "summarizer": {
+        "name": "Summarizer",
+        "body": "Makes long runs shorter."
+      },
+      "inherit": "No model. This role uses the owner models.",
+      "ownerMissing": "No model. Bots cannot work until you set one.",
+      "needProvider": "Add a provider first.",
+      "order": "Models of {role} in order",
+      "moveUp": "Move {model} up",
+      "remove": "Remove {model}",
+      "provider": "Provider",
+      "model": "Model",
+      "set": "Set",
+      "addFallback": "Add as next",
+      "saved": "Role saved",
+      "saveFailed": "Fettle did not save the role",
+      "loadFailed": "Fettle cannot load the roles",
+      "missingProvider": "Removed provider"
     }
   },
   "setup": {
@@ -162,8 +352,18 @@
     "back": "Back",
     "continue": "Continue",
     "finish": "Open the chat",
-    "steps": { "where": "Place", "computer": "Computer", "model": "Model", "you": "You" },
-    "check": { "pass": "Passed", "fail": "Failed", "running": "Running", "idle": "Not started" },
+    "steps": {
+      "where": "Place",
+      "computer": "Computer",
+      "model": "Model",
+      "you": "You"
+    },
+    "check": {
+      "pass": "Passed",
+      "fail": "Failed",
+      "running": "Running",
+      "idle": "Not started"
+    },
     "where": {
       "title": "Where does Fettle run?",
       "body": "You can change this later.",
@@ -191,7 +391,201 @@
       "body": "Bots use your name and your time zone.",
       "name": "Your name",
       "timeZone": "Time zone",
-      "timeZoneHint": "Fettle found this time zone on this computer."
+      "timeZoneHint": "Fettle found this time zone on this computer.",
+      "needName": "Type your name."
+    },
+    "saveFailed": "Fettle did not save this step",
+    "real": {
+      "steps": {
+        "you": "You",
+        "model": "Model",
+        "owner": "Owner model"
+      },
+      "you": {
+        "title": "Tell your bots about you",
+        "body": "Bots use your name and your time zone."
+      },
+      "model": {
+        "title": "Add a model provider",
+        "body": "Bots use your own model key. Fettle keeps it encrypted and tests it at once.",
+        "saveAndTest": "Save and test",
+        "using": "Provider: {name}",
+        "needTools": "The tool check failed. Bots need tool calls. Test a different model or provider."
+      },
+      "owner": {
+        "title": "Pick the owner model",
+        "body": "The owner model does the work of each run. You can change it later in Settings.",
+        "label": "Owner model",
+        "hint": "The list shows the models of {name}."
+      }
     }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "reset": "Undo changes",
+    "retry": "Try again",
+    "save": "Save"
+  },
+  "auth": {
+    "title": "Open Fettle from the app",
+    "body": "This page has no sign-in. Open Fettle from the desktop app, or open the link that this command prints:",
+    "failed": "Fettle cannot load your account",
+    "noSpace": "Your account has no space."
+  },
+  "notFound": {
+    "title": "This page does not exist",
+    "body": "The address can be old or wrong.",
+    "home": "Go to the start page"
+  },
+  "runs": {
+    "title": "Runs",
+    "allBots": "All bots",
+    "filterBot": "Show the runs of one bot",
+    "loadFailed": "Fettle cannot load the runs",
+    "empty": {
+      "title": "No runs yet",
+      "body": "A run starts when you send a message to a bot."
+    }
+  },
+  "memory": {
+    "bytes": "{used} of {limit} bytes",
+    "over": "Too long",
+    "placeholder": "Facts that the bot keeps for the next chats",
+    "rev": "revision {rev}",
+    "saved": "Memory saved",
+    "saveFailed": "Fettle did not save the memory",
+    "loadFailed": "Fettle cannot load the memory"
+  },
+  "botPage": {
+    "title": "Bot settings",
+    "profile": "Profile",
+    "name": "Name",
+    "job": "Job",
+    "jobHint": "One line. Other bots see it.",
+    "publicDesc": "Public description",
+    "publicDescHint": "Other bots read this when they pick a helper. Empty uses the job.",
+    "saved": "Bot saved",
+    "saveFailed": "Fettle did not save the bot",
+    "instructions": "Instructions",
+    "instructionsSaved": "Instructions saved as a new version",
+    "saveVersion": "Save as new version",
+    "version": "Version {rev}",
+    "versions": "Version history",
+    "versionsFailed": "Fettle cannot load the versions",
+    "noVersions": "No versions yet.",
+    "rev": "v{rev}",
+    "byPerson": "by a person",
+    "byBot": "by the bot",
+    "current": "Current",
+    "view": "Show",
+    "hide": "Hide",
+    "restore": "Restore",
+    "restored": "Version {rev} is current again",
+    "restoreFailed": "Fettle did not restore the version",
+    "emptyInstructions": "(empty)",
+    "memory": "Memory",
+    "memoryBody": "MEMORY.md holds the facts this bot keeps between chats. The bot reads it at the start of each run.",
+    "openChat": "Open the chat",
+    "loadFailed": "Fettle cannot load this bot",
+    "bySystem": "by Fettle"
+  },
+  "settings": {
+    "nav": "Settings pages",
+    "tabs": {
+      "models": "Models",
+      "vault": "Vault",
+      "space": "Space",
+      "usage": "Cost",
+      "audit": "Audit log",
+      "admin": "Instance"
+    },
+    "ownerOnly": {
+      "title": "Only the owner can change settings",
+      "body": "Ask the owner of this space for access."
+    }
+  },
+  "space": {
+    "title": "Space",
+    "name": "Space name",
+    "timeZone": "Time zone",
+    "timeZoneHint": "Routines and dates use this time zone.",
+    "saved": "Space saved",
+    "saveFailed": "Fettle did not save the space",
+    "memory": "Shared memory",
+    "memoryBody": "All bots in this space read the shared memory at the start of each run.",
+    "settings": "Limits and defaults",
+    "settingsFailed": "Fettle cannot load the settings",
+    "isDefault": "default value",
+    "revision": "revision {rev}",
+    "settingSaved": "{key} saved",
+    "settingFailed": "Fettle did not save the setting",
+    "needNumber": "Type a number.",
+    "history": "Show the history of {key}",
+    "historyTitle": "Change history",
+    "historyFailed": "Fettle cannot load the history",
+    "noHistory": "No changes yet.",
+    "defaultValue": "default"
+  },
+  "usage": {
+    "title": "Cost",
+    "by": "Group the cost by",
+    "range": "Time range",
+    "days": "Last {n} days",
+    "loadFailed": "Fettle cannot load the cost",
+    "empty": {
+      "title": "No cost in this range",
+      "body": "Model calls and computer time show here."
+    },
+    "none": "None",
+    "total": "Total",
+    "dims": {
+      "day": "Day",
+      "month": "Month",
+      "bot": "Bot",
+      "run": "Run",
+      "step": "Step",
+      "role": "Role",
+      "model": "Model"
+    },
+    "col": {
+      "calls": "Calls",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "time": "Time",
+      "cost": "Cost"
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "body": "Each change in this space writes one line here. Nobody can change this log.",
+    "filter": "Filter by action",
+    "placeholder": "bot.update",
+    "loadFailed": "Fettle cannot load the audit log",
+    "empty": "No entries match.",
+    "details": "Details ({n})",
+    "hideDetails": "Hide details",
+    "actor": {
+      "user": "Person",
+      "bot": "Bot",
+      "system": "Fettle"
+    }
+  },
+  "admin": {
+    "title": "Telemetry",
+    "toggle": "Send anonymous counts",
+    "stateOn": "On. Fettle sends the counts below once a day.",
+    "stateOff": "Off. Fettle sends nothing.",
+    "endpoint": "Address:",
+    "fields": "What Fettle sends",
+    "fieldsBody": "These are all the fields. The values are the counts that Fettle sends now.",
+    "on": "Telemetry is on",
+    "off": "Telemetry is off",
+    "saveFailed": "Fettle did not change telemetry",
+    "loadFailed": "Fettle cannot load telemetry",
+    "adminOnly": "Only an instance admin can see this page."
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Activity, FileText, Moon, Repeat, Settings, Sun } from "lucide-react";
+import { Activity, Moon, Settings, Sun } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -81,12 +81,6 @@ export function CommandPalette({
         <CommandGroup heading={t("palette.go")}>
           <CommandItem onSelect={() => go({ kind: "page", page: "runs" })}>
             <Activity aria-hidden /> {t("shell.runs")}
-          </CommandItem>
-          <CommandItem onSelect={() => go({ kind: "page", page: "files" })}>
-            <FileText aria-hidden /> {t("shell.files")}
-          </CommandItem>
-          <CommandItem onSelect={() => go({ kind: "page", page: "routines" })}>
-            <Repeat aria-hidden /> {t("shell.routines")}
           </CommandItem>
           {isOwner && (
             <CommandItem onSelect={() => go({ kind: "page", page: "settings" })}>
