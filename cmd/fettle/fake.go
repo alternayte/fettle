@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	fakemcp "github.com/alternayte/fettle/internal/fakes/mcp"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 	fakepush "github.com/alternayte/fettle/internal/fakes/push"
 	"github.com/alternayte/fettle/internal/fakes/web"
@@ -20,6 +21,9 @@ import (
 
 func init() {
 	register("fake serve", "Run the test fakes (fake model) for end-to-end tests", runFakeServe)
+	register("fake mcp-stdio", "Run the fake MCP server fakemail on stdin and stdout", func(ctx context.Context, _ []string) error {
+		return (&fakemcp.Mail{ShowHost: true}).ServeStdio(ctx)
+	})
 }
 
 func runFakeServe(ctx context.Context, args []string) error {

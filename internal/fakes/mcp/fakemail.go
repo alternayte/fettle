@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -32,6 +33,8 @@ type Mail struct {
 	HeaderKey string
 	// URL is the public base URL of the HTTP handler, for the resource metadata.
 	URL string
+	// ShowHost adds the host name to list_inbox, so a test sees where the server runs.
+	ShowHost bool
 }
 
 // Calls returns the recorded calls.
@@ -68,7 +71,12 @@ func (m *Mail) Server(account func(ctx context.Context) string) *mcp.Server {
 	}
 	add(&mcp.Tool{Name: "list_inbox", Description: "List the newest emails of the inbox.", InputSchema: obj(`"limit":{"type":"integer"}`), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(map[string]any) string {
-			return "1. From ana@acme.test: The Q3 numbers are ready.\n2. From ben@acme.test: Lunch on Friday?\n3. From noreply@shop.test: Your order shipped."
+			out := "1. From ana@acme.test: The Q3 numbers are ready.\n2. From ben@acme.test: Lunch on Friday?\n3. From noreply@shop.test: Your order shipped."
+			if m.ShowHost {
+				h, _ := os.Hostname()
+				out += "\nServed by host " + h + "."
+			}
+			return out
 		})
 	add(&mcp.Tool{Name: "send_email", Description: "Send an email.", InputSchema: obj(`"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}`, "to", "subject", "body")},
 		func(a map[string]any) string { return fmt.Sprintf("Sent to %v.", a["to"]) })
