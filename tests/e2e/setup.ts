@@ -42,10 +42,12 @@ export default async function setup() {
   const bin = resolve(process.env.FETTLE_BIN ?? "../../bin/fettle");
   const fakesBin = resolve(process.env.FETTLE_FAKES_BIN ?? "../../bin/fettle-fakes");
   if (!existsSync(bin) || !existsSync(fakesBin)) throw new Error("build bin/fettle and bin/fettle-fakes first: just e2e");
-  const fake = spawn(fakesBin, ["fake", "serve", "--model-addr", "127.0.0.1:0", "--push-addr", "127.0.0.1:0", "--scripts", resolve("scripts")], { stdio: ["ignore", "pipe", "pipe"] });
+  const fake = spawn(fakesBin, ["fake", "serve", "--model-addr", "127.0.0.1:0", "--push-addr", "127.0.0.1:0", "--mcp-addr", "127.0.0.1:0", "--scripts", resolve("scripts")], { stdio: ["ignore", "pipe", "pipe"] });
   const pushURLp = waitLine(fake, /FAKE_PUSH_URL=(\S+)/, 20_000);
+  const mcpURLp = waitLine(fake, /FAKE_MCP_URL=(\S+)/, 20_000);
   const fakeURL = await waitLine(fake, /FAKE_MODEL_URL=(\S+)/, 20_000);
   const pushURL = await pushURLp;
+  const mcpURL = await mcpURLp;
   const data = mkdtempSync(join(tmpdir(), "fettle-e2e-"));
   const sites = fixtureSites();
   const server = spawn(bin, ["serve", "--data", data, "--addr", `127.0.0.1:${PORT}`], {
@@ -78,7 +80,7 @@ export default async function setup() {
   for (const role of ["owner", "summarizer"]) {
     await api("PUT", `/spaces/${space}/model-roles/${role}`, { targets: [{ provider_id: p.id, model: "fake/large", price_in: 3, price_out: 15, context_window: 128000 }] });
   }
-  writeFileSync(STATE, JSON.stringify({ url: `http://127.0.0.1:${PORT}`, token, space, data, fakeURL, pushURL, pids: [server.pid, fake.pid], containers: sites.containers }));
+  writeFileSync(STATE, JSON.stringify({ url: `http://127.0.0.1:${PORT}`, token, space, data, fakeURL, pushURL, mcpURL, pids: [server.pid, fake.pid], containers: sites.containers }));
   server.unref();
   fake.unref();
 }

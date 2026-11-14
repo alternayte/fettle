@@ -2,7 +2,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { STATE } from "./setup";
 
-export type State = { url: string; token: string; space: string; data: string; fakeURL: string; pushURL: string };
+export type State = { url: string; token: string; space: string; data: string; fakeURL: string; pushURL: string; mcpURL: string };
 
 export const state = (): State => JSON.parse(readFileSync(STATE, "utf8"));
 

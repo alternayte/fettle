@@ -32,6 +32,7 @@ func runFakeServe(ctx context.Context, args []string) error {
 	scripts := fs.String("scripts", "", "folder with extra YAML scripts")
 	webAddr := fs.String("web-addr", "", "listen address of the fixture web server (docs.test, shop.test, evil.test, slow.test)")
 	pushAddr := fs.String("push-addr", "", "listen address of the push service mock")
+	mcpAddr := fs.String("mcp-addr", "", "listen address of fakemail over Streamable HTTP with the key acme-mail-key-9901")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -49,6 +50,17 @@ func runFakeServe(ctx context.Context, args []string) error {
 	fmt.Printf("FAKE_MODEL_URL=http://%s/v1\n", ln.Addr())
 	srv := &http.Server{Handler: f}
 	go func() { _ = srv.Serve(ln) }()
+	if *mcpAddr != "" {
+		ml, err := net.Listen("tcp", *mcpAddr)
+		if err != nil {
+			return err
+		}
+		mail := &fakemcp.Mail{HeaderKey: "acme-mail-key-9901", URL: "http://" + ml.Addr().String()}
+		fmt.Printf("FAKE_MCP_URL=%s/mcp\n", mail.URL)
+		ms := &http.Server{Handler: mail.Handler()}
+		go func() { _ = ms.Serve(ml) }()
+		defer func() { _ = ms.Close() }()
+	}
 	if *pushAddr != "" {
 		pl, err := net.Listen("tcp", *pushAddr)
 		if err != nil {

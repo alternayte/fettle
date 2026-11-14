@@ -58,6 +58,8 @@ export const keys = {
   computerProviders: (s: string) => ["s", s, "computer-providers"] as const,
   policy: (s: string) => ["s", s, "policy"] as const,
   routines: (s: string) => ["s", s, "routines"] as const,
+  connectors: (s: string) => ["s", s, "connectors"] as const,
+  catalog: ["connector-catalog"] as const,
   routineRuns: (s: string, r: string) => ["s", s, "routines", r, "runs"] as const,
 };
 
@@ -648,5 +650,120 @@ export function useRunRoutine() {
     mutationFn: (id: string) =>
       must(api.POST("/api/v1/spaces/{space}/routines/{routine}/run", { params: { path: { space, routine: id } } })),
     onSuccess: (_, id) => qc.invalidateQueries({ queryKey: keys.routineRuns(space, id) }),
+  });
+}
+
+// ---------------------------------------------------------------- connectors
+
+export function useConnectors() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.connectors(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/connectors", { params: { path: { space } } }))).connectors ?? [],
+  });
+}
+
+export function useCatalog() {
+  return useQuery({
+    queryKey: keys.catalog,
+    staleTime: Infinity,
+    queryFn: async () => (await must(api.GET("/api/v1/connectors/catalog"))).connectors ?? [],
+  });
+}
+
+export type NewConnector = {
+  name: string;
+  url?: string;
+  kind?: "mcp_remote" | "mcp_stdio";
+  command?: string[];
+  auth?: "none" | "oauth" | "header";
+  header_name?: string;
+  icon?: string;
+};
+
+export function useCreateConnector() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: NewConnector) =>
+      must(api.POST("/api/v1/spaces/{space}/connectors", { params: { path: { space } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export function useDeleteConnector() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (id: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/connectors/{connector}", { params: { path: { space, connector: id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export function useAddAccount() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, label, value }: { id: string; label: string; value?: string }) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/connectors/{connector}/accounts", {
+          params: { path: { space, connector: id } },
+          body: { label, value },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export function useAuthorize() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, label }: { id: string; label: string }) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/connectors/{connector}/authorize", {
+          params: { path: { space, connector: id } },
+          body: { label },
+        }),
+      ),
+  });
+}
+
+export function useTestConnector() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, account }: { id: string; account: string }) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/connectors/{connector}/test", {
+          params: { path: { space, connector: id } },
+          body: { account_id: account },
+        }),
+      ),
+  });
+}
+
+export function useSetTool() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, tool, cls, disabled }: { id: string; tool: string; cls?: string; disabled: boolean }) =>
+      must(
+        api.PUT("/api/v1/spaces/{space}/connectors/{connector}/tools/{tool}", {
+          params: { path: { space, connector: id, tool } },
+          body: { class: cls as "read" | undefined, disabled },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export function useAddComposio() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (key: string) =>
+      must(api.POST("/api/v1/spaces/{space}/connectors/composio", { params: { path: { space } }, body: { key } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
   });
 }

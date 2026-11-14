@@ -523,7 +523,8 @@
       "computers": "Computers",
       "approvals": "Approvals",
       "tokens": "Access tokens",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "connectors": "Connectors"
     },
     "ownerOnly": {
       "title": "Only the owner can change settings",
@@ -823,5 +824,64 @@
     "needName": "Give the routine a name and a prompt.",
     "needCron": "Give a schedule.",
     "ownerOnly": "Only an owner can change routines."
+  },
+  "connectors": {
+    "intro": "A connector lets bots use another app through MCP. A zone gets an account of a connector as a grant.",
+    "catalog": "Connect an app",
+    "custom": "Any MCP server",
+    "added": "Your connectors",
+    "none": "No connectors yet.",
+    "name": "Name",
+    "url": "MCP URL",
+    "urlHint": "The Streamable HTTP address of the server.",
+    "auth": "Sign-in",
+    "auths": {
+      "oauth": "OAuth sign-in",
+      "header": "Key in a header",
+      "none": "None"
+    },
+    "headerName": "Header name",
+    "add": "Add connector",
+    "connect": "Connect",
+    "stdio": "Command in the computer",
+    "command": "Command",
+    "commandHint": "The program and its arguments, one per line. It runs in the zone computer.",
+    "kinds": {
+      "mcp_remote": "Remote",
+      "mcp_stdio": "In the computer",
+      "composio": "Composio"
+    },
+    "accounts": "Accounts",
+    "noAccounts": "No accounts yet.",
+    "label": "Account name",
+    "key": "Key",
+    "addAccount": "Add account",
+    "signIn": "Sign in to add an account",
+    "test": "Test",
+    "testing": "Listing tools",
+    "tools": "Tools",
+    "off": "Off",
+    "zones": "Zones: {zones}",
+    "noZones": "No zone has this account yet.",
+    "grant": "Give to a zone",
+    "grantAsk": "The change waits for your approval in the chat of your primary bot.",
+    "classes": {
+      "read": "Read",
+      "write_local": "Change in computer",
+      "write_external": "Change outside",
+      "send": "Send",
+      "admin": "Admin"
+    },
+    "classLabel": "Class of {tool}",
+    "disable": "Turn off",
+    "enable": "Turn on",
+    "delete": "Delete connector",
+    "failed": "Fettle could not change the connector",
+    "connected": "The account is connected.",
+    "composio": "Composio",
+    "composioHint": "A Composio key adds Composio's MCP endpoint and its apps.",
+    "composioKey": "Composio key",
+    "composioAdd": "Add Composio",
+    "signInFailed": "The sign-in did not finish: {reason}"
   }
 }
