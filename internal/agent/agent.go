@@ -44,10 +44,12 @@ type Agent struct {
 	// Computer brings up the computer of a bot's zone; ErrNoComputer means wait.
 	Computer func(ctx context.Context, spaceID, botID uuid.UUID) error
 	HTTP     *http.Client
-	Log      *slog.Logger
-	Metrics  Metrics
-	now      func() time.Time
-	changes  map[string]Change
+	// RescueAfter is the River rescue timeout; run jobs use it as their timeout.
+	RescueAfter time.Duration
+	Log         *slog.Logger
+	Metrics     Metrics
+	now         func() time.Time
+	changes     map[string]Change
 }
 
 // Metrics receives counters from the loop.

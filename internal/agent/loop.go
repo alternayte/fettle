@@ -27,8 +27,32 @@ type Worker struct {
 	A *Agent
 }
 
-// Timeout lets a run job run as long as it needs; the fence and the heartbeat protect it.
-func (w *Worker) Timeout(*river.Job[runs.Args]) time.Duration { return -1 }
+// Timeout is the rescue timeout (§7.2). River rescues a job only after its timeout, and a
+// job without a timeout never; a live attempt sends heartbeats, so only a dead one is
+// rescued. The attempt does not stop at this deadline (see Work).
+func (w *Worker) Timeout(*river.Job[runs.Args]) time.Duration {
+	if w.A.RescueAfter > 0 {
+		return w.A.RescueAfter
+	}
+	return 60 * time.Second
+}
+
+// detach returns a context that ends when River cancels the job or stops, but not at the
+// job's deadline: a long model stream or command keeps going while heartbeats show that
+// the attempt lives.
+func detach(ctx context.Context) (context.Context, context.CancelFunc) {
+	inner, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	go func() {
+		select {
+		case <-ctx.Done():
+			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				cancel()
+			}
+		case <-inner.Done():
+		}
+	}()
+	return inner, cancel
+}
 
 // exec is one job attempt of one run.
 type exec struct {
@@ -42,8 +66,26 @@ type exec struct {
 }
 
 // Work runs steps until the run finishes or waits (§7.2).
-func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
+func (w *Worker) Work(rctx context.Context, job *river.Job[runs.Args]) error {
 	a := w.A
+	ctx, cancel := detach(rctx)
+	defer cancel()
+	// Heartbeats keep the rescuer away from a live attempt (§7.2).
+	if a.Runs.Queue != nil {
+		every := w.Timeout(job) / 3
+		go func() {
+			t := time.NewTicker(every)
+			defer t.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+					_ = a.Runs.Queue.Heartbeat(ctx, job.ID)
+				}
+			}
+		}()
+	}
 	run, err := a.Runs.Claim(ctx, job.Args.RunID, job.ID)
 	if err != nil {
 		a.Log.Error("run claim failed; River retries it", "run", job.Args.RunID, "error", err)
@@ -90,15 +132,10 @@ func strp(s string) *string { return &s }
 
 func (x *exec) loop(ctx context.Context) error {
 	a := x.a
-	lastBeat := time.Now()
 	// The journal is read once, then only its new events: this attempt's appends and the
 	// appends of others (steer, cancel, card answers).
 	var evs []*runs.RunEvent
 	for i := 0; ; i++ {
-		if time.Since(lastBeat) > 15*time.Second && a.Runs.Queue != nil {
-			_ = a.Runs.Queue.Heartbeat(ctx, x.jobID)
-			lastBeat = time.Now()
-		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -706,6 +743,10 @@ func (x *exec) compact(ctx context.Context, st *state, window int) (bool, error)
 		return false, nil
 	}
 	older := st.turns[:cut]
+	// Nothing new to compact: only an earlier summary is older than the last turn.
+	if len(older) == 1 && older[0].Kind == "summary" {
+		return false, nil
+	}
 	var b strings.Builder
 	for _, t := range older {
 		switch t.Kind {

@@ -49,7 +49,9 @@ func runFakeServe(ctx context.Context, args []string) error {
 			return err
 		}
 		fmt.Printf("FAKE_WEB_ADDR=%s\n", wl.Addr())
-		ws := &http.Server{Handler: web.New()}
+		wh := web.New()
+		wh.Log = func(line string) { fmt.Println("web " + line) }
+		ws := &http.Server{Handler: wh}
 		go func() { _ = ws.Serve(wl) }()
 		defer func() { _ = ws.Close() }()
 	}

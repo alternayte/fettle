@@ -42,6 +42,8 @@ type Server struct {
 	hits map[string]int
 	// SlowDelay is the delay of slow.test.
 	SlowDelay time.Duration
+	// Log, when set, receives one line per request ("GET shop.test/login").
+	Log func(line string)
 }
 
 // New returns a fixture web server.
@@ -72,6 +74,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.hits[host+r.URL.Path]++
 	s.mu.Unlock()
+	if s.Log != nil {
+		s.Log(r.Method + " " + host + r.URL.Path)
+	}
 	switch host {
 	case "docs.test":
 		s.docs(w, r)
@@ -143,6 +148,7 @@ func (s *Server) shop(w http.ResponseWriter, r *http.Request) {
 <button type="button" id="next" onclick="document.getElementById('out').textContent='next'">Next</button>
 <a href="/account">Account page</a>
 <a href="http://slow.test/">Slow page</a>
+<form method="post" action="http://slow.test/posted" aria-label="Note"><button type="submit">Post note</button></form>
 <label for="card">Card number</label><input id="card" name="cardnumber" autocomplete="cc-number" value="4111111111111111">
 <p id="out">idle</p>`)
 	case "/changing":

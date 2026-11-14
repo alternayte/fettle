@@ -95,6 +95,9 @@ func ConfigFromEnv() Config {
 	if n, err := strconv.Atoi(os.Getenv("FETTLE_WORKERS")); err == nil {
 		c.Workers = n
 	}
+	if n, err := strconv.Atoi(os.Getenv("FETTLE_RESCUE_AFTER_S")); err == nil && n > 0 {
+		c.RescueAfterSeconds = n
+	}
 	return c
 }
 

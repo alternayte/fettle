@@ -60,8 +60,15 @@ func (v *Vault) dataKey(ctx context.Context, spaceID uuid.UUID) (spaceKey, error
 	if ok {
 		return k, nil
 	}
-	repo := drel.NewRepository(v.e, DataKeyMeta)
-	row, err := repo.Where(DataKeys.SpaceID.Eq(spaceID)).OrderBy(DataKeys.KeyVersion.Desc()).FirstOrNil(ctx)
+	var row *DataKey
+	var err error
+	// Inside a transaction, read on its connection: a second connection can deadlock a
+	// full pool (the journal redacts and seals inside its transaction).
+	if tx, ok := drel.FromContext(ctx); ok {
+		row, err = drel.NewTxRepository(tx, DataKeyMeta).Where(DataKeys.SpaceID.Eq(spaceID)).OrderBy(DataKeys.KeyVersion.Desc()).FirstOrNil(ctx)
+	} else {
+		row, err = drel.NewRepository(v.e, DataKeyMeta).Where(DataKeys.SpaceID.Eq(spaceID)).OrderBy(DataKeys.KeyVersion.Desc()).FirstOrNil(ctx)
+	}
 	if err != nil {
 		return spaceKey{}, err
 	}
@@ -268,6 +275,9 @@ func (v *Vault) Delete(ctx context.Context, actor audit.Actor, spaceID, id uuid.
 
 // List returns the items of a space. Callers must not expose Ciphertext or Nonce.
 func (v *Vault) List(ctx context.Context, spaceID uuid.UUID) ([]*VaultItem, error) {
+	if tx, ok := drel.FromContext(ctx); ok {
+		return drel.NewTxRepository(tx, VaultItemMeta).Where(VaultItems.SpaceID.Eq(spaceID)).OrderBy(VaultItems.Name.Asc()).All(ctx)
+	}
 	return drel.NewRepository(v.e, VaultItemMeta).Where(VaultItems.SpaceID.Eq(spaceID)).OrderBy(VaultItems.Name.Asc()).All(ctx)
 }
 

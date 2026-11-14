@@ -35,9 +35,11 @@ func binary(t *testing.T) string {
 
 // server is one running fettle process.
 type server struct {
-	cmd  *exec.Cmd
-	data string
-	logs *strings.Builder
+	cmd      *exec.Cmd
+	data     string
+	logs     *strings.Builder
+	env      []string
+	fixtures map[string]string // fixture site -> container ID
 	*apptest.Env
 }
 

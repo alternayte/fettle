@@ -78,13 +78,8 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 		steps = append(steps, fakemodel.Step{Text: "The report is read."})
 		chief := scripted(e, steps...)
 		runID, _ := e.Post(chief.ChatID, "Read the report.")
-		t.Cleanup(func() {
-			select {
-			case <-block:
-			default:
-				close(block)
-			}
-		})
+		var unblock sync.Once
+		t.Cleanup(func() { unblock.Do(func() { close(block) }) })
 		select {
 		case <-blocked:
 		case <-time.After(30 * time.Second):
@@ -104,8 +99,7 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 			t.Fatal(err)
 		}
 		r := e.WaitRun(runID, "done", "failed")
-		close(block) // the old attempt's append now fails on the stale fence
-		block = make(chan struct{})
+		unblock.Do(func() { close(block) }) // the old attempt's append now fails on the stale fence
 		if r.Line.State != "done" {
 			t.Fatalf("state %s: %s", r.Line.State, r.EventTypes())
 		}
@@ -221,13 +215,8 @@ func TestSCN_RUN_003_QueuesAndWaitsHoldNoWorker(t *testing.T) {
 			}
 			bg = append(bg, r)
 		}
-		t.Cleanup(func() {
-			select {
-			case <-release:
-			default:
-				close(release)
-			}
-		})
+		var releaseOnce sync.Once
+		t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 		waited := make(chan struct{})
 		go func() { started.Wait(); close(waited) }()
 		select {
@@ -276,10 +265,104 @@ func TestSCN_RUN_003_QueuesAndWaitsHoldNoWorker(t *testing.T) {
 			t.Fatalf("after the answer: %d allowed approvals, %d jobs of the run", answered, queued)
 		}
 		e.WaitRun(run, "done")
-		close(release)
-		release = make(chan struct{})
+		releaseOnce.Do(func() { close(release) })
 		for _, b := range bg {
 			e.WaitRun(b.ID().String(), "done")
 		}
 	})
+}
+
+func TestSCN_RUN_002_OneWorkerPerRunAcrossProcesses(t *testing.T) {
+	e1 := apptest.Start(t, "postgres")
+	e2 := apptest.Peer(t, e1)
+	e1.SetupModel("openai-chat", "", 128000)
+	type span struct {
+		app        int
+		start, end time.Time
+	}
+	var mu sync.Mutex
+	spans := map[uuid.UUID][]span{}
+	for i, e := range []*apptest.Env{e1, e2} {
+		i := i
+		e.App.Agent.Tools.Add(agent.Tool{
+			Name: "trace", Description: "Do one step.", Class: envelopes.ClassRead, Schema: json.RawMessage(`{"type":"object"}`),
+			Run: func(_ context.Context, env *agent.ToolEnv, _ json.RawMessage) (agent.ToolOutput, error) {
+				s := span{app: i, start: time.Now()}
+				time.Sleep(20 * time.Millisecond)
+				s.end = time.Now()
+				mu.Lock()
+				spans[env.RunID] = append(spans[env.RunID], s)
+				mu.Unlock()
+				return agent.ToolOutput{Text: "ok"}, nil
+			},
+		})
+	}
+	e1.Fake.AddScript(fakemodel.Script{Name: "trace3", Match: fakemodel.Match{User: "[[trace3]]"}, Steps: []fakemodel.Step{
+		{ToolCalls: calls("trace", nil)}, {ToolCalls: calls("trace", nil)}, {ToolCalls: calls("trace", nil)}, {Text: "Traced."},
+	}})
+	ctx := context.Background()
+	bot := uuid.MustParse(e1.Chief().ID)
+	sp := uuid.MustParse(e1.Space)
+	var ids []uuid.UUID
+	for i := 0; i < 50; i++ {
+		r, err := e1.App.Agent.Submit(ctx, &envelopes.Envelope{SpaceID: sp, Kind: "message", Origin: "user", Requester: envelopes.Requester{Type: "user", ID: e1.Owner}, OwnerBotID: &bot, Goal: fmt.Sprintf("[[trace3]] job %d", i), Capabilities: agent.UserCapabilities})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, r.ID())
+	}
+	deadline := time.Now().Add(90 * time.Second)
+	for _, id := range ids {
+		for {
+			r, err := e1.App.Runs.Find(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if runs.Terminal(r.Status) {
+				if r.Status != runs.StatusDone {
+					t.Fatalf("run %s is %s", id, r.Status)
+				}
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("run %s is still %s", id, r.Status)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	used := map[int]bool{}
+	for _, id := range ids {
+		ss := spans[id]
+		if len(ss) != 3 {
+			t.Fatalf("run %s ran %d steps, want 3", id, len(ss))
+		}
+		for i := range ss {
+			used[ss[i].app] = true
+			for j := range ss {
+				if i != j && ss[i].start.Before(ss[j].end) && ss[j].start.Before(ss[i].end) {
+					t.Fatalf("run %s ran on two workers at once", id)
+				}
+			}
+		}
+		evs, _ := e1.App.Journal.Load(ctx, id)
+		starts := 0
+		for k, ev := range evs {
+			if ev.Seq != int64(k+1) {
+				t.Fatalf("run %s has a gap at %d", id, k+1)
+			}
+			if ev.Type == runs.EvRunStarted {
+				starts++
+			}
+		}
+		if starts != 1 {
+			t.Fatalf("run %s started %d times", id, starts)
+		}
+	}
+	if !used[0] || !used[1] {
+		t.Fatalf("only one process ran the work: %v", used)
+	}
+	r, _ := e1.App.Runs.Find(ctx, ids[0])
+	if _, err := e1.App.Journal.Append(ctx, ids[0], r.Fence-1, nil, runs.New{Type: runs.EvSteer, Data: map[string]string{"text": "late"}}); err != runs.ErrStaleFence {
+		t.Fatalf("an append with a stale fence gave %v", err)
+	}
 }

@@ -144,9 +144,11 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 		interactive = cfg.Workers
 	}
 	jc := jobs.Config{Interactive: interactive, Background: background, Maintenance: 1, Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})), FetchPoll: 100 * time.Millisecond, PeriodicJobs: maintenanceJobs()}
+	jc.RescueAfter = 60 * time.Second
 	if cfg.RescueAfterSeconds > 0 {
 		jc.RescueAfter = time.Duration(cfg.RescueAfterSeconds) * time.Second
 	}
+	a.Agent.RescueAfter = jc.RescueAfter
 	if db.Postgres {
 		a.Queue, err = jobs.NewPostgres(db.PGPool, jc, workers)
 	} else {

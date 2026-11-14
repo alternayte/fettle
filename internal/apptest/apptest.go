@@ -254,3 +254,30 @@ func (r Run) EventTypes() string {
 	}
 	return strings.Join(s, ",")
 }
+
+// Peer starts a second app on the same database and data folder, as a second server process
+// on one PostgreSQL database. It shares the fake model of e.
+func Peer(t testing.TB, e *Env, opts ...Option) *Env {
+	t.Helper()
+	cfg := *e.Cfg
+	cfg.Addr = "127.0.0.1:0"
+	for _, o := range opts {
+		o(&cfg)
+	}
+	ctx := context.Background()
+	a, err := app.New(ctx, &cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Start(ctx, a.Handler()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		sctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = a.Shutdown(sctx)
+	})
+	p := &Env{T: t, App: a, URL: a.URL(), Token: a.LocalToken, Fake: e.Fake, FakeURL: e.FakeURL, Cfg: &cfg}
+	p.loadMe()
+	return p
+}

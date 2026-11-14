@@ -35,7 +35,7 @@ func docker(t *testing.T, args ...string) string {
 
 // fixtureHosts runs the fixture web server (§24.4) in a container on the default bridge and
 // returns the FETTLE_COMPUTER_HOSTS value that resolves the fixture sites inside computers.
-func fixtureHosts(t *testing.T) string {
+func fixtureHosts(t *testing.T) (string, map[string]string) {
 	t.Helper()
 	bin, err := filepath.Abs("../../bin/linux/fettle-fakes")
 	if err != nil {
@@ -47,6 +47,7 @@ func fixtureHosts(t *testing.T) string {
 	// One container per site, so each site has its own address and network allowlists,
 	// which work on addresses, can tell the sites apart.
 	var hosts []string
+	ids := map[string]string{}
 	for _, h := range []string{"docs.test", "shop.test", "evil.test", "slow.test"} {
 		id := docker(t, "run", "-d", "--rm", "--user", "0", "--entrypoint", "/fakes/fettle-fakes",
 			"-v", filepath.Dir(bin)+":/fakes:ro", computerImage(), "fake", "serve", "--web-addr", ":80")
@@ -56,8 +57,9 @@ func fixtureHosts(t *testing.T) string {
 			t.Fatal("the fixture container has no address on the default bridge")
 		}
 		hosts = append(hosts, h+"="+ip)
+		ids[h] = id
 	}
-	return strings.Join(hosts, ",")
+	return strings.Join(hosts, ","), ids
 }
 
 // startComputers runs fettle with the docker provider and the fixture sites. It removes the
@@ -76,10 +78,34 @@ func startComputers(t *testing.T, dialect string, env ...string) *server {
 			}
 		}
 	})
-	env = append([]string{"FETTLE_DEFAULT_PROVIDER=docker", "FETTLE_COMPUTER_IMAGE=" + computerImage(), "FETTLE_COMPUTER_HOSTS=" + fixtureHosts(t)}, env...)
+	hosts, ids := fixtureHosts(t)
+	env = append([]string{"FETTLE_DEFAULT_PROVIDER=docker", "FETTLE_COMPUTER_IMAGE=" + computerImage(), "FETTLE_COMPUTER_HOSTS=" + hosts}, env...)
 	s := startServer(t, dialect, env...)
+	s.env, s.fixtures = env, ids
 	s.SetupModel("openai-chat", "", 128000)
 	return s
+}
+
+// fixtureLog returns the request lines of one fixture site.
+func (s *server) fixtureLog(host string) string {
+	s.T.Helper()
+	out, _ := exec.Command("docker", "logs", s.fixtures[host]).CombinedOutput()
+	return string(out)
+}
+
+// kill ends the server process at once, as a crash does.
+func (s *server) kill() {
+	s.T.Helper()
+	_ = s.cmd.Process.Kill()
+	_ = s.cmd.Wait()
+}
+
+// restart starts a new server process on the same data folder and database.
+func (s *server) restart() *server {
+	s.T.Helper()
+	n := startOn(s.T.(*testing.T), s.data, "sqlite", s.Fake, s.FakeURL, s.env...)
+	n.env, n.fixtures = s.env, s.fixtures
+	return n
 }
 
 // script adds a fake model script that a bot runs when its instructions hold the marker.

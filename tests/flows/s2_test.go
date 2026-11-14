@@ -312,3 +312,113 @@ func TestSCN_CMP_014_BrowserMasksRevalidatesAndNeverAcceptsDialogs(t *testing.T)
 		t.Fatalf("a click whose page does not load does not report confirmed and uncertain parts:\n%v", acts)
 	}
 }
+
+// waitEvent waits until a run has an event type.
+func (s *server) waitEvent(runID, typ string, limit time.Duration) apptest.Run {
+	s.T.Helper()
+	deadline := time.Now().Add(limit)
+	for {
+		r := s.GetRun(runID)
+		if r.HasEvent(typ) {
+			return r
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatalf("run %s has no %s: %s", runID, typ, r.EventTypes())
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// waitState waits for a run state, longer than WaitRun, for rescue tests.
+func (s *server) waitState(runID string, limit time.Duration, states ...string) apptest.Run {
+	s.T.Helper()
+	deadline := time.Now().Add(limit)
+	for {
+		r := s.GetRun(runID)
+		for _, st := range states {
+			if r.Line.State == st {
+				return r
+			}
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatalf("run %s is %s: %s", runID, r.Line.State, r.EventTypes())
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+func TestSCN_RUN_004_KilledProcessResumesFromJournal(t *testing.T) {
+	s := startComputers(t, "sqlite", "FETTLE_RESCUE_AFTER_S=2")
+	marker := "rescue-read"
+	s.script(marker,
+		fakemodel.Step{ToolCalls: call("exec", map[string]any{"command": "echo first > first.txt"})},
+		fakemodel.Step{ToolCalls: call("browser_navigate", map[string]any{"url": "http://slow.test/"})},
+		fakemodel.Step{Text: "The slow page loaded."})
+	chief := s.Chief()
+	s.instruct(chief.ID, marker)
+	run, _ := s.Post(chief.ChatID, "Open the slow page.")
+	r := s.waitEvent(run, "tool_result", 60*time.Second)
+	time.Sleep(time.Second) // the navigate is in flight
+	before := len(r.Events)
+	s.kill()
+	s2 := s.restart()
+	r = s2.waitState(run, 3*time.Minute, "done", "failed", "escalated")
+	if r.Line.State != "done" {
+		t.Fatalf("state %s: %s", r.Line.State, r.EventTypes())
+	}
+	if strings.Count(r.EventTypes(), "run_started") != 1 || strings.Count(r.EventTypes(), "model_turn") != 3 || strings.Count(r.EventTypes(), "tool_intent") != 1 {
+		t.Fatalf("finished steps repeated: %s", r.EventTypes())
+	}
+	if len(r.Events) <= before {
+		t.Fatalf("the run did not continue: %s", r.EventTypes())
+	}
+	n := 0
+	for _, q := range s2.Fake.Requests() {
+		if strings.Contains(q.System, "[[script:"+marker+"]]") {
+			n++
+		}
+	}
+	if n != 3 {
+		t.Fatalf("the fake model got %d requests, want 3 (no repeat)", n)
+	}
+}
+
+func TestSCN_RUN_005_UncertainSendIsNeverRepeated(t *testing.T) {
+	s := startComputers(t, "sqlite", "FETTLE_RESCUE_AFTER_S=2")
+	s.neverMode()
+	marker := "uncertain-post"
+	s.script(marker,
+		fakemodel.Step{ToolCalls: call("browser_navigate", map[string]any{"url": "http://shop.test/actions"})},
+		fakemodel.Step{ToolCalls: call("browser_act", map[string]any{"ref": "e7", "action": "click"})},
+		fakemodel.Step{Text: "Posted."})
+	chief := s.Chief()
+	s.instruct(chief.ID, marker)
+	run, _ := s.Post(chief.ChatID, "Post the note.")
+	r := s.waitEvent(run, "tool_intent", 60*time.Second)
+	for _, ev := range r.Events {
+		if ev.Type == "tool_intent" && !strings.Contains(string(ev.Data), `"class":"send"`) {
+			t.Fatalf("the post click is not class send: %s", ev.Data)
+		}
+	}
+	time.Sleep(1500 * time.Millisecond) // the click ran; agentd waits for the slow page
+	s.kill()
+	s2 := s.restart()
+	r = s2.waitEvent(run, "tool_uncertain", 3*time.Minute)
+	r = s2.waitState(run, 30*time.Second, "waiting")
+	if strings.Contains(r.EventTypes(), "tool_result") {
+		t.Fatalf("the uncertain action has a result: %s", r.EventTypes())
+	}
+	var card map[string]any
+	for _, m := range s2.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "uncertain" {
+			card = c
+		}
+	}
+	if card == nil || card["status"] != "pending" || card["title"] != "Uncertain action" {
+		t.Fatalf("no pending Uncertain action card: %v", card)
+	}
+	time.Sleep(3 * time.Second)
+	if n := strings.Count(s2.fixtureLog("slow.test"), "POST slow.test/posted"); n != 1 {
+		t.Fatalf("the post reached the site %d times, want 1", n)
+	}
+}
