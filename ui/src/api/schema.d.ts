@@ -872,7 +872,8 @@ export interface components {
     };
     "Answer-cardRequest": {
       /** @enum {string} */
-      action: "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done";
+      action:
+        "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done" | "dismiss";
       value?: string;
     };
     Attachment: {

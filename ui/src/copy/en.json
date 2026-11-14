@@ -89,7 +89,8 @@
       "uncertain": "Check needed",
       "takeover": "Takeover",
       "turn_limit": "Turn limit",
-      "change": "Change"
+      "change": "Change",
+      "warning": "Warning"
     },
     "approval": {
       "tool": "Tool",
@@ -124,6 +125,9 @@
     "change": {
       "allow": "Allow",
       "deny": "Deny"
+    },
+    "warning": {
+      "dismiss": "Dismiss"
     }
   },
   "run": {

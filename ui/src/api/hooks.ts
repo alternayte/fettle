@@ -213,7 +213,7 @@ export function postMessage(space: string, chat: string, body: string) {
 }
 
 export type CardAction =
-  "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done";
+  "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done" | "dismiss";
 
 export function answerCard(space: string, card: string, action: CardAction, value?: string) {
   return must(

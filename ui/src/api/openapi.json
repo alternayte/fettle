@@ -68,7 +68,8 @@
               "stop",
               "add_budget",
               "done",
-              "not_done"
+              "not_done",
+              "dismiss"
             ],
             "type": "string"
           },

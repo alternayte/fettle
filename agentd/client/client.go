@@ -45,6 +45,8 @@ func (e *Error) Is(target error) bool {
 		return e.Status == http.StatusUnauthorized
 	case ErrNotFound:
 		return e.Status == http.StatusNotFound
+	case ErrTooLarge:
+		return e.Status == http.StatusRequestEntityTooLarge
 	}
 	return false
 }
@@ -216,7 +218,16 @@ func (c *Client) Stat(ctx context.Context, path string) (Entry, error) {
 // Export returns a tar stream compressed with zstd of a workspace folder.
 // The caller closes it. exclude adds patterns to the default exclusions.
 func (c *Client) Export(ctx context.Context, path string, exclude []string) (io.ReadCloser, error) {
-	body, err := json.Marshal(WorkspaceRequest{Path: path, Exclude: exclude})
+	return c.ExportLimited(ctx, path, exclude, 0)
+}
+
+// ErrTooLarge matches an *Error with status 413: the workspace is over its limit.
+var ErrTooLarge = errors.New("agentd: workspace over its limit")
+
+// ExportLimited streams a workspace like Export, but refuses (ErrTooLarge) when its files
+// hold more than maxBytes after exclusions.
+func (c *Client) ExportLimited(ctx context.Context, path string, exclude []string, maxBytes int64) (io.ReadCloser, error) {
+	body, err := json.Marshal(WorkspaceRequest{Path: path, Exclude: exclude, MaxBytes: maxBytes})
 	if err != nil {
 		return nil, err
 	}

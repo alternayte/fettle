@@ -14,6 +14,7 @@ const icons = {
   takeover: Hand,
   turn_limit: TriangleAlert,
   change: KeyRound,
+  warning: TriangleAlert,
 } as const;
 
 function ActionButton({
@@ -125,6 +126,9 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
               {t("card.change.deny")}
             </ActionButton>
           </>
+        )}
+        {card.kind === "warning" && (
+          <ActionButton onClick={() => onAnswer({ action: "dismiss" })}>{t("card.warning.dismiss")}</ActionButton>
         )}
         {card.kind === "question" &&
           (card.options ?? []).map((o, i) => (

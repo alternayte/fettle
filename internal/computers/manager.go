@@ -58,6 +58,10 @@ type Manager struct {
 	ExtraHosts map[string]string
 	// OnSleep is called after a computer sleeps, so runs that wait for a computer can start.
 	OnSleep func(ctx context.Context)
+	// HomeLimit is the size limit of a bot home in bytes (0: no limit).
+	HomeLimit func(ctx context.Context, spaceID uuid.UUID) int64
+	// OnOversize is called when a bot home is over its limit; the bot posts a warning card.
+	OnOversize func(ctx context.Context, spaceID, botID uuid.UUID, limit int64)
 	// Redact registers a computer token for redaction (SI-01).
 	Redact func(name, value string)
 	now    func() time.Time
@@ -495,6 +499,7 @@ func (m *Manager) Checkpoint(ctx context.Context, computerID uuid.UUID) error {
 	if err != nil {
 		return err
 	}
+	var oversize error
 	for _, p := range paths {
 		owner, kind, botID := z.ID().String(), "zone_shared", (*uuid.UUID)(nil)
 		zoneID := z.ID()
@@ -506,12 +511,22 @@ func (m *Manager) Checkpoint(ctx context.Context, computerID uuid.UUID) error {
 			owner, kind, botID = id.String(), "bot_home", &id
 		}
 		if err := m.checkpointPath(ctx, z, lv, p, owner, kind, botID, &zoneID); err != nil {
+			if errors.Is(err, ErrOversize) {
+				oversize = err // the other homes still get their checkpoint
+				continue
+			}
 			return err
 		}
 	}
-	_, err = m.E.Exec(ctx, "UPDATE computers SET workspace_rev = workspace_rev + 1 WHERE id = $1", computerID)
-	return err
+	if _, err = m.E.Exec(ctx, "UPDATE computers SET workspace_rev = workspace_rev + 1 WHERE id = $1", computerID); err != nil {
+		return err
+	}
+	return oversize
 }
+
+// ErrOversize means a bot home is over its size limit: its checkpoints pause and the
+// computer keeps running (§10.3).
+var ErrOversize = errors.New("a bot home is over its size limit")
 
 func (m *Manager) checkpointPath(ctx context.Context, z *zones.Zone, lv *live, path, owner, kind string, botID, zoneID *uuid.UUID) error {
 	ws, err := m.workspace(ctx, owner, kind)
@@ -530,7 +545,17 @@ func (m *Manager) checkpointPath(ctx context.Context, z *zones.Zone, lv *live, p
 			return err
 		}
 	}
-	rc, err := lv.client.Export(ctx, path, nil)
+	var limit int64
+	if kind == "bot_home" && m.HomeLimit != nil {
+		limit = m.HomeLimit(ctx, z.SpaceID)
+	}
+	rc, err := lv.client.ExportLimited(ctx, path, nil, limit)
+	if errors.Is(err, client.ErrTooLarge) {
+		if m.OnOversize != nil && botID != nil {
+			m.OnOversize(ctx, z.SpaceID, *botID, limit)
+		}
+		return fmt.Errorf("%w: %s", ErrOversize, path)
+	}
 	if err != nil {
 		return fmt.Errorf("export %s: %w", path, err)
 	}

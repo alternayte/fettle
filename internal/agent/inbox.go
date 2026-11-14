@@ -139,6 +139,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"question":   {"answer"},
 		"takeover":   {"done"},
 		"change":     {"allow", "deny"},
+		"warning":    {"dismiss"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {

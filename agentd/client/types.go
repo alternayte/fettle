@@ -100,6 +100,14 @@ type ListReply struct {
 type WorkspaceRequest struct {
 	Path    string   `json:"path"`
 	Exclude []string `json:"exclude,omitempty"`
+	// MaxBytes refuses an export whose files, after exclusions, hold more bytes (413).
+	MaxBytes int64 `json:"max_bytes,omitempty"`
+}
+
+// TooLarge is the reply of an export over MaxBytes.
+type TooLarge struct {
+	Error string `json:"error"`
+	Bytes int64  `json:"bytes"`
 }
 
 // Manifest is the reply of POST /v1/workspace/manifest. Files maps a path

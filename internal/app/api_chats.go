@@ -236,7 +236,7 @@ func (a *App) registerChats(api huma.API) {
 		SpacePath
 		Card string `path:"card"`
 		Body struct {
-			Action string `json:"action" enum:"allow,always,deny,answer,continue,stop,add_budget,done,not_done"`
+			Action string `json:"action" enum:"allow,always,deny,answer,continue,stop,add_budget,done,not_done,dismiss"`
 			Value  string `json:"value,omitempty" maxLength:"2000"`
 		}
 	}) (*struct{ Body agent.MessageView }, error) {

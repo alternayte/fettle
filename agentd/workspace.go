@@ -143,6 +143,25 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, req.Path, err)
 		return
 	}
+	if req.MaxBytes > 0 {
+		var total int64
+		err := s.walkWorkspace(rel, ex, func(_, _ string, d fs.DirEntry) error {
+			if d.Type().IsRegular() {
+				if info, err := d.Info(); err == nil {
+					total += info.Size()
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			s.fail(w, req.Path, err)
+			return
+		}
+		if total > req.MaxBytes {
+			writeJSON(w, http.StatusRequestEntityTooLarge, client.TooLarge{Error: "the workspace is larger than its limit", Bytes: total})
+			return
+		}
+	}
 	w.Header().Set("Content-Type", "application/zstd")
 	w.WriteHeader(http.StatusOK)
 	zw, err := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedDefault))

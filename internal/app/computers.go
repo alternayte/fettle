@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +14,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/alternayte/fettle/internal/agent"
+	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/computers"
 	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/alternayte/fettle/internal/providers/docker"
@@ -99,8 +101,10 @@ func (a *App) setupComputers(ctx context.Context) {
 			}
 			return defaultMaxRunning()
 		},
-		Redact:  func(name, v string) { a.Vault.Redactor.RegisterGlobal(name, v) },
-		OnSleep: a.wakeComputerWaiters,
+		Redact:     func(name, v string) { a.Vault.Redactor.RegisterGlobal(name, v) },
+		HomeLimit:  a.homeLimit,
+		OnOversize: a.warnOversize,
+		OnSleep:    a.wakeComputerWaiters,
 	})
 	a.Zones.CheckProvider = a.Computers.CheckProvider
 	a.Agent.Computer = func(ctx context.Context, spaceID, botID uuid.UUID) error {
@@ -163,4 +167,41 @@ func maintenanceJobs() []*river.PeriodicJob {
 	return []*river.PeriodicJob{river.NewPeriodicJob(river.PeriodicInterval(time.Minute), func() (river.JobArgs, *river.InsertOpts) {
 		return MaintenanceArgs{}, &river.InsertOpts{Queue: jobs.Maintenance}
 	}, &river.PeriodicJobOpts{RunOnStart: true})}
+}
+
+func init() {
+	settings.Register(settings.Def{Key: "workspaces.home_limit_gib", Scope: "space", Default: 5, Doc: "Size limit of one bot home in GiB. Over it, checkpoints pause."})
+}
+
+// homeLimit returns the bot home limit in bytes (§10.3).
+func (a *App) homeLimit(ctx context.Context, spaceID uuid.UUID) int64 {
+	gib := a.Settings.Float(ctx, &spaceID, "workspaces.home_limit_gib")
+	if gib <= 0 {
+		return 0
+	}
+	return int64(gib * float64(1<<30))
+}
+
+// warnOversize posts one warning card in the bot's direct chat while its home is over the
+// limit; the computer keeps running and its checkpoints pause (§10.3).
+func (a *App) warnOversize(ctx context.Context, spaceID, botID uuid.UUID, limit int64) {
+	chat, err := a.Chats.DirectFor(ctx, spaceID, botID)
+	if err != nil {
+		return
+	}
+	var n int
+	_ = a.DB.Engine.QueryRow(ctx, `SELECT COUNT(*) FROM messages WHERE chat_id = $1 AND card LIKE $2 AND card LIKE $3`,
+		chat.ID(), `%"kind":"warning"%`, `%"status":"pending"%`).Scan(&n)
+	if n > 0 {
+		return
+	}
+	card := chats.Card{ID: uuid.NewString(), Kind: "warning", Status: "pending", Title: "My files are too large to save",
+		Detail: fmt.Sprintf("My home is over %.0f GiB, so Fettle stopped saving it. My computer keeps running. Delete large files, or raise the limit in Settings.", float64(limit)/float64(1<<30))}
+	msg := &chats.Message{SpaceID: spaceID, ChatID: chat.ID(), AuthorKind: "bot", AuthorID: botID.String(), Card: &card}
+	if err := a.Chats.Insert(ctx, msg, nil); err != nil {
+		a.Log.Warn("oversize card", "error", err)
+		return
+	}
+	a.Chats.Publish(chat.ID(), "message", a.Agent.MessageView(ctx, msg))
+	a.Agent.Notify(ctx, spaceID, "question", card.Title, card.Detail, fmt.Sprintf("/chat/%s?card=%s", chat.ID(), card.ID))
 }

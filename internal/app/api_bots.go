@@ -63,6 +63,8 @@ type botBody struct {
 	PublicDesc   string `json:"public_desc,omitempty" maxLength:"200"`
 	Instructions string `json:"instructions,omitempty" maxLength:"20000"`
 	Avatar       string `json:"avatar,omitempty" maxLength:"16"`
+	// ZoneID places a new bot in a zone (default: personal). Moving a bot later needs a card.
+	ZoneID string `json:"zone_id,omitempty" doc:"Only on create."`
 }
 
 type botsOut struct {
@@ -134,7 +136,16 @@ func (a *App) registerBots(api huma.API) {
 		var b *bots.Bot
 		err = a.DB.Engine.WithTx(ctx, func(ctx context.Context) error {
 			var zoneID *uuid.UUID
-			if z, err := a.Zones.ByName(ctx, in.Space, zones.Personal); err == nil {
+			if in.Body.ZoneID != "" {
+				id, err := uuid.Parse(in.Body.ZoneID)
+				if err != nil {
+					return huma.Error422UnprocessableEntity("zone_id is not valid")
+				}
+				if _, err := a.Zones.Get(ctx, in.Space, id); err != nil {
+					return huma.Error422UnprocessableEntity("The zone is not in this space.")
+				}
+				zoneID = &id
+			} else if z, err := a.Zones.ByName(ctx, in.Space, zones.Personal); err == nil {
 				id := z.ID()
 				zoneID = &id
 			}
