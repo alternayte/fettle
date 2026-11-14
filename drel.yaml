@@ -38,3 +38,9 @@ modules:
   - name: policy
     packages: [./internal/policy]
     migrations: ./internal/policy/migrations/sqlite
+  - name: zones
+    packages: [./internal/zones]
+    migrations: ./internal/zones/migrations/sqlite
+  - name: computers
+    packages: [./internal/computers]
+    migrations: ./internal/computers/migrations/sqlite

@@ -38,3 +38,9 @@ modules:
   - name: policy
     packages: [./internal/policy]
     migrations: ./internal/policy/migrations/postgres
+  - name: zones
+    packages: [./internal/zones]
+    migrations: ./internal/zones/migrations/postgres
+  - name: computers
+    packages: [./internal/computers]
+    migrations: ./internal/computers/migrations/postgres

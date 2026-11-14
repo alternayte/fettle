@@ -13,6 +13,8 @@ import (
 	botslite "github.com/alternayte/fettle/internal/bots/migrations/sqlite"
 	chatspg "github.com/alternayte/fettle/internal/chats/migrations/postgres"
 	chatslite "github.com/alternayte/fettle/internal/chats/migrations/sqlite"
+	computerspg "github.com/alternayte/fettle/internal/computers/migrations/postgres"
+	computerslite "github.com/alternayte/fettle/internal/computers/migrations/sqlite"
 	envelopespg "github.com/alternayte/fettle/internal/envelopes/migrations/postgres"
 	envelopeslite "github.com/alternayte/fettle/internal/envelopes/migrations/sqlite"
 	modelspg "github.com/alternayte/fettle/internal/models/migrations/postgres"
@@ -29,12 +31,14 @@ import (
 	usagelite "github.com/alternayte/fettle/internal/usage/migrations/sqlite"
 	vaultpg "github.com/alternayte/fettle/internal/vault/migrations/postgres"
 	vaultlite "github.com/alternayte/fettle/internal/vault/migrations/sqlite"
+	zonespg "github.com/alternayte/fettle/internal/zones/migrations/postgres"
+	zoneslite "github.com/alternayte/fettle/internal/zones/migrations/sqlite"
 )
 
 // migrationSets returns the embedded migrations of every drel module for one dialect.
 func migrationSets(postgres bool) []fs.FS {
 	if postgres {
-		return []fs.FS{authpg.FS, spacespg.FS, settingspg.FS, auditpg.FS, vaultpg.FS, modelspg.FS, botspg.FS, chatspg.FS, envelopespg.FS, runspg.FS, usagepg.FS, policypg.FS}
+		return []fs.FS{authpg.FS, spacespg.FS, settingspg.FS, auditpg.FS, vaultpg.FS, modelspg.FS, botspg.FS, chatspg.FS, envelopespg.FS, runspg.FS, usagepg.FS, policypg.FS, zonespg.FS, computerspg.FS}
 	}
-	return []fs.FS{authlite.FS, spaceslite.FS, settingslite.FS, auditlite.FS, vaultlite.FS, modelslite.FS, botslite.FS, chatslite.FS, envelopeslite.FS, runslite.FS, usagelite.FS, policylite.FS}
+	return []fs.FS{authlite.FS, spaceslite.FS, settingslite.FS, auditlite.FS, vaultlite.FS, modelslite.FS, botslite.FS, chatslite.FS, envelopeslite.FS, runslite.FS, usagelite.FS, policylite.FS, zoneslite.FS, computerslite.FS}
 }

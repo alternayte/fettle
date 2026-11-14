@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "zone_grants";
+DROP TABLE IF EXISTS "zones";

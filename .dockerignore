@@ -1,0 +1,5 @@
+*
+!go.mod
+!go.sum
+!agentd
+!cmd/fettle-agentd

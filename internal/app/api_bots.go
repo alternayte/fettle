@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/alternayte/fettle/internal/bots"
+	"github.com/alternayte/fettle/internal/zones"
 )
 
 // BotView is a bot.
@@ -128,8 +129,13 @@ func (a *App) registerBots(api huma.API) {
 		}
 		var b *bots.Bot
 		err = a.DB.Engine.WithTx(ctx, func(ctx context.Context) error {
+			var zoneID *uuid.UUID
+			if z, err := a.Zones.ByName(ctx, in.Space, zones.Personal); err == nil {
+				id := z.ID()
+				zoneID = &id
+			}
 			var err error
-			b, err = a.Bots.Create(ctx, actorOf(p), in.Space, bots.Input{Name: in.Body.Name, Job: in.Body.Job, PublicDesc: in.Body.PublicDesc, Instructions: in.Body.Instructions, Avatar: in.Body.Avatar})
+			b, err = a.Bots.Create(ctx, actorOf(p), in.Space, bots.Input{Name: in.Body.Name, Job: in.Body.Job, PublicDesc: in.Body.PublicDesc, Instructions: in.Body.Instructions, Avatar: in.Body.Avatar, ZoneID: zoneID})
 			if err != nil {
 				return err
 			}

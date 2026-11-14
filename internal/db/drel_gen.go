@@ -10,6 +10,7 @@ import (
 	auth "github.com/alternayte/fettle/internal/auth"
 	bots "github.com/alternayte/fettle/internal/bots"
 	chats "github.com/alternayte/fettle/internal/chats"
+	computers "github.com/alternayte/fettle/internal/computers"
 	envelopes "github.com/alternayte/fettle/internal/envelopes"
 	models "github.com/alternayte/fettle/internal/models"
 	policy "github.com/alternayte/fettle/internal/policy"
@@ -18,6 +19,7 @@ import (
 	spaces "github.com/alternayte/fettle/internal/spaces"
 	usage "github.com/alternayte/fettle/internal/usage"
 	vault "github.com/alternayte/fettle/internal/vault"
+	zones "github.com/alternayte/fettle/internal/zones"
 )
 
 type DB struct {
@@ -31,6 +33,9 @@ type DB struct {
 	Chats               *chats.ChatRepository
 	ChatMembers         *chats.ChatMemberRepository
 	Messages            *chats.MessageRepository
+	Computers           *computers.ComputerRepository
+	ProviderRows        *computers.ProviderRowRepository
+	Workspaces          *computers.WorkspaceRepository
 	Envelopes           *envelopes.EnvelopeRepository
 	ModelProviders      *models.ModelProviderRepository
 	ModelRoles          *models.ModelRoleRepository
@@ -45,6 +50,8 @@ type DB struct {
 	UsageEvents         *usage.UsageEventRepository
 	DataKeys            *vault.DataKeyRepository
 	VaultItems          *vault.VaultItemRepository
+	Zones               *zones.ZoneRepository
+	ZoneGrants          *zones.ZoneGrantRepository
 	Modules             Modules
 }
 
@@ -64,6 +71,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		Chats:               &chats.ChatRepository{Repository: drel.NewRepository(engine, chats.ChatMeta)},
 		ChatMembers:         &chats.ChatMemberRepository{Repository: drel.NewRepository(engine, chats.ChatMemberMeta)},
 		Messages:            &chats.MessageRepository{Repository: drel.NewRepository(engine, chats.MessageMeta)},
+		Computers:           &computers.ComputerRepository{Repository: drel.NewRepository(engine, computers.ComputerMeta)},
+		ProviderRows:        &computers.ProviderRowRepository{Repository: drel.NewRepository(engine, computers.ProviderRowMeta)},
+		Workspaces:          &computers.WorkspaceRepository{Repository: drel.NewRepository(engine, computers.WorkspaceMeta)},
 		Envelopes:           &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
 		ModelRoles:          &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
@@ -78,6 +88,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		UsageEvents:         &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
 		DataKeys:            &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
 		VaultItems:          &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
+		Zones:               &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
+		ZoneGrants:          &zones.ZoneGrantRepository{Repository: drel.NewRepository(engine, zones.ZoneGrantMeta)},
 		Modules: Modules{
 			Audit: AuditRepos{
 				AuditEntries: &audit.AuditEntryRepository{Repository: drel.NewRepository(engine, audit.AuditEntryMeta)},
@@ -95,6 +107,11 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Chats:       &chats.ChatRepository{Repository: drel.NewRepository(engine, chats.ChatMeta)},
 				ChatMembers: &chats.ChatMemberRepository{Repository: drel.NewRepository(engine, chats.ChatMemberMeta)},
 				Messages:    &chats.MessageRepository{Repository: drel.NewRepository(engine, chats.MessageMeta)},
+			},
+			Computers: ComputersRepos{
+				Computers:    &computers.ComputerRepository{Repository: drel.NewRepository(engine, computers.ComputerMeta)},
+				ProviderRows: &computers.ProviderRowRepository{Repository: drel.NewRepository(engine, computers.ProviderRowMeta)},
+				Workspaces:   &computers.WorkspaceRepository{Repository: drel.NewRepository(engine, computers.WorkspaceMeta)},
 			},
 			Envelopes: EnvelopesRepos{
 				Envelopes: &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
@@ -126,6 +143,10 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				DataKeys:   &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
 				VaultItems: &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
 			},
+			Zones: ZonesRepos{
+				Zones:      &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
+				ZoneGrants: &zones.ZoneGrantRepository{Repository: drel.NewRepository(engine, zones.ZoneGrantMeta)},
+			},
 		},
 	}, nil
 }
@@ -142,6 +163,9 @@ type TxRepos struct {
 	Chats               *chats.TxChatRepository
 	ChatMembers         *chats.TxChatMemberRepository
 	Messages            *chats.TxMessageRepository
+	Computers           *computers.TxComputerRepository
+	ProviderRows        *computers.TxProviderRowRepository
+	Workspaces          *computers.TxWorkspaceRepository
 	Envelopes           *envelopes.TxEnvelopeRepository
 	ModelProviders      *models.TxModelProviderRepository
 	ModelRoles          *models.TxModelRoleRepository
@@ -156,6 +180,8 @@ type TxRepos struct {
 	UsageEvents         *usage.TxUsageEventRepository
 	DataKeys            *vault.TxDataKeyRepository
 	VaultItems          *vault.TxVaultItemRepository
+	Zones               *zones.TxZoneRepository
+	ZoneGrants          *zones.TxZoneGrantRepository
 	Modules             TxModules
 }
 
@@ -173,6 +199,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		Chats:               &chats.TxChatRepository{TxRepository: drel.NewTxRepository(tx, chats.ChatMeta)},
 		ChatMembers:         &chats.TxChatMemberRepository{TxRepository: drel.NewTxRepository(tx, chats.ChatMemberMeta)},
 		Messages:            &chats.TxMessageRepository{TxRepository: drel.NewTxRepository(tx, chats.MessageMeta)},
+		Computers:           &computers.TxComputerRepository{TxRepository: drel.NewTxRepository(tx, computers.ComputerMeta)},
+		ProviderRows:        &computers.TxProviderRowRepository{TxRepository: drel.NewTxRepository(tx, computers.ProviderRowMeta)},
+		Workspaces:          &computers.TxWorkspaceRepository{TxRepository: drel.NewTxRepository(tx, computers.WorkspaceMeta)},
 		Envelopes:           &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
 		ModelRoles:          &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
@@ -187,6 +216,8 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		UsageEvents:         &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
 		DataKeys:            &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
 		VaultItems:          &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
+		Zones:               &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
+		ZoneGrants:          &zones.TxZoneGrantRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneGrantMeta)},
 		Modules: TxModules{
 			Audit: AuditTxRepos{
 				AuditEntries: &audit.TxAuditEntryRepository{TxRepository: drel.NewTxRepository(tx, audit.AuditEntryMeta)},
@@ -204,6 +235,11 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				Chats:       &chats.TxChatRepository{TxRepository: drel.NewTxRepository(tx, chats.ChatMeta)},
 				ChatMembers: &chats.TxChatMemberRepository{TxRepository: drel.NewTxRepository(tx, chats.ChatMemberMeta)},
 				Messages:    &chats.TxMessageRepository{TxRepository: drel.NewTxRepository(tx, chats.MessageMeta)},
+			},
+			Computers: ComputersTxRepos{
+				Computers:    &computers.TxComputerRepository{TxRepository: drel.NewTxRepository(tx, computers.ComputerMeta)},
+				ProviderRows: &computers.TxProviderRowRepository{TxRepository: drel.NewTxRepository(tx, computers.ProviderRowMeta)},
+				Workspaces:   &computers.TxWorkspaceRepository{TxRepository: drel.NewTxRepository(tx, computers.WorkspaceMeta)},
 			},
 			Envelopes: EnvelopesTxRepos{
 				Envelopes: &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
@@ -234,6 +270,10 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 			Vault: VaultTxRepos{
 				DataKeys:   &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
 				VaultItems: &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
+			},
+			Zones: ZonesTxRepos{
+				Zones:      &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
+				ZoneGrants: &zones.TxZoneGrantRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneGrantMeta)},
 			},
 		},
 	}
@@ -287,6 +327,20 @@ type ChatsTxRepos struct {
 	Chats       *chats.TxChatRepository
 	ChatMembers *chats.TxChatMemberRepository
 	Messages    *chats.TxMessageRepository
+}
+
+// ComputersRepos holds the untracked repositories of the "computers" module.
+type ComputersRepos struct {
+	Computers    *computers.ComputerRepository
+	ProviderRows *computers.ProviderRowRepository
+	Workspaces   *computers.WorkspaceRepository
+}
+
+// ComputersTxRepos holds the tracked repositories of the "computers" module.
+type ComputersTxRepos struct {
+	Computers    *computers.TxComputerRepository
+	ProviderRows *computers.TxProviderRowRepository
+	Workspaces   *computers.TxWorkspaceRepository
 }
 
 // EnvelopesRepos holds the untracked repositories of the "envelopes" module.
@@ -381,6 +435,18 @@ type VaultTxRepos struct {
 	VaultItems *vault.TxVaultItemRepository
 }
 
+// ZonesRepos holds the untracked repositories of the "zones" module.
+type ZonesRepos struct {
+	Zones      *zones.ZoneRepository
+	ZoneGrants *zones.ZoneGrantRepository
+}
+
+// ZonesTxRepos holds the tracked repositories of the "zones" module.
+type ZonesTxRepos struct {
+	Zones      *zones.TxZoneRepository
+	ZoneGrants *zones.TxZoneGrantRepository
+}
+
 // Modules groups the untracked repositories by feature slice, so a slice
 // reaches only its own models.
 type Modules struct {
@@ -388,6 +454,7 @@ type Modules struct {
 	Auth      AuthRepos
 	Bots      BotsRepos
 	Chats     ChatsRepos
+	Computers ComputersRepos
 	Envelopes EnvelopesRepos
 	Models    ModelsRepos
 	Policy    PolicyRepos
@@ -396,6 +463,7 @@ type Modules struct {
 	Spaces    SpacesRepos
 	Usage     UsageRepos
 	Vault     VaultRepos
+	Zones     ZonesRepos
 }
 
 // TxModules groups the tracked repositories by feature slice. Every set is
@@ -405,6 +473,7 @@ type TxModules struct {
 	Auth      AuthTxRepos
 	Bots      BotsTxRepos
 	Chats     ChatsTxRepos
+	Computers ComputersTxRepos
 	Envelopes EnvelopesTxRepos
 	Models    ModelsTxRepos
 	Policy    PolicyTxRepos
@@ -413,6 +482,7 @@ type TxModules struct {
 	Spaces    SpacesTxRepos
 	Usage     UsageTxRepos
 	Vault     VaultTxRepos
+	Zones     ZonesTxRepos
 }
 
 // WithTx runs fn inside a transaction and puts that transaction in the

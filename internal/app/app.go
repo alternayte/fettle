@@ -33,6 +33,7 @@ import (
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
+	"github.com/alternayte/fettle/internal/zones"
 )
 
 // App is one running Fettle instance: storage, services, jobs and the HTTP server.
@@ -57,6 +58,7 @@ type App struct {
 	Models   *models.Service
 	Usage    *usage.Service
 	Policy   *policy.Service
+	Zones    *zones.Service
 	Agent    *agent.Agent
 	Queue    jobs.Queue
 
@@ -123,6 +125,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Models = models.NewService(e, a.Vault, a.Audit, a.HTTP)
 	a.Usage = usage.New(e)
 	a.Policy = policy.New(e, a.Audit)
+	a.Zones = zones.New(e, a.Audit)
 	a.Agent = agent.New(agent.Agent{E: e, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
 	a.Telemetry = NewTelemetry(a)
 
@@ -221,7 +224,12 @@ func (a *App) CreateSpace(ctx context.Context, actor audit.Actor, name, tz strin
 		if err != nil {
 			return err
 		}
-		chief, err := a.Bots.Create(ctx, actor, sp.ID(), bots.Input{Name: "Chief", Job: "Chief of Staff: routes work, answers questions and reports back", Instructions: ChiefInstructions, IsPrimary: true})
+		personal, err := a.Zones.CreateDefaults(ctx, sp.ID())
+		if err != nil {
+			return err
+		}
+		pid := personal.ID()
+		chief, err := a.Bots.Create(ctx, actor, sp.ID(), bots.Input{Name: "Chief", Job: "Chief of Staff: routes work, answers questions and reports back", Instructions: ChiefInstructions, IsPrimary: true, ZoneID: &pid})
 		if err != nil {
 			return err
 		}

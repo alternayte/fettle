@@ -1,0 +1,130 @@
+{
+  "tables": [
+    {
+      "name": "zones",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "provider_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "network",
+          "type": "text",
+          "notNull": true,
+          "check": "network IN ('open','allowlist')"
+        },
+        {
+          "name": "allow_hosts",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "size",
+          "type": "text",
+          "notNull": true,
+          "check": "size IN ('small','browser','desktop')"
+        },
+        {
+          "name": "idle_minutes",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_zones_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "zone_grants",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "zone_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "zones",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('vault_item','connector_account')"
+        },
+        {
+          "name": "target_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_zone_grants",
+          "columns": [
+            "zone_id",
+            "kind",
+            "target_id"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

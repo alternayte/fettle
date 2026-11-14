@@ -1,0 +1,242 @@
+{
+  "tables": [
+    {
+      "name": "computers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "zone_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "zones",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "provider_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "provider_ref",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "state",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "state IN ('none','starting','running','sleeping','stopping','error','quarantined')"
+        },
+        {
+          "name": "agentd_url",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "token_hash",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "cert_pem",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "image_digest",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "workspace_rev",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "last_active_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "error",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_computers_zone",
+          "columns": [
+            "zone_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "providers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('host','docker','applecontainer','kiln','e2b')"
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "config",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "secret_item_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "caps",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "enabled",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "tested_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "test_result",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "name": "workspaces",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "zone_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "owner_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('bot_home','zone_shared')"
+        },
+        {
+          "name": "rev",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "object_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "size",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "sha256",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_workspaces_owner",
+          "columns": [
+            "owner_key",
+            "kind"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}
