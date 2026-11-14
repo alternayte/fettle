@@ -93,12 +93,12 @@ func (openAIChat) body(req Request) map[string]any {
 	if len(req.Tools) > 0 {
 		tools := []map[string]any{}
 		for _, t := range req.Tools {
-			tools = append(tools, map[string]any{"type": "function", "function": map[string]any{"name": t.Name, "description": t.Description, "parameters": json.RawMessage(t.Schema)}})
+			tools = append(tools, map[string]any{"type": "function", "function": map[string]any{"name": t.Name, "description": t.Description, "parameters": t.Schema}})
 		}
 		b["tools"] = tools
 	}
 	if req.Output != nil {
-		b["response_format"] = map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": req.Output.Name, "schema": json.RawMessage(req.Output.Schema), "strict": true}}
+		b["response_format"] = map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": req.Output.Name, "schema": req.Output.Schema, "strict": true}}
 	}
 	return b
 }

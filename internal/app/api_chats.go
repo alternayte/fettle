@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alternayte/fettle/internal/agent"
-	"github.com/alternayte/fettle/internal/chats"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/sse"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/agent"
+	"github.com/alternayte/fettle/internal/chats"
 )
 
 // ChatView is a chat with its bots.

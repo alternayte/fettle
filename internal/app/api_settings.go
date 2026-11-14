@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/auth"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/usage"
-	"github.com/danielgtaylor/huma/v2"
 )
 
 // SettingView is one setting.

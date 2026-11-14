@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alternayte/fettle/internal/vault"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/vault"
 )
 
 // VaultItemView is a vault item without its value (REQ-VLT-002).

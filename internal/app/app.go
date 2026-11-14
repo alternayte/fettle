@@ -15,6 +15,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/riverqueue/river"
+
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/auth"
@@ -29,8 +32,6 @@ import (
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
-	"github.com/google/uuid"
-	"github.com/riverqueue/river"
 )
 
 // App is one running Fettle instance: storage, services, jobs and the HTTP server.

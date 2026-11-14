@@ -5,8 +5,9 @@ import (
 	"crypto/subtle"
 	"net/http"
 
-	"github.com/alternayte/fettle/internal/auth"
 	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/alternayte/fettle/internal/auth"
 )
 
 // SpaceView is a space with the caller's role.

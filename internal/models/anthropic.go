@@ -36,7 +36,7 @@ func (anthropic) body(req Request) map[string]any {
 				blocks = append(blocks, map[string]any{"type": "text", "text": t})
 			}
 			for _, tc := range m.ToolCalls {
-				blocks = append(blocks, map[string]any{"type": "tool_use", "id": tc.ID, "name": tc.Name, "input": json.RawMessage(tc.Args)})
+				blocks = append(blocks, map[string]any{"type": "tool_use", "id": tc.ID, "name": tc.Name, "input": tc.Args})
 			}
 			if len(blocks) > 0 {
 				add("assistant", blocks)
@@ -69,10 +69,10 @@ func (anthropic) body(req Request) map[string]any {
 	}
 	tools := []map[string]any{}
 	for _, t := range req.Tools {
-		tools = append(tools, map[string]any{"name": t.Name, "description": t.Description, "input_schema": json.RawMessage(t.Schema)})
+		tools = append(tools, map[string]any{"name": t.Name, "description": t.Description, "input_schema": t.Schema})
 	}
 	if req.Output != nil {
-		tools = append(tools, map[string]any{"name": outputTool, "description": "Return the answer in this structure.", "input_schema": json.RawMessage(req.Output.Schema)})
+		tools = append(tools, map[string]any{"name": outputTool, "description": "Return the answer in this structure.", "input_schema": req.Output.Schema})
 		b["tool_choice"] = map[string]any{"type": "tool", "name": outputTool}
 	}
 	if len(tools) > 0 {

@@ -50,13 +50,6 @@ func detect(text string) string {
 	return ""
 }
 
-type module struct {
-	Path    string
-	Version string
-	Dir     string
-	Main    bool
-}
-
 func goModules() ([]string, error) {
 	out, err := exec.Command("go", "list", "-deps", "-f", "{{if .Module}}{{.Module.Path}}\t{{.Module.Dir}}\t{{.Module.Main}}{{end}}", "./...").Output()
 	if err != nil {
@@ -89,7 +82,8 @@ func licenseOfDir(dir string) string {
 	}
 	for _, e := range ents {
 		n := strings.ToUpper(e.Name())
-		if e.IsDir() || !(strings.HasPrefix(n, "LICENSE") || strings.HasPrefix(n, "LICENCE") || strings.HasPrefix(n, "COPYING")) {
+		isLicense := strings.HasPrefix(n, "LICENSE") || strings.HasPrefix(n, "LICENCE") || strings.HasPrefix(n, "COPYING")
+		if e.IsDir() || !isLicense {
 			continue
 		}
 		b, err := os.ReadFile(filepath.Join(dir, e.Name()))

@@ -6,6 +6,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/auth"
@@ -17,8 +20,6 @@ import (
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/vault"
-	"github.com/danielgtaylor/huma/v2"
-	"github.com/google/uuid"
 )
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

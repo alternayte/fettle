@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
-	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
+
+	"github.com/alternayte/fettle/internal/jobs"
 )
 
 // Run states (§7.1).

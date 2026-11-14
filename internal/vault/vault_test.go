@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/testenv"
 	"github.com/alternayte/fettle/internal/vault"
-	"github.com/google/uuid"
 )
 
 func newSpace(t *testing.T, e *drel.Engine) uuid.UUID {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/chats"

@@ -15,12 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alternayte/fettle/internal/app"
 	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
 	tclog "github.com/testcontainers/testcontainers-go/log"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/alternayte/fettle/internal/app"
 )
 
 // Dialects lists the storage backends every storage test runs on.

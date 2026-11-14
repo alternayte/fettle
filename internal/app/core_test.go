@@ -237,13 +237,13 @@ func connectProxy(t *testing.T, target string) (string, *atomic.Int64) {
 	var n atomic.Int64
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodConnect || !strings.HasPrefix(r.Host, "fake-model.test:") {
-			http.Error(w, "no", 403)
+			http.Error(w, "no", http.StatusForbidden)
 			return
 		}
 		n.Add(1)
 		up, err := net.Dial("tcp", target)
 		if err != nil {
-			http.Error(w, err.Error(), 502)
+			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
 		hj, _ := w.(http.Hijacker)

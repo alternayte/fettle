@@ -21,7 +21,7 @@ import (
 func sseEvents(ctx context.Context, t *testing.T, url, token string) <-chan [2]string {
 	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose // the reader goroutine closes it
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
-	"github.com/alternayte/fettle/internal/models"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/models"
 )
 
 // ProviderView is a model provider without its key.
@@ -140,7 +142,7 @@ func (a *App) registerModels(api huma.API) {
 		}
 		pr, err := a.Models.Update(ctx, actorOf(p), in.Space, in.Provider, in.Body.input())
 		if err != nil {
-			if err == models.ErrNotFound {
+			if errors.Is(err, models.ErrNotFound) {
 				return nil, apiError(err)
 			}
 			return nil, huma.Error422UnprocessableEntity(err.Error())
@@ -168,7 +170,7 @@ func (a *App) registerModels(api huma.API) {
 		}
 		pr, err := a.Models.Test(ctx, actorOf(p), in.Space, in.Provider, in.Body.Model)
 		if err != nil {
-			if err == models.ErrNotFound {
+			if errors.Is(err, models.ErrNotFound) {
 				return nil, apiError(err)
 			}
 			return nil, huma.Error422UnprocessableEntity(err.Error())
@@ -239,7 +241,7 @@ func (a *App) registerModels(api huma.API) {
 			bot = &id
 		}
 		if err := a.Models.SetRole(ctx, actorOf(p), in.Space, bot, in.Role, in.Body.Targets); err != nil {
-			if err == models.ErrNotFound {
+			if errors.Is(err, models.ErrNotFound) {
 				return nil, huma.Error422UnprocessableEntity("a target names a provider that does not exist")
 			}
 			return nil, huma.Error422UnprocessableEntity(err.Error())

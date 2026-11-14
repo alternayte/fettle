@@ -9,8 +9,9 @@ import (
 	"sort"
 
 	"github.com/alternayte/drel"
-	"github.com/alternayte/fettle/internal/audit"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/audit"
 )
 
 // Def describes one known setting.

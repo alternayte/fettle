@@ -1,0 +1,25 @@
+version: "2"
+run:
+  build-tags: [contract, e2e, fakes]
+linters:
+  default: standard
+  enable: [misspell, bodyclose, errorlint, gocritic, unconvert]
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (io.ReadCloser).Close
+        - (net.Conn).Close
+        - (*github.com/jackc/pgx/v5.Conn).Close
+        - fmt.Fprintf
+        - fmt.Fprint
+        - fmt.Sscanf
+    gocritic:
+      disabled-checks: [ifElseChain, singleCaseSwitch, appendAssign, exitAfterDefer]
+  exclusions:
+    paths: ["ui/node_modules", "internal/.*/migrations"]
+    generated: lax
+    rules:
+      # readSSE closes the response body that post returns.
+      - path: internal/models/
+        linters: [bodyclose]

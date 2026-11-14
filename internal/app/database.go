@@ -152,7 +152,7 @@ var ErrNotMigrated = errors.New("database migrations are not applied")
 func (d *Database) Pending(ctx context.Context) error {
 	var n int
 	if err := d.Engine.QueryRow(ctx, "SELECT count(*) FROM drel_migrations").Scan(&n); err != nil {
-		return fmt.Errorf("%w: %v", ErrNotMigrated, err)
+		return fmt.Errorf("%w: %w", ErrNotMigrated, err)
 	}
 	want := 0
 	for _, f := range migrationSets(d.Postgres) {

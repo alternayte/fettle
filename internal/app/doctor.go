@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alternayte/fettle/internal/auth"
-	"github.com/alternayte/fettle/internal/models"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/auth"
+	"github.com/alternayte/fettle/internal/models"
 )
 
 // Check is one doctor check (REQ-CORE-006).

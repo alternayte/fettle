@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+	"github.com/riverqueue/river"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/chats"
@@ -16,8 +19,6 @@ import (
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/usage"
-	"github.com/google/uuid"
-	"github.com/riverqueue/river"
 )
 
 // Worker executes run jobs.

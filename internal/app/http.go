@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alternayte/fettle/internal/auth"
-	"github.com/alternayte/fettle/ui"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/alternayte/fettle/internal/auth"
+	"github.com/alternayte/fettle/ui"
 )
 
 // APIPrefix is the prefix of every API route.

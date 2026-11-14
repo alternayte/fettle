@@ -1,7 +1,9 @@
 package auth
 
-import "github.com/alternayte/drel"
-import "github.com/google/uuid"
+import (
+	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+)
 
 // User is a person who signs in. Local mode has one owner row.
 type User struct {

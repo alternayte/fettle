@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/vault"
-	"github.com/google/uuid"
 )
 
 // Errors of the models service.

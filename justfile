@@ -56,15 +56,15 @@ gen-check: gen
 # recipe: fmt
 # Format Go and UI code.
 fmt:
-    gofmt -w cmd internal tools ui/embed.go
-    goimports -w -local github.com/alternayte/fettle cmd internal tools
+    gofmt -w cmd internal tools tests ui/embed.go
+    goimports -l -local github.com/alternayte/fettle cmd internal tools tests | grep -v -e '_drel.go$' -e '_gen.go$' | xargs -r goimports -w -local github.com/alternayte/fettle
     cd ui && bunx prettier --write src scripts
 
 # recipe: fmt-check
 # Fail when Go or UI code is not formatted.
 fmt-check:
-    test -z "$(gofmt -l cmd internal tools ui/embed.go)"
-    test -z "$(goimports -l -local github.com/alternayte/fettle cmd internal tools)"
+    test -z "$(gofmt -l cmd internal tools tests ui/embed.go)"
+    test -z "$(goimports -l -local github.com/alternayte/fettle cmd internal tools tests | grep -v -e '_drel.go$' -e '_gen.go$')"
     cd ui && bunx prettier --check src scripts
 
 # recipe: lint

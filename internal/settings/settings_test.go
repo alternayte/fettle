@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/testenv"
-	"github.com/google/uuid"
 )
 
 func TestSCN_CORE_009_SettingsAreVersioned(t *testing.T) {

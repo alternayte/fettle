@@ -314,7 +314,7 @@ func (s *streamer) openAIResponses(st Step, text string, in, out int64, cost *fl
 func (s *streamer) anthropic(st Step, schema bool, text string, in, out int64) {
 	s.event("message_start", map[string]any{"type": "message_start", "message": map[string]any{"id": "msg_fake", "model": s.model, "role": "assistant", "usage": map[string]any{"input_tokens": in, "output_tokens": 1}}})
 	idx := 0
-	if text != "" && !(schema && st.JSON != nil) {
+	if text != "" && (!schema || st.JSON == nil) {
 		s.event("content_block_start", map[string]any{"type": "content_block_start", "index": idx, "content_block": map[string]any{"type": "text", "text": ""}})
 		for _, w := range words(text) {
 			s.token()

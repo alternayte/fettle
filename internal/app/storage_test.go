@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/app"
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/bots"
@@ -14,7 +16,6 @@ import (
 	"github.com/alternayte/fettle/internal/testenv"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
-	"github.com/google/uuid"
 )
 
 // storageSuite is the storage test suite of SCN-CORE-002. Every case runs on SQLite and PostgreSQL.

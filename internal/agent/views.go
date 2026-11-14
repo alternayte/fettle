@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/runs"
-	"github.com/google/uuid"
 )
 
 // MessageView is a chat message as the API and the stream show it.

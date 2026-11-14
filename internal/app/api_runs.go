@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
-	"github.com/alternayte/fettle/internal/agent"
-	"github.com/alternayte/fettle/internal/runs"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/agent"
+	"github.com/alternayte/fettle/internal/runs"
 )
 
 // EventView is one journal event for the timeline. Large payloads show their preview.

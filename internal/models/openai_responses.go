@@ -49,12 +49,12 @@ func (openAIResponses) body(req Request) map[string]any {
 	if len(req.Tools) > 0 {
 		tools := []map[string]any{}
 		for _, t := range req.Tools {
-			tools = append(tools, map[string]any{"type": "function", "name": t.Name, "description": t.Description, "parameters": json.RawMessage(t.Schema)})
+			tools = append(tools, map[string]any{"type": "function", "name": t.Name, "description": t.Description, "parameters": t.Schema})
 		}
 		b["tools"] = tools
 	}
 	if req.Output != nil {
-		b["text"] = map[string]any{"format": map[string]any{"type": "json_schema", "name": req.Output.Name, "schema": json.RawMessage(req.Output.Schema), "strict": true}}
+		b["text"] = map[string]any{"format": map[string]any{"type": "json_schema", "name": req.Output.Name, "schema": req.Output.Schema, "strict": true}}
 	}
 	return b
 }

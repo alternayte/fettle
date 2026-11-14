@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/alternayte/drel"
-	"github.com/alternayte/fettle/internal/objects"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+
+	"github.com/alternayte/fettle/internal/objects"
 )
 
 // Event types (Appendix D).

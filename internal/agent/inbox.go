@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/runs"
-	"github.com/google/uuid"
 )
 
 // UserCapabilities are the classes of an envelope from a user message. spend is never included (SI-08).

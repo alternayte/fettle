@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alternayte/fettle/internal/bots"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/bots"
 )
 
 // BotView is a bot.

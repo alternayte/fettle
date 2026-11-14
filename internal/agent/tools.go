@@ -9,9 +9,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/envelopes"
-	"github.com/google/uuid"
 )
 
 // Tool is one tool that a bot can call.
@@ -96,7 +97,7 @@ var errBadArgs = errors.New("the tool arguments do not match the schema")
 func decode[T any](args json.RawMessage) (T, error) {
 	var v T
 	if err := json.Unmarshal(args, &v); err != nil {
-		return v, fmt.Errorf("%w: %v", errBadArgs, err)
+		return v, fmt.Errorf("%w: %w", errBadArgs, err)
 	}
 	return v, nil
 }

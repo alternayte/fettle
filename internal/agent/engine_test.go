@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/apptest"
 	"github.com/alternayte/fettle/internal/audit"
@@ -16,7 +18,6 @@ import (
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 	"github.com/alternayte/fettle/internal/testenv"
 	"github.com/alternayte/fettle/internal/usage"
-	"github.com/google/uuid"
 )
 
 func setInstructions(e *apptest.Env, botID, text string) {
@@ -133,7 +134,8 @@ func TestSCN_BOT_007_SearchHistoryPages(t *testing.T) {
 			t.Fatalf("page 1 has %d matches: %s", n, out.Text)
 		}
 		var cursor int64
-		fmt.Sscanf(out.Text[strings.Index(out.Text, "next_cursor:"):], "next_cursor: %d", &cursor)
+		_, after, _ := strings.Cut(out.Text, "next_cursor:")
+		fmt.Sscanf(after, " %d", &cursor)
 		out2, err := tool.Run(ctx, env, json.RawMessage(fmt.Sprintf(`{"query":"zebra lamp","limit":6,"cursor":%d}`, cursor)))
 		if err != nil {
 			t.Fatal(err)
