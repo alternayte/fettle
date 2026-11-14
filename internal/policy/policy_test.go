@@ -3,8 +3,9 @@ package policy
 import (
 	"testing"
 
-	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/envelopes"
 )
 
 func rule(effect, tool, site string) *Rule {

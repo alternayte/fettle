@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/alternayte/drel"
-	"github.com/alternayte/fettle/internal/audit"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/audit"
 )
 
 // Default zone names.

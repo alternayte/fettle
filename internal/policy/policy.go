@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/envelopes"
-	"github.com/google/uuid"
 )
 
 // Approval modes (§11.2).

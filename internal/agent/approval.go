@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/policy"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/usage"
-	"github.com/google/uuid"
 )
 
 // argsPreview flattens the top-level arguments for a card, redacted and shortened.
