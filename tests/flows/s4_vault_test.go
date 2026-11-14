@@ -3,9 +3,24 @@
 package flows
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/app"
+	"github.com/alternayte/fettle/internal/audit"
+	fakemcp "github.com/alternayte/fettle/internal/fakes/mcp"
+	fakeoauth "github.com/alternayte/fettle/internal/fakes/oauth"
+	"github.com/alternayte/fettle/internal/objects"
+	"github.com/alternayte/fettle/internal/runs"
+	"github.com/alternayte/fettle/internal/vault"
 
 	"github.com/alternayte/fettle/internal/apptest"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
@@ -78,5 +93,114 @@ func TestSCN_VLT_003_BrokerFillsOnlyGrantedLoginsOnTheirSite(t *testing.T) {
 	)
 	if out := strings.Join(toolResults(run, "fill_login"), "\n"); !strings.Contains(out, "not on the site of this login") {
 		t.Fatalf("agentd filled a login on another site: %s", out)
+	}
+}
+
+func TestSCN_VLT_004_SecretsAreRedactedEverywhere(t *testing.T) {
+	s := startComputers(t, "sqlite", "FETTLE_LOG_LEVEL=debug")
+	as := fakeoauth.New()
+	asrv := httptest.NewServer(as)
+	t.Cleanup(asrv.Close)
+	as.URL = asrv.URL
+	mail := &fakemcp.Mail{OAuth: as}
+	msrv := httptest.NewServer(mail.Handler())
+	t.Cleanup(msrv.Close)
+	mail.URL = msrv.URL
+
+	const secret = "acme-deploy-secret-4471"
+	s.MustDo("POST", s.SP("/vault"), map[string]any{"name": "deploy key", "kind": "secret", "value": secret}, nil)
+	var c struct {
+		ID string `json:"id"`
+	}
+	s.MustDo("POST", s.SP("/connectors"), map[string]any{"name": "fakemail", "url": msrv.URL + "/mcp", "auth": "oauth"}, &c)
+	var start struct {
+		URL string `json:"url"`
+	}
+	s.MustDo("POST", s.SP("/connectors/%s/authorize", c.ID), map[string]any{"label": "work"}, &start)
+	resp, err := http.Get(start.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	oauthToken := as.AccessTokens()[0]
+
+	chief := s.Chief()
+	s.runTool("exec", map[string]any{"command": "true"})
+	zone := s.zoneIDOf("personal")
+	env := docker(t, "ps", "-q", "--filter", "label=fettle.zone="+zone)
+	computerToken := ""
+	for _, kv := range strings.Split(docker(t, "inspect", "-f", "{{range .Config.Env}}{{println .}}{{end}}", strings.Fields(env)[0]), "\n") {
+		if v, ok := strings.CutPrefix(kv, "FETTLE_AGENTD_TOKEN="); ok {
+			computerToken = v
+		}
+	}
+	if computerToken == "" {
+		t.Fatal("no computer token in the container")
+	}
+
+	all := secret + " " + computerToken + " " + oauthToken
+	marker := "leak"
+	s.script(marker,
+		fakemodel.Step{ToolCalls: call("exec", map[string]any{"command": "echo " + all})},
+		fakemodel.Step{Text: "Here they are: " + all + "\n" + strings.Repeat("padding line for a large event\n", 400)})
+	s.instruct(chief.ID, marker)
+	runID, _ := s.Post(chief.ChatID, "Show me the values.")
+	r := s.WaitRun(runID, "done", "failed")
+	raw := []string{secret, computerToken, oauthToken}
+	names := []string{"[secret:deploy key]", "[secret:computer token]", "[secret:fakemail token]"}
+
+	// Events, as the API serves them.
+	var events strings.Builder
+	for _, ev := range r.Events {
+		events.Write(ev.Data)
+	}
+	// Payloads, read back from the object store with the space data key.
+	var payloads strings.Builder
+	cfg := &app.Config{Data: s.data, DB: "sqlite", Mode: app.ModeLocal, ObjectStore: "disk"}
+	_ = cfg.Normalize()
+	db, err := app.OpenDatabase(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	t.Setenv("FETTLE_NO_KEYCHAIN", "1")
+	master, _, err := vault.LoadMasterKey("", s.data, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, _ := objects.NewDisk(filepath.Join(s.data, "objects"))
+	evs, err := runs.NewJournal(db.Engine, store, vault.New(db.Engine, audit.New(db.Engine), master)).Load(context.Background(), uuid.MustParse(runID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := 0
+	for _, ev := range evs {
+		if ev.PayloadKey != nil {
+			stored++
+			payloads.WriteString(ev.Data)
+		}
+	}
+	if stored == 0 {
+		t.Fatal("no event went to the object store")
+	}
+	var chat strings.Builder
+	for _, m := range s.Messages(chief.ChatID) {
+		b, _ := json.Marshal(m)
+		chat.Write(b)
+	}
+	for where, text := range map[string]string{"events": events.String(), "payloads": payloads.String(), "chat": chat.String(), "logs": s.logs.String()} {
+		for _, v := range raw {
+			if strings.Contains(text, v) {
+				t.Fatalf("a raw secret is in the %s", where)
+			}
+		}
+		if where == "logs" {
+			continue
+		}
+		for _, n := range names {
+			if !strings.Contains(text, n) {
+				t.Fatalf("the %s do not show %s", where, n)
+			}
+		}
 	}
 }

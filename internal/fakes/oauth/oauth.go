@@ -166,3 +166,14 @@ func BearerOf(r *http.Request) string {
 	t, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	return t
 }
+
+// AccessTokens returns the access tokens that the server issued.
+func (s *Server) AccessTokens() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]string, 0, len(s.tokens))
+	for t := range s.tokens {
+		out = append(out, t)
+	}
+	return out
+}
