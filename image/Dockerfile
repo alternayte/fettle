@@ -30,7 +30,6 @@ RUN apt-get update \
  && apt-get purge -y gnupg && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
  && useradd --create-home --home-dir /home/fettle --shell /bin/bash --uid 1000 fettle \
- && mkdir -p /home/fettle/bots /home/fettle/shared && chown -R fettle:fettle /home/fettle \
  && rm -f /usr/bin/sudo /usr/bin/su
 COPY --from=agentd /out/fettle-agentd /usr/local/bin/fettle-agentd
 ENV FETTLE_AGENTD_HOME=/home/fettle FETTLE_AGENTD_USER=fettle CHROME_BIN=/usr/bin/chromium

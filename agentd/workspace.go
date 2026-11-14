@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/klauspost/compress/zstd"
 
@@ -281,6 +282,10 @@ func (s *Server) swap(rel, tmp, old string, exists bool) error {
 		return s.root.Rename(tmp, rel)
 	}
 	if err := s.root.Rename(rel, old); err != nil {
+		if errors.Is(err, syscall.EXDEV) {
+			// overlayfs cannot rename a folder from an image layer: replace its entries instead.
+			return s.replaceEntries(rel, tmp)
+		}
 		return err
 	}
 	if err := s.root.Rename(tmp, rel); err != nil {
@@ -465,4 +470,27 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(out.Deleted)
 	writeJSON(w, http.StatusOK, out)
+}
+
+// replaceEntries empties rel and moves the entries of tmp into it, then removes tmp.
+func (s *Server) replaceEntries(rel, tmp string) error {
+	old, err := fs.ReadDir(s.root.FS(), filepath.ToSlash(rel))
+	if err != nil {
+		return err
+	}
+	for _, e := range old {
+		if err := s.root.RemoveAll(filepath.Join(rel, e.Name())); err != nil {
+			return err
+		}
+	}
+	ents, err := fs.ReadDir(s.root.FS(), filepath.ToSlash(tmp))
+	if err != nil {
+		return err
+	}
+	for _, e := range ents {
+		if err := s.root.Rename(filepath.Join(tmp, e.Name()), filepath.Join(rel, e.Name())); err != nil {
+			return err
+		}
+	}
+	return s.root.RemoveAll(tmp)
 }
