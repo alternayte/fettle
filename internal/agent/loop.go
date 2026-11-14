@@ -2,12 +2,12 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/alternayte/drel"
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 
@@ -67,8 +67,8 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
 		a.Log.Info("run attempt stopped: another attempt owns the run", "run", run.ID())
 		return nil
 	}
-	if errors.Is(err, errWaitRace) {
-		return nil // a wake inserted the next job
+	if errors.Is(err, errWaitRace) || errors.Is(err, errParked) {
+		err = nil // parked, or a wake inserted the next job
 	}
 	a.publishRun(context.WithoutCancel(ctx), run.ID())
 	if err != nil && ctx.Err() == nil {
@@ -78,6 +78,9 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
 }
 
 var errWaitRace = errors.New("the run was woken while this attempt was ending")
+
+// errParked ends a job attempt after the run moved to waiting or escalated.
+var errParked = errors.New("the run is parked")
 
 func (x *exec) append(ctx context.Context, up *runs.Update, evs ...runs.New) ([]*runs.RunEvent, error) {
 	return x.a.Journal.Append(ctx, x.run.ID(), x.fence, up, evs...)
@@ -159,17 +162,15 @@ func (x *exec) wait(ctx context.Context, reason string) error {
 // park moves a running run to waiting or escalated. When a wake came in between, the
 // status is no longer running, and the job snoozes to pick up the event (§7.2).
 func (x *exec) park(ctx context.Context, status, reason string) error {
-	return x.a.E.WithTx(ctx, func(ctx context.Context) error {
-		n, err := drel.MustFromContext(ctx).Exec(ctx, "UPDATE runs SET status = $1, wait_reason = $2 WHERE id = $3 AND fence = $4 AND status = $5",
-			status, reason, x.run.ID(), x.fence, runs.StatusRunning)
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			return errWaitRace
-		}
-		return nil
-	})
+	n, err := x.a.E.Exec(ctx, "UPDATE runs SET status = $1, wait_reason = $2 WHERE id = $3 AND fence = $4 AND status = $5",
+		status, reason, x.run.ID(), x.fence, runs.StatusRunning)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errWaitRace
+	}
+	return errParked
 }
 
 // finish appends run_finished and ends the envelope.
@@ -281,6 +282,9 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 	}
 	if x.env.Deadline != nil && a.now().Sub(*x.env.Deadline) >= 15*time.Minute {
 		in.DueAt = x.env.Deadline
+	}
+	if st.sleepUntil != nil && a.now().Sub(*st.sleepUntil) >= 15*time.Minute {
+		in.DueAt = st.sleepUntil
 	}
 	return Assemble(in), nil
 }
@@ -435,7 +439,10 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Args: call.Args, Error: "This tool is not available in this run."}})
 		return err
 	}
-	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData}
+	if call.Name == "sleep_until" {
+		return x.sleepUntil(ctx, call)
+	}
+	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1}
 	class := tool.classOf(ctx, env, call.Args)
 	side := class != envelopes.ClassRead
 	if side || tool.MemoryWrite {
@@ -449,6 +456,20 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		default:
 			proceed, err := x.authorize(ctx, st, tool, class, call)
 			if err != nil || !proceed {
+				return err
+			}
+		}
+	}
+	if tool.NeedsComputer && a.Computer != nil {
+		if err := a.Computer(ctx, x.run.SpaceID, x.run.BotID); err != nil {
+			if errors.Is(err, ErrNoComputer) {
+				return x.waitForComputer(ctx, st)
+			}
+			_, aerr := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Error: "The computer could not start: " + a.Vault.Redactor.String(ctx, x.run.SpaceID, err.Error())}})
+			return aerr
+		}
+		if !st.computer {
+			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerAcquired, Data: map[string]string{"tool": call.Name}}); err != nil {
 				return err
 			}
 		}
@@ -480,6 +501,50 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	}
 	_, aerr := x.append(ctx, nil, runs.New{Type: typ, Data: res})
 	return aerr
+}
+
+// sleepUntil records the timer, schedules the run's next job at that time and parks the run (§7.5).
+func (x *exec) sleepUntil(ctx context.Context, call models.ToolCall) error {
+	a := x.a
+	var in struct {
+		Time   string `json:"time"`
+		Reason string `json:"reason"`
+	}
+	_ = json.Unmarshal(call.Args, &in)
+	until, err := time.Parse(time.RFC3339, strings.TrimSpace(in.Time))
+	if err != nil {
+		_, aerr := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Error: "The time must be RFC 3339 with a zone, for example 2026-11-15T09:00:00+01:00."}})
+		return aerr
+	}
+	until = until.UTC()
+	err = a.E.WithTx(ctx, func(ctx context.Context) error {
+		wake := &until
+		if _, err := x.append(ctx, &runs.Update{WakeAt: &wake}, runs.New{Type: runs.EvSleepUntil, Data: evSleep{CallID: call.ID, Until: until, Reason: in.Reason}},
+			runs.New{Type: runs.EvToolResult, Data: evTool{CallID: call.ID, Tool: call.Name, Class: envelopes.ClassWriteLocal, Result: "Slept until " + until.Format(time.RFC3339) + ".", Origin: OriginTool}}); err != nil {
+			return err
+		}
+		return a.Runs.ScheduleWake(ctx, x.run.ID(), x.queue, until)
+	})
+	if err != nil {
+		return err
+	}
+	return x.park(ctx, runs.StatusWaiting, "timer")
+}
+
+// waitForComputer parks the run until a computer is free. A sleeping computer wakes the
+// oldest waiting run; a timer retries after 30 s as well.
+func (x *exec) waitForComputer(ctx context.Context, st *state) error {
+	a := x.a
+	if !st.computerWait {
+		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerWait, Data: map[string]string{"reason": "Waiting for a free computer"}}); err != nil {
+			return err
+		}
+	}
+	at := a.now().Add(30 * time.Second)
+	if err := a.Runs.ScheduleWake(ctx, x.run.ID(), x.queue, at); err != nil {
+		return err
+	}
+	return x.park(ctx, runs.StatusWaiting, "computer")
 }
 
 // resolveUncertain marks intents without results as uncertain and never repeats them (SI-10).

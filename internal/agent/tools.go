@@ -23,6 +23,9 @@ type Tool struct {
 	Schema      json.RawMessage
 	// HardAsk marks actions that need a card in every mode (§11.2).
 	HardAsk bool
+	// NeedsComputer marks tools that act on the zone's computer; the run gets the computer
+	// before it writes an intent, so a full host makes the run wait instead of fail.
+	NeedsComputer bool
 	// MemoryWrite marks remember and forget (§11.3).
 	MemoryWrite bool
 	// Target returns the site and the recipient that a call touches, for rules.
@@ -55,6 +58,7 @@ type ToolEnv struct {
 	Actor    audit.Actor
 	Origin   string // origin of the run's envelope
 	ReadData bool   // the run already read web, email or connector content
+	Seq      int64  // the journal sequence of this call, for output file names
 }
 
 // Registry holds the built-in tools.

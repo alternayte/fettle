@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/runs"
@@ -57,6 +58,11 @@ type (
 		Summary string `json:"summary,omitempty"`
 		Error   string `json:"error,omitempty"`
 	}
+	evSleep struct {
+		CallID string    `json:"call_id"`
+		Until  time.Time `json:"until"`
+		Reason string    `json:"reason,omitempty"`
+	}
 	evBudget struct {
 		Estimate float64 `json:"estimate_usd"`
 		Left     float64 `json:"left_usd"`
@@ -77,28 +83,31 @@ type (
 
 // state is the run rebuilt from its journal.
 type state struct {
-	events      []*runs.RunEvent
-	started     bool
-	step        string
-	turns       []TurnRecord
-	modelTurns  int
-	extraTurns  int
-	lastSeq     int64
-	lastModel   *evModelTurn
-	pending     []models.ToolCall // calls of the last model turn without a result
-	uncertain   []evTool          // intents without results
-	steers      []string          // steer texts after the last model turn
-	cancelled   bool
-	finished    bool
-	openCard    *evCard // a posted card without an answer
-	answers     []evCard
-	readData    bool
-	summarySeq  int64
-	finalText   string
-	lastMsgID   string
-	budgetHalts int
-	approvals   map[string]string // call ID -> requested, allowed, denied
-	intent      []string          // user items of this run: the goal and steer texts
+	events       []*runs.RunEvent
+	started      bool
+	step         string
+	turns        []TurnRecord
+	modelTurns   int
+	extraTurns   int
+	lastSeq      int64
+	lastModel    *evModelTurn
+	pending      []models.ToolCall // calls of the last model turn without a result
+	uncertain    []evTool          // intents without results
+	steers       []string          // steer texts after the last model turn
+	cancelled    bool
+	finished     bool
+	openCard     *evCard // a posted card without an answer
+	answers      []evCard
+	readData     bool
+	summarySeq   int64
+	finalText    string
+	lastMsgID    string
+	budgetHalts  int
+	approvals    map[string]string // call ID -> requested, allowed, denied
+	intent       []string          // user items of this run: the goal and steer texts
+	sleepUntil   *time.Time        // the last sleep_until time
+	computer     bool              // a computer_acquired event exists
+	computerWait bool              // the last computer event is a wait
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
@@ -182,6 +191,15 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evApproval
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.approvals[d.CallID] = d.Decision
+		case runs.EvSleepUntil:
+			var d evSleep
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			u := d.Until
+			st.sleepUntil = &u
+		case runs.EvComputerAcquired:
+			st.computer, st.computerWait = true, false
+		case runs.EvComputerWait:
+			st.computerWait = true
 		case runs.EvBudgetReached:
 			st.budgetHalts++
 		case runs.EvCancel:

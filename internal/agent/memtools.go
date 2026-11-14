@@ -12,6 +12,16 @@ import (
 
 func (a *Agent) registerMemoryTools() {
 	a.Tools.Add(Tool{
+		Name:        "sleep_until",
+		Description: "Pause this work until a time, then continue. Use an RFC 3339 time with a zone, for example 2026-11-15T09:00:00+01:00.",
+		Class:       envelopes.ClassWriteLocal,
+		Schema:      schema(`{"type":"object","properties":{"time":{"type":"string"},"reason":{"type":"string"}},"required":["time"],"additionalProperties":false}`),
+		// The run loop handles sleep_until, because it parks the run.
+		Run: func(context.Context, *ToolEnv, json.RawMessage) (ToolOutput, error) {
+			return ToolOutput{}, fmt.Errorf("sleep_until runs in the loop")
+		},
+	})
+	a.Tools.Add(Tool{
 		Name:        "remember",
 		Description: "Save one fact in your MEMORY.md. Keep one fact per line. To change a fact, give the old fact in replaces.",
 		Class:       envelopes.ClassWriteLocal,

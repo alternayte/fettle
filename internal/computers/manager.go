@@ -1,0 +1,642 @@
+package computers
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"sync"
+	"time"
+
+	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/agentd"
+	"github.com/alternayte/fettle/agentd/client"
+	"github.com/alternayte/fettle/internal/objects"
+	"github.com/alternayte/fettle/internal/vault"
+	"github.com/alternayte/fettle/internal/zones"
+)
+
+// Computer states (§10.2).
+const (
+	StateNone        = "none"
+	StateStarting    = "starting"
+	StateRunning     = "running"
+	StateSleeping    = "sleeping"
+	StateStopping    = "stopping"
+	StateError       = "error"
+	StateQuarantined = "quarantined"
+)
+
+// ErrNoCapacity means the admission limit is reached; the run waits (§10.2).
+var ErrNoCapacity = errors.New("waiting for a free computer")
+
+// Manager owns the computers of all zones.
+type Manager struct {
+	E       *drel.Engine
+	Zones   *zones.Service
+	Vault   *vault.Vault
+	Objects objects.Store
+	Log     *slog.Logger
+	// Providers by kind; Default names the provider of zones without one.
+	Providers map[string]Provider
+	Default   string
+	Image     string
+	// MaxRunning is the admission limit; 0 means no limit.
+	MaxRunning func(ctx context.Context) int
+	// ExtraHosts are test DNS entries inside computers.
+	ExtraHosts map[string]string
+	// OnSleep is called after a computer sleeps, so runs that wait for a computer can start.
+	OnSleep func(ctx context.Context)
+	// Redact registers a computer token for redaction (SI-01).
+	Redact func(name, value string)
+	now    func() time.Time
+
+	mu       sync.Mutex
+	live     map[uuid.UUID]*live // by computer ID; tokens live only in memory (SI-02)
+	creating map[uuid.UUID]chan struct{}
+}
+
+type live struct {
+	token    string
+	client   *client.Client
+	machine  Machine
+	leases   int
+	viewers  int
+	imported map[string]bool // workspace paths imported into this machine
+}
+
+// NewManager prepares a manager that the caller filled.
+func NewManager(mm *Manager) *Manager {
+	mm.live = map[uuid.UUID]*live{}
+	mm.creating = map[uuid.UUID]chan struct{}{}
+	if mm.now == nil {
+		mm.now = func() time.Time { return time.Now().UTC() }
+	}
+	if mm.Log == nil {
+		mm.Log = slog.Default()
+	}
+	return mm
+}
+
+// SetClock replaces the clock (tests).
+func (m *Manager) SetClock(now func() time.Time) { m.now = now }
+
+// Lease is the use of a zone's computer by one tool call or run step.
+type Lease struct {
+	m        *Manager
+	Computer uuid.UUID
+	ZoneID   uuid.UUID
+	SpaceID  uuid.UUID
+	Client   *client.Client
+	released bool
+}
+
+// Release ends the lease.
+func (l *Lease) Release() {
+	if l.released {
+		return
+	}
+	l.released = true
+	l.m.mu.Lock()
+	if lv := l.m.live[l.Computer]; lv != nil && lv.leases > 0 {
+		lv.leases--
+	}
+	l.m.mu.Unlock()
+	_ = l.m.touch(context.Background(), l.Computer)
+}
+
+func (m *Manager) touch(ctx context.Context, id uuid.UUID) error {
+	_, err := m.E.Exec(ctx, "UPDATE computers SET last_active_at = $1 WHERE id = $2", m.now(), id)
+	return err
+}
+
+func hashToken(t string) string {
+	h := sha256.Sum256([]byte(t))
+	return hex.EncodeToString(h[:])
+}
+
+func newToken() string {
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// current returns the computer row of a zone, if any.
+func (m *Manager) current(ctx context.Context, zoneID uuid.UUID) (*Computer, error) {
+	return drel.NewRepository(m.E, ComputerMeta).Where(Computers.ZoneID.Eq(zoneID)).OrderBy(Computers.CreatedAt.Desc()).FirstOrNil(ctx)
+}
+
+// Current returns the computer of a zone, or nil.
+func (m *Manager) Current(ctx context.Context, zoneID uuid.UUID) (*Computer, error) {
+	return m.current(ctx, zoneID)
+}
+
+func (m *Manager) providerFor(ctx context.Context, z *zones.Zone) (Provider, *ProviderRow, error) {
+	if z.ProviderID != nil {
+		row, err := drel.NewRepository(m.E, ProviderRowMeta).Where(ProviderRows.ID.Eq(*z.ProviderID)).FirstOrNil(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if row == nil {
+			return nil, nil, fmt.Errorf("the provider of zone %s does not exist", z.Name)
+		}
+		p, ok := m.Providers[row.Kind]
+		if !ok {
+			return nil, nil, fmt.Errorf("the %s provider is not available on this server", row.Kind)
+		}
+		return p, row, nil
+	}
+	p, ok := m.Providers[m.Default]
+	if !ok {
+		return nil, nil, errors.New("no computer provider is set up; set one up in Settings, Computers")
+	}
+	row, err := m.ensureProviderRow(ctx, m.Default)
+	return p, row, err
+}
+
+func (m *Manager) ensureProviderRow(ctx context.Context, kind string) (*ProviderRow, error) {
+	row, err := drel.NewRepository(m.E, ProviderRowMeta).Where(ProviderRows.Kind.Eq(kind)).Where(ProviderRows.SpaceID.IsNull()).FirstOrNil(ctx)
+	if err != nil || row != nil {
+		return row, err
+	}
+	p := m.Providers[kind]
+	row = &ProviderRow{Kind: kind, Name: kind, Config: map[string]string{}, Caps: p.Caps(), Enabled: true}
+	err = m.E.WithTx(ctx, func(ctx context.Context) error {
+		drel.Repo(drel.MustFromContext(ctx), ProviderRowMeta).Add(row)
+		return nil
+	})
+	return row, err
+}
+
+func (m *Manager) running(ctx context.Context) (int, error) {
+	var n int
+	err := m.E.QueryRow(ctx, "SELECT COUNT(*) FROM computers WHERE state IN ('running','starting')").Scan(&n)
+	return n, err
+}
+
+// Acquire returns a lease on the computer of a zone. It starts, resumes or replaces the
+// machine when needed. ErrNoCapacity means the run must wait.
+func (m *Manager) Acquire(ctx context.Context, zoneID uuid.UUID) (*Lease, error) {
+	for {
+		m.mu.Lock()
+		wait, busy := m.creating[zoneID]
+		if !busy {
+			m.creating[zoneID] = make(chan struct{})
+		}
+		m.mu.Unlock()
+		if !busy {
+			break
+		}
+		select {
+		case <-wait:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	defer func() {
+		m.mu.Lock()
+		close(m.creating[zoneID])
+		delete(m.creating, zoneID)
+		m.mu.Unlock()
+	}()
+	z, err := m.Zones.Find(ctx, zoneID)
+	if err != nil {
+		return nil, err
+	}
+	c, err := m.current(ctx, zoneID)
+	if err != nil {
+		return nil, err
+	}
+	if c != nil && c.State == StateRunning {
+		m.mu.Lock()
+		lv := m.live[c.ID()]
+		m.mu.Unlock()
+		if lv != nil {
+			if _, err := lv.client.Health(ctx); err == nil {
+				return m.lease(c, z, lv), nil
+			}
+		}
+	}
+	if c == nil || c.State != StateRunning {
+		if max := m.maxRunning(ctx); max > 0 {
+			n, err := m.running(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if n >= max {
+				return nil, ErrNoCapacity
+			}
+		}
+	}
+	lv, c, err := m.bringUp(ctx, z, c)
+	if err != nil {
+		return nil, err
+	}
+	return m.lease(c, z, lv), nil
+}
+
+func (m *Manager) maxRunning(ctx context.Context) int {
+	if m.MaxRunning == nil {
+		return 0
+	}
+	return m.MaxRunning(ctx)
+}
+
+func (m *Manager) lease(c *Computer, z *zones.Zone, lv *live) *Lease {
+	m.mu.Lock()
+	lv.leases++
+	m.mu.Unlock()
+	_ = m.touch(context.Background(), c.ID())
+	return &Lease{m: m, Computer: c.ID(), ZoneID: z.ID(), SpaceID: z.SpaceID, Client: lv.client}
+}
+
+// bringUp resumes the known machine when this process holds its token, else creates a new
+// machine with a new token and certificate (SI-02 rotation).
+func (m *Manager) bringUp(ctx context.Context, z *zones.Zone, c *Computer) (*live, *Computer, error) {
+	prov, row, err := m.providerFor(ctx, z)
+	if err != nil {
+		return nil, nil, err
+	}
+	if c != nil {
+		m.mu.Lock()
+		lv := m.live[c.ID()]
+		m.mu.Unlock()
+		if lv != nil && c.ProviderRef != "" {
+			if err := m.setState(ctx, c.ID(), StateStarting, ""); err != nil {
+				return nil, nil, err
+			}
+			if err := lv.machine.Resume(ctx); err == nil {
+				if err := m.waitHealthy(ctx, lv, c, lv.machine); err == nil {
+					return lv, c, m.setState(ctx, c.ID(), StateRunning, "")
+				}
+			}
+		}
+		// The machine is gone or its token is unknown: replace it.
+		if c.ProviderRef != "" {
+			if mach, err := prov.Attach(ctx, c.ProviderRef); err == nil {
+				_ = mach.Destroy(ctx)
+			}
+		}
+		m.mu.Lock()
+		delete(m.live, c.ID())
+		m.mu.Unlock()
+		if err := m.setState(ctx, c.ID(), StateNone, "replaced"); err != nil {
+			return nil, nil, err
+		}
+	}
+	token := newToken()
+	certPEM, keyPEM, err := agentd.GenerateCert([]string{"fettle-computer"})
+	if err != nil {
+		return nil, nil, err
+	}
+	netCfg, _ := json.Marshal(map[string]any{"mode": z.Network, "allow_hosts": z.AllowHosts})
+	nc := &Computer{ZoneID: z.ID(), ProviderID: row.ID(), State: StateStarting, TokenHash: hashToken(token), CertPEM: string(certPEM), ImageDigest: m.Image}
+	if c != nil {
+		nc.WorkspaceRev = c.WorkspaceRev
+	}
+	if err := m.E.WithTx(ctx, func(ctx context.Context) error {
+		drel.Repo(drel.MustFromContext(ctx), ComputerMeta).Add(nc)
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	if m.Redact != nil {
+		m.Redact("computer token", token)
+	}
+	spec := Spec{ZoneID: z.ID().String(), Image: m.Image, Size: Size(z.Size), DiskGiB: Sizes[Size(z.Size)].DiskGiB, ExtraHosts: m.ExtraHosts, Env: map[string]string{
+		"FETTLE_AGENTD_TOKEN":    token,
+		"FETTLE_AGENTD_TLS_CERT": string(certPEM),
+		"FETTLE_AGENTD_TLS_KEY":  string(keyPEM),
+		"FETTLE_AGENTD_NETWORK":  string(netCfg),
+	}}
+	mach, err := prov.Create(ctx, spec)
+	if err != nil {
+		_ = m.setState(context.WithoutCancel(ctx), nc.ID(), StateError, err.Error())
+		return nil, nil, fmt.Errorf("start the computer of zone %s: %w", z.Name, err)
+	}
+	if _, err := m.E.Exec(ctx, "UPDATE computers SET provider_ref = $1 WHERE id = $2", mach.Ref(), nc.ID()); err != nil {
+		return nil, nil, err
+	}
+	nc.ProviderRef = mach.Ref()
+	lv := &live{token: token, machine: mach, imported: map[string]bool{}}
+	if err := m.waitHealthy(ctx, lv, nc, mach); err != nil {
+		_ = m.setState(context.WithoutCancel(ctx), nc.ID(), StateError, err.Error())
+		return nil, nil, err
+	}
+	m.mu.Lock()
+	m.live[nc.ID()] = lv
+	m.mu.Unlock()
+	if err := m.importShared(ctx, z, lv); err != nil {
+		return nil, nil, err
+	}
+	return lv, nc, m.setState(ctx, nc.ID(), StateRunning, "")
+}
+
+func (m *Manager) setState(ctx context.Context, id uuid.UUID, state, errText string) error {
+	_, err := m.E.Exec(ctx, "UPDATE computers SET state = $1, error = $2, updated_at = $3 WHERE id = $4", state, errText, m.now(), id)
+	return err
+}
+
+// waitHealthy connects to agentd with the pinned certificate and waits for its health check.
+func (m *Manager) waitHealthy(ctx context.Context, lv *live, c *Computer, mach Machine) error {
+	deadline := time.Now().Add(90 * time.Second)
+	var last error
+	for time.Now().Before(deadline) {
+		url, err := mach.AgentdURL(ctx)
+		if err == nil {
+			cl, err := client.New(url, lv.token, []byte(c.CertPEM))
+			if err != nil {
+				return err
+			}
+			hctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			_, err = cl.Health(hctx)
+			cancel()
+			if err == nil {
+				lv.client = cl
+				_, _ = m.E.Exec(ctx, "UPDATE computers SET agentd_url = $1 WHERE id = $2", url, c.ID())
+				return nil
+			}
+			last = err
+		} else {
+			last = err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	return fmt.Errorf("agentd did not answer within 90 s: %w", last)
+}
+
+// VerifyToken checks a token against the stored hash of a computer (SI-02).
+func (m *Manager) VerifyToken(ctx context.Context, computerID uuid.UUID, token string) bool {
+	var h string
+	if err := m.E.QueryRow(ctx, "SELECT token_hash FROM computers WHERE id = $1", computerID).Scan(&h); err != nil {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(h), []byte(hashToken(token))) == 1
+}
+
+// BotHome is the folder of a bot inside the computer.
+func BotHome(botID uuid.UUID) string { return "bots/" + botID.String() }
+
+// SharedPath is the zone's shared folder inside the computer.
+const SharedPath = "shared"
+
+// EnsureBotHome imports the latest workspace of a bot into the leased machine once.
+func (m *Manager) EnsureBotHome(ctx context.Context, l *Lease, botID uuid.UUID) error {
+	path := BotHome(botID)
+	m.mu.Lock()
+	lv := m.live[l.Computer]
+	done := lv != nil && lv.imported[path]
+	m.mu.Unlock()
+	if lv == nil || done {
+		return nil
+	}
+	ws, err := m.workspace(ctx, botID.String(), "bot_home")
+	if err != nil {
+		return err
+	}
+	if ws != nil && ws.ObjectKey != "" {
+		if err := m.importArchive(ctx, l.SpaceID, lv, ws, path); err != nil {
+			return err
+		}
+	} else if _, err := lv.client.Stat(ctx, path); errors.Is(err, client.ErrNotFound) {
+		if err := lv.client.WriteFile(ctx, path+"/.fettle/README", []byte("This folder is the home of one bot.\n"), 0o644); err != nil {
+			return err
+		}
+	}
+	m.mu.Lock()
+	lv.imported[path] = true
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *Manager) importShared(ctx context.Context, z *zones.Zone, lv *live) error {
+	ws, err := m.workspace(ctx, z.ID().String(), "zone_shared")
+	if err != nil {
+		return err
+	}
+	if ws != nil && ws.ObjectKey != "" {
+		if err := m.importArchive(ctx, z.SpaceID, lv, ws, SharedPath); err != nil {
+			return err
+		}
+	}
+	m.mu.Lock()
+	lv.imported[SharedPath] = true
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *Manager) workspace(ctx context.Context, owner, kind string) (*Workspace, error) {
+	return drel.NewRepository(m.E, WorkspaceMeta).Where(Workspaces.OwnerKey.Eq(owner)).Where(Workspaces.Kind.Eq(kind)).FirstOrNil(ctx)
+}
+
+func workspaceAAD(ws *Workspace) string {
+	return fmt.Sprintf("fettle:workspace:%s:%d", ws.ID(), ws.Rev)
+}
+
+func (m *Manager) importArchive(ctx context.Context, spaceID uuid.UUID, lv *live, ws *Workspace, path string) error {
+	rc, err := m.Objects.Get(ctx, ws.ObjectKey)
+	if err != nil {
+		return fmt.Errorf("read workspace %s: %w", ws.ObjectKey, err)
+	}
+	defer func() { _ = rc.Close() }()
+	plain, err := m.Vault.OpenStream(ctx, spaceID, rc, workspaceAAD(ws))
+	if err != nil {
+		return err
+	}
+	return lv.client.Import(ctx, path, plain)
+}
+
+// Checkpoint exports the bot homes and the shared folder of a zone's computer into the
+// object store as new encrypted revisions (§10.3).
+func (m *Manager) Checkpoint(ctx context.Context, computerID uuid.UUID) error {
+	m.mu.Lock()
+	lv := m.live[computerID]
+	var paths []string
+	if lv != nil {
+		for p := range lv.imported {
+			paths = append(paths, p)
+		}
+	}
+	m.mu.Unlock()
+	if lv == nil {
+		return nil
+	}
+	c, err := drel.NewRepository(m.E, ComputerMeta).Where(Computers.ID.Eq(computerID)).First(ctx)
+	if err != nil {
+		return err
+	}
+	z, err := m.Zones.Find(ctx, c.ZoneID)
+	if err != nil {
+		return err
+	}
+	for _, p := range paths {
+		owner, kind, botID := z.ID().String(), "zone_shared", (*uuid.UUID)(nil)
+		zoneID := z.ID()
+		if p != SharedPath {
+			id, err := uuid.Parse(p[len("bots/"):])
+			if err != nil {
+				continue
+			}
+			owner, kind, botID = id.String(), "bot_home", &id
+		}
+		if err := m.checkpointPath(ctx, z, lv, p, owner, kind, botID, &zoneID); err != nil {
+			return err
+		}
+	}
+	_, err = m.E.Exec(ctx, "UPDATE computers SET workspace_rev = workspace_rev + 1 WHERE id = $1", computerID)
+	return err
+}
+
+func (m *Manager) checkpointPath(ctx context.Context, z *zones.Zone, lv *live, path, owner, kind string, botID, zoneID *uuid.UUID) error {
+	ws, err := m.workspace(ctx, owner, kind)
+	if err != nil {
+		return err
+	}
+	if ws == nil {
+		ws = &Workspace{OwnerKey: owner, Kind: kind, BotID: botID, SpaceID: z.SpaceID}
+		if kind == "zone_shared" {
+			ws.ZoneID = zoneID
+		}
+		if err := m.E.WithTx(ctx, func(ctx context.Context) error {
+			drel.Repo(drel.MustFromContext(ctx), WorkspaceMeta).Add(ws)
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	rc, err := lv.client.Export(ctx, path, nil)
+	if err != nil {
+		return fmt.Errorf("export %s: %w", path, err)
+	}
+	defer func() { _ = rc.Close() }()
+	next := &Workspace{OwnerKey: owner, Kind: kind, Rev: ws.Rev + 1}
+	next.SetID(ws.ID())
+	key := fmt.Sprintf("workspaces/%s/%d", ws.ID(), next.Rev)
+	pr, pw := io.Pipe()
+	hasher := sha256.New()
+	counter := &countWriter{}
+	go func() {
+		sw, err := m.Vault.SealStream(ctx, z.SpaceID, pw, workspaceAAD(next))
+		if err != nil {
+			pw.CloseWithError(err)
+			return
+		}
+		_, err = io.Copy(io.MultiWriter(sw, hasher, counter), rc)
+		if err == nil {
+			err = sw.Close()
+		}
+		pw.CloseWithError(err)
+	}()
+	if err := m.Objects.Put(ctx, key, pr, -1); err != nil {
+		return fmt.Errorf("store workspace: %w", err)
+	}
+	old := ws.ObjectKey
+	if _, err := m.E.Exec(ctx, "UPDATE workspaces SET rev = $1, object_key = $2, size = $3, sha256 = $4, updated_at = $5 WHERE id = $6",
+		next.Rev, key, counter.n, hex.EncodeToString(hasher.Sum(nil)), m.now(), ws.ID()); err != nil {
+		return err
+	}
+	if old != "" && old != key {
+		_ = m.Objects.Delete(ctx, old)
+	}
+	return nil
+}
+
+type countWriter struct{ n int64 }
+
+func (c *countWriter) Write(p []byte) (int, error) { c.n += int64(len(p)); return len(p), nil }
+
+// SleepIdle checkpoints and sleeps running computers with no lease and no viewer after
+// their zone's idle minutes (§10.2). It returns the number of computers it put to sleep.
+func (m *Manager) SleepIdle(ctx context.Context) (int, error) {
+	rows, err := drel.NewRepository(m.E, ComputerMeta).Where(Computers.State.Eq(StateRunning)).All(ctx)
+	if err != nil {
+		return 0, err
+	}
+	slept := 0
+	for _, c := range rows {
+		m.mu.Lock()
+		lv := m.live[c.ID()]
+		busy := lv != nil && (lv.leases > 0 || lv.viewers > 0)
+		m.mu.Unlock()
+		if busy {
+			continue
+		}
+		z, err := m.Zones.Find(ctx, c.ZoneID)
+		if err != nil {
+			continue
+		}
+		last := c.UpdatedAt()
+		if c.LastActiveAt != nil {
+			last = *c.LastActiveAt
+		}
+		if m.now().Sub(last) < time.Duration(z.IdleMinutes)*time.Minute {
+			continue
+		}
+		if err := m.Sleep(ctx, c.ID()); err != nil {
+			m.Log.Warn("idle sleep failed", "computer", c.ID(), "error", err)
+			continue
+		}
+		slept++
+	}
+	if slept > 0 && m.OnSleep != nil {
+		m.OnSleep(ctx)
+	}
+	return slept, nil
+}
+
+// Sleep checkpoints a computer and sleeps its machine.
+func (m *Manager) Sleep(ctx context.Context, computerID uuid.UUID) error {
+	if err := m.Checkpoint(ctx, computerID); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	lv := m.live[computerID]
+	m.mu.Unlock()
+	if lv != nil {
+		if err := lv.machine.Sleep(ctx); err != nil && !errors.Is(err, ErrGone) {
+			return err
+		}
+	}
+	return m.setState(ctx, computerID, StateSleeping, "")
+}
+
+// CheckpointAll checkpoints every live computer (shutdown, REQ-CORE-008).
+func (m *Manager) CheckpointAll(ctx context.Context) error {
+	m.mu.Lock()
+	ids := make([]uuid.UUID, 0, len(m.live))
+	for id := range m.live {
+		ids = append(ids, id)
+	}
+	m.mu.Unlock()
+	var errs []error
+	for _, id := range ids {
+		if err := m.Checkpoint(ctx, id); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// Destroy removes the machines of a zone (zone deletion, tests).
+func (m *Manager) Destroy(ctx context.Context, computerID uuid.UUID) error {
+	m.mu.Lock()
+	lv := m.live[computerID]
+	delete(m.live, computerID)
+	m.mu.Unlock()
+	if lv != nil {
+		_ = lv.machine.Destroy(ctx)
+	}
+	return m.setState(ctx, computerID, StateNone, "")
+}

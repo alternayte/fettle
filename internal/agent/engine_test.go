@@ -244,3 +244,32 @@ func TestSCN_MOD_007_CostRecordedAndViewsSum(t *testing.T) {
 		}
 	})
 }
+
+func TestSCN_RUN_008_TimerWakesRunAndStatesLateStart(t *testing.T) {
+	testenv.Each(t, func(t *testing.T, dialect string) {
+		e := apptest.Start(t, dialect)
+		e.SetupModel("openai-chat", "", 128000)
+		due := time.Now().UTC().Add(1500 * time.Millisecond).Truncate(time.Second)
+		e.Fake.AddScript(fakemodel.Script{Name: "sleep", Match: fakemodel.Match{User: "[[sleep-test]]"}, Steps: []fakemodel.Step{
+			{ToolCalls: []fakemodel.ScriptCall{{Name: "sleep_until", Args: map[string]any{"time": due.Format(time.RFC3339), "reason": "the report is due"}}}},
+			{Text: "I woke up and wrote the report."},
+		}})
+		chief := e.Chief()
+		run, _ := e.Post(chief.ChatID, "[[sleep-test]] write the report at nine")
+		r := e.WaitRun(run, "waiting")
+		if !r.HasEvent("sleep_until") {
+			t.Fatalf("events %s", r.EventTypes())
+		}
+		// The clock moves to 20 minutes after the due time, as after downtime.
+		late := due.Add(20 * time.Minute)
+		e.App.Agent.SetClock(func() time.Time { return late.Add(time.Since(due.Add(-time.Second))) })
+		e.WaitRun(run, "done")
+		var last fakemodel.Recorded
+		for _, req := range e.Fake.Requests() {
+			last = req
+		}
+		if !strings.Contains(last.System, "was due at "+due.In(time.UTC).Format("15:04")) || !strings.Contains(last.System, "started at") {
+			t.Fatalf("context does not state the times: %s", last.System)
+		}
+	})
+}

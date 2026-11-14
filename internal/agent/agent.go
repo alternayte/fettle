@@ -1,6 +1,10 @@
 package agent
 
 import (
+	"context"
+	"errors"
+
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"time"
@@ -36,10 +40,12 @@ type Agent struct {
 	Vault     *vault.Vault
 	Tools     *Registry
 	Policy    *policy.Service
-	HTTP      *http.Client
-	Log       *slog.Logger
-	Metrics   Metrics
-	now       func() time.Time
+	// Computer brings up the computer of a bot's zone; ErrNoComputer means wait.
+	Computer func(ctx context.Context, spaceID, botID uuid.UUID) error
+	HTTP     *http.Client
+	Log      *slog.Logger
+	Metrics  Metrics
+	now      func() time.Time
 }
 
 // Metrics receives counters from the loop.
@@ -74,3 +80,6 @@ func (a *Agent) SetClock(now func() time.Time) {
 
 // Now returns the agent's clock time.
 func (a *Agent) Now() time.Time { return a.now() }
+
+// ErrNoComputer is returned by Agent.Computer when no computer is free; the run waits.
+var ErrNoComputer = errors.New("waiting for a free computer")
