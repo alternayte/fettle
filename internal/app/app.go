@@ -39,17 +39,19 @@ import (
 
 // App is one running Fettle instance: storage, services, jobs and the HTTP server.
 type App struct {
-	Cfg       *Config
-	DB        *Database
-	Objects   objects.Store
-	HTTP      *http.Client
-	Log       *slog.Logger
-	Metrics   *Metrics
-	Hub       *chats.Hub
-	Audit     *audit.Log
-	Vault     *vault.Vault
-	Settings  *settings.Store
-	Users     *auth.UserStore
+	Cfg      *Config
+	DB       *Database
+	Objects  objects.Store
+	HTTP     *http.Client
+	Log      *slog.Logger
+	Metrics  *Metrics
+	Hub      *chats.Hub
+	Audit    *audit.Log
+	Vault    *vault.Vault
+	Settings *settings.Store
+	Users    *auth.UserStore
+	// SignIn is the server-mode sign-in; nil in local mode.
+	SignIn    *auth.Server
 	Spaces    *spaces.Service
 	Bots      *bots.Service
 	Chats     *chats.Service
@@ -89,7 +91,15 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 		return nil, err
 	}
 	a.DB = db
-	if _, err := db.Migrate(ctx, cfg); err != nil {
+	var extra []func(context.Context) error
+	if cfg.Mode == ModeServer {
+		if a.SignIn, err = auth.NewServer(db.Engine, auth.ServerConfig{SQL: db.SQL, PGPool: db.PGPool, BaseURL: cfg.BaseURL}); err != nil {
+			db.Close()
+			return nil, err
+		}
+		extra = append(extra, a.SignIn.Migrate)
+	}
+	if _, err := db.Migrate(ctx, cfg, extra...); err != nil {
 		db.Close()
 		return nil, err
 	}

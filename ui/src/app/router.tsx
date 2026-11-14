@@ -101,6 +101,7 @@ export async function createAppRouter() {
         sub("space", () => import("@/features/settings/SpacePage"), "SpacePage"),
         sub("usage", () => import("@/features/settings/UsagePage"), "UsagePage"),
         sub("audit", () => import("@/features/settings/AuditPage"), "AuditPage"),
+        sub("tokens", () => import("@/features/settings/TokensPage"), "TokensPage"),
       ]),
       admin,
     ]),

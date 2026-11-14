@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { KeyRound, RotateCw } from "lucide-react";
-import { errorText, isUnauthorized } from "@/api/client";
+import { api, errorText, isUnauthorized } from "@/api/client";
+import { signIn } from "@/api/signin";
 import { SessionContext, useBots, useMe, useSession } from "@/api/hooks";
-import { Btn } from "@/components/form";
+import { Btn, Field, inputCls } from "@/components/form";
 import { Toaster } from "@/components/ui/sonner";
 import { t } from "@/lib/copy";
 import { useTheme } from "@/lib/theme";
@@ -19,7 +21,65 @@ function FullPage({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SignInForm() {
+  const qc = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <FullPage>
+      <h1 className="serif-title text-2xl text-ink">{t("auth.signIn.title")}</h1>
+      <form
+        className="mt-4 space-y-4"
+        noValidate
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError(null);
+          setBusy(true);
+          const r = await signIn(email.trim(), password);
+          setBusy(false);
+          if (r === "ok") return void qc.invalidateQueries();
+          setError(t(`auth.signIn.${r}`));
+        }}
+      >
+        <Field id="signin-email" label={t("auth.signIn.email")}>
+          <input
+            id="signin-email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+        <Field id="signin-password" label={t("auth.signIn.password")}>
+          <input
+            id="signin-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+        {error && (
+          <p role="alert" className="rounded-sm border border-danger/40 bg-danger-wash px-3 py-2 text-sm text-ink">
+            {error}
+          </p>
+        )}
+        <Btn type="submit" kind="primary" busy={busy} className="w-full">
+          {t("auth.signIn.submit")}
+        </Btn>
+      </form>
+    </FullPage>
+  );
+}
+
 function SignedOut() {
+  const instance = useQuery({ queryKey: ["instance"], queryFn: async () => (await api.GET("/api/v1/instance")).data });
+  if (instance.isPending) return <div className="h-full bg-ground" aria-busy="true" />;
+  if (instance.data?.mode === "server") return <SignInForm />;
   return (
     <FullPage>
       <div className="flex items-start gap-3">

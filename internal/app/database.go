@@ -87,7 +87,7 @@ func (d *Database) Close() {
 
 // Migrate applies drel and River migrations once, under a lock that also serializes
 // two processes that start at the same time (REQ-CORE-003).
-func (d *Database) Migrate(ctx context.Context, cfg *Config) (int, error) {
+func (d *Database) Migrate(ctx context.Context, cfg *Config, extra ...func(context.Context) error) (int, error) {
 	unlock, err := d.migrationLock(ctx, cfg)
 	if err != nil {
 		return 0, err
@@ -103,6 +103,11 @@ func (d *Database) Migrate(ctx context.Context, cfg *Config) (int, error) {
 	}
 	if err := d.migrateRiver(ctx); err != nil {
 		return n, err
+	}
+	for _, m := range extra {
+		if err := m(ctx); err != nil {
+			return n, fmt.Errorf("apply sign-in migrations: %w", err)
+		}
 	}
 	return n, nil
 }

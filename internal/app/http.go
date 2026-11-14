@@ -33,11 +33,14 @@ func (a *App) Handler() http.Handler {
 	r.Get("/readyz", a.readyz)
 	r.Handle("/metrics", promhttp.HandlerFor(a.Metrics.Registry, promhttp.HandlerOpts{}))
 
+	if a.SignIn != nil {
+		r.Handle("/api/auth/*", a.SignIn.Handler())
+	}
 	r.Group(func(g chi.Router) {
 		if a.Cfg.Mode == ModeLocal {
 			g.Use(auth.LocalAuth(a.LocalToken, func(ctx context.Context) (*auth.User, error) { return a.LocalOwner(ctx) }, publicAPIPath))
 		} else {
-			g.Use(a.serverAuth)
+			g.Use(a.SignIn.Middleware(publicAPIPath))
 		}
 		a.registerAPI(humachi.New(g, apiConfig(a.Cfg.Version)))
 	})
@@ -46,20 +49,7 @@ func (a *App) Handler() http.Handler {
 }
 
 func publicAPIPath(p string) bool {
-	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local"
-}
-
-// serverAuth accepts sessions and access tokens in server mode (REQ-AUTH-001, -003).
-func (a *App) serverAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if publicAPIPath(r.URL.Path) {
-			next.ServeHTTP(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "application/problem+json")
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"status":401,"title":"Unauthorized","detail":"Sign in first."}`))
-	})
+	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local" || p == APIPrefix+"/instance"
 }
 
 func securityHeaders(next http.Handler) http.Handler {

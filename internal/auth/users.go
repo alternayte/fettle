@@ -48,3 +48,25 @@ func (u *UserStore) SetName(ctx context.Context, id uuid.UUID, name string) erro
 		return nil
 	})
 }
+
+// Ensure returns the Fettle user of a server-mode account and creates it on first use.
+// admin is applied only at creation.
+func (u *UserStore) Ensure(ctx context.Context, email, name string, admin bool) (*User, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	usr, err := drel.NewRepository(u.e, UserMeta).Where(Users.Email.Eq(email)).FirstOrNil(ctx)
+	if err != nil || usr != nil {
+		return usr, err
+	}
+	usr = &User{Email: email, Name: strings.TrimSpace(name), Status: "active", IsAdmin: admin}
+	err = u.e.WithTx(ctx, func(ctx context.Context) error {
+		drel.Repo(drel.MustFromContext(ctx), UserMeta).Add(usr)
+		return nil
+	})
+	if err != nil {
+		// Another request created it at the same time.
+		if again, gerr := drel.NewRepository(u.e, UserMeta).Where(Users.Email.Eq(email)).FirstOrNil(ctx); gerr == nil && again != nil {
+			return again, nil
+		}
+	}
+	return usr, err
+}

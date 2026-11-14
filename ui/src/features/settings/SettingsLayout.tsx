@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { useSession } from "@/api/hooks";
 import { Notice, Page } from "@/app/Page";
@@ -25,6 +25,13 @@ export function SettingsNav() {
               </Link>
             </li>
           ))}
+        {me.mode === "server" && (
+          <li>
+            <Link to="/settings/tokens" className={tabCls} activeProps={{ "aria-current": "page" }}>
+              {t("settings.tabs.tokens")}
+            </Link>
+          </li>
+        )}
         {me.is_admin && (
           <li>
             <Link to="/admin" className={tabCls} activeProps={{ "aria-current": "page" }}>
@@ -39,10 +46,13 @@ export function SettingsNav() {
 
 export function SettingsLayout() {
   const { isOwner } = useSession();
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
+  // Access tokens belong to the caller, so members open them too.
+  const own = pathname.startsWith("/settings/tokens");
   return (
     <Page title={t("shell.settings")} wide>
       <SettingsNav />
-      {isOwner ? (
+      {isOwner || own ? (
         <Outlet />
       ) : (
         <Notice icon={Lock} title={t("settings.ownerOnly.title")}>

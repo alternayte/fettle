@@ -439,7 +439,16 @@
     "title": "Open Fettle from the app",
     "body": "This page has no sign-in. Open Fettle from the desktop app, or open the link that this command prints:",
     "failed": "Fettle cannot load your account",
-    "noSpace": "Your account has no space."
+    "noSpace": "Your account has no space.",
+    "signIn": {
+      "title": "Sign in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "wrong": "The email or the password is wrong.",
+      "limited": "Too many tries. Wait one minute, then try again.",
+      "failed": "Fettle could not sign you in. Try again."
+    }
   },
   "notFound": {
     "title": "This page does not exist",
@@ -508,7 +517,8 @@
       "audit": "Audit log",
       "admin": "Instance",
       "computers": "Computers",
-      "approvals": "Approvals"
+      "approvals": "Approvals",
+      "tokens": "Access tokens"
     },
     "ownerOnly": {
       "title": "Only the owner can change settings",
@@ -729,5 +739,20 @@
     "forRecipient": "Recipient {who}",
     "fromCard": "From a card",
     "deleteRule": "Delete the rule: {what}"
+  },
+  "tokens": {
+    "intro": "Access tokens let the CLI and scripts use the API as you. Fettle shows a token one time only.",
+    "name": "Token name",
+    "create": "Create token",
+    "copy": "Copy the token now. Fettle does not show it again.",
+    "none": "No access tokens yet.",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "lastUsed": "Last used {when}",
+    "neverUsed": "Never used",
+    "failed": "Fettle could not change the tokens",
+    "localOnly": "In local mode, the CLI uses the local token. Access tokens are for server mode.",
+    "signOut": "Sign out",
+    "needName": "Give the token a name."
   }
 }

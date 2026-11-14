@@ -56,6 +56,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/instance": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The mode and the version of this server. It needs no sign-in. */
+    get: operations["get-instance"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/me": {
     parameters: {
       query?: never;
@@ -902,6 +919,11 @@ export interface components {
       truncated: boolean;
       type: string;
     };
+    "Get-instanceResponse": {
+      /** @enum {string} */
+      mode: "local" | "server";
+      version: string;
+    };
     HistoryRow: {
       at: string;
       new_value: string;
@@ -1296,6 +1318,7 @@ export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsRespon
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
 export type SchemaEventView = components["schemas"]["EventView"];
+export type SchemaGetInstanceResponse = components["schemas"]["Get-instanceResponse"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
@@ -1463,6 +1486,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LocalAuthOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-instance": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Get-instanceResponse"];
         };
       };
       /** @description Error */

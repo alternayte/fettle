@@ -65,6 +65,22 @@ type spaceIn struct {
 type spaceOut struct{ Body SpaceView }
 
 func (a *App) registerMe(api huma.API) {
+	huma.Register(api, op("get-instance", http.MethodGet, "/instance", "The mode and the version of this server. It needs no sign-in.", "auth"), func(ctx context.Context, _ *struct{}) (*struct {
+		Body struct {
+			Mode    string `json:"mode" enum:"local,server"`
+			Version string `json:"version"`
+		}
+	}, error) {
+		out := &struct {
+			Body struct {
+				Mode    string `json:"mode" enum:"local,server"`
+				Version string `json:"version"`
+			}
+		}{}
+		out.Body.Mode, out.Body.Version = string(a.Cfg.Mode), a.Cfg.Version
+		return out, nil
+	})
+
 	huma.Register(api, op("local-auth", http.MethodPost, "/auth/local", "Exchange the local token for a UI cookie", "auth"), func(ctx context.Context, in *localAuthIn) (*localAuthOut, error) {
 		if a.Cfg.Mode != ModeLocal || subtle.ConstantTimeCompare([]byte(in.Body.Token), []byte(a.LocalToken)) != 1 {
 			return nil, huma.Error401Unauthorized("The local token is wrong.")

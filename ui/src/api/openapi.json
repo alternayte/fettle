@@ -616,6 +616,26 @@
         ],
         "type": "object"
       },
+      "Get-instanceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "local",
+              "server"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "version"
+        ],
+        "type": "object"
+      },
       "HistoryRow": {
         "additionalProperties": false,
         "properties": {
@@ -2261,6 +2281,37 @@
           }
         },
         "summary": "Exchange the local token for a UI cookie",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/instance": {
+      "get": {
+        "operationId": "get-instance",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get-instanceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The mode and the version of this server. It needs no sign-in.",
         "tags": [
           "auth"
         ]

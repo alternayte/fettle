@@ -28,9 +28,6 @@ func configFlags(fs *flag.FlagSet) *app.Config {
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "listen address")
 	mode := string(cfg.Mode)
 	fs.Var(modeValue{cfg: &cfg, s: &mode}, "mode", "local or server")
-	if n, err := strconv.Atoi(os.Getenv("FETTLE_RESCUE_SECONDS")); err == nil {
-		cfg.RescueAfterSeconds = n
-	}
 	return &cfg
 }
 
@@ -83,20 +80,17 @@ func runServe(ctx context.Context, args []string) error {
 		_ = a.Shutdown(context.Background())
 		return err
 	}
-	if cfg.Mode == app.ModeLocal {
-		_ = os.WriteFile(filepath.Join(cfg.Data, "fettle.pid"), []byte(strconv.Itoa(os.Getpid())), 0o600)
-		_ = os.WriteFile(filepath.Join(cfg.Data, "fettle.addr"), []byte(a.Addr()), 0o600)
-	}
+	// The pid and the listen address let fettle down and scripts find this process.
+	_ = os.WriteFile(filepath.Join(cfg.Data, "fettle.pid"), []byte(strconv.Itoa(os.Getpid())), 0o600)
+	_ = os.WriteFile(filepath.Join(cfg.Data, "fettle.addr"), []byte(a.Addr()), 0o600)
 	a.Log.Info("fettle is ready", "url", a.URL(), "mode", cfg.Mode, "data", cfg.Data)
 	<-sigCtx.Done()
 	a.Log.Info("shutting down")
 	sctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	err = a.Shutdown(sctx)
-	if cfg.Mode == app.ModeLocal {
-		_ = os.Remove(filepath.Join(cfg.Data, "fettle.pid"))
-		_ = os.Remove(filepath.Join(cfg.Data, "fettle.addr"))
-	}
+	_ = os.Remove(filepath.Join(cfg.Data, "fettle.pid"))
+	_ = os.Remove(filepath.Join(cfg.Data, "fettle.addr"))
 	return err
 }
 
