@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -362,7 +363,7 @@ func TestSCN_RUN_002_OneWorkerPerRunAcrossProcesses(t *testing.T) {
 		t.Fatalf("only one process ran the work: %v", used)
 	}
 	r, _ := e1.App.Runs.Find(ctx, ids[0])
-	if _, err := e1.App.Journal.Append(ctx, ids[0], r.Fence-1, nil, runs.New{Type: runs.EvSteer, Data: map[string]string{"text": "late"}}); err != runs.ErrStaleFence {
+	if _, err := e1.App.Journal.Append(ctx, ids[0], r.Fence-1, nil, runs.New{Type: runs.EvSteer, Data: map[string]string{"text": "late"}}); !errors.Is(err, runs.ErrStaleFence) {
 		t.Fatalf("an append with a stale fence gave %v", err)
 	}
 }
