@@ -1,7 +1,8 @@
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { STATE } from "./setup";
 
 export default async function teardown() {
+  if (!existsSync(STATE)) return;
   const s = JSON.parse(readFileSync(STATE, "utf8"));
   for (const pid of s.pids) {
     try {

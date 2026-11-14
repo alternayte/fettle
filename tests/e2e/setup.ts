@@ -25,12 +25,12 @@ export default async function setup() {
   const bin = resolve(process.env.FETTLE_BIN ?? "../../bin/fettle");
   const fakesBin = resolve(process.env.FETTLE_FAKES_BIN ?? "../../bin/fettle-fakes");
   if (!existsSync(bin) || !existsSync(fakesBin)) throw new Error("build bin/fettle and bin/fettle-fakes first: just e2e");
-  const fake = spawn(fakesBin, ["fake", "serve", "--model-addr", "127.0.0.1:0"], { stdio: ["ignore", "pipe", "pipe"] });
+  const fake = spawn(fakesBin, ["fake", "serve", "--model-addr", "127.0.0.1:0", "--scripts", resolve("scripts")], { stdio: ["ignore", "pipe", "pipe"] });
   const fakeURL = await waitLine(fake, /FAKE_MODEL_URL=(\S+)/, 20_000);
   const data = mkdtempSync(join(tmpdir(), "fettle-e2e-"));
   const server = spawn(bin, ["serve", "--data", data, "--addr", `127.0.0.1:${PORT}`], {
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, FETTLE_NO_KEYCHAIN: "1", FETTLE_LOG_LEVEL: "warn" },
+    env: { ...process.env, FETTLE_NO_KEYCHAIN: "1", FETTLE_LOG_LEVEL: "info" },
   });
   await waitLine(server, /fettle is ready/, 60_000);
   const token = readFileSync(join(data, "local.token"), "utf8").trim();
