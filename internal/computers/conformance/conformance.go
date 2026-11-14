@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -278,4 +279,89 @@ func Manager(t *testing.T, kind string, p computers.Provider, image string) {
 		t.Fatal("the replacement kept the old computer row and token")
 	}
 	t.Cleanup(func() { _ = mgr2.Destroy(context.Background(), c2.ID()); _ = mgr.Destroy(context.Background(), c.ID()) })
+}
+
+// ResumeTimes measures how long a sleeping computer takes to resume, and how long a new
+// machine takes to start and import a bot home of sizeMiB (NFR-006). It returns both.
+func ResumeTimes(t *testing.T, kind string, p computers.Provider, image string, sizeMiB int) (resume, replace time.Duration) {
+	ctx := context.Background()
+	db, cfg := testenv.Open(t, "sqlite")
+	master, _ := vault.ParseMasterKey(testenv.TestMasterKey)
+	al := audit.New(db.Engine)
+	v := vault.New(db.Engine, al, master)
+	store, err := objects.NewDisk(filepath.Join(cfg.Data, "objects"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	zs := zones.New(db.Engine, al)
+	sp := &spaces.Space{Name: "acme", TimeZone: "UTC"}
+	if err := db.Engine.WithTx(ctx, func(ctx context.Context) error {
+		drel.Repo(drel.MustFromContext(ctx), spaces.SpaceMeta).Add(sp)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	personal, err := zs.CreateDefaults(ctx, sp.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	newManager := func() *computers.Manager {
+		m := computers.NewManager(&computers.Manager{E: db.Engine, Zones: zs, Vault: v, Objects: store, Audit: al, Providers: map[string]computers.Provider{kind: p}, Default: kind, Image: image})
+		if err := m.SetEnabled(ctx, audit.Actor{Kind: "system", ID: "conformance"}, nil, kind, true); err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	mgr := newManager()
+	bot := uuid.New()
+	l, err := mgr.Acquire(ctx, personal.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mgr.EnsureBotHome(ctx, l, bot); err != nil {
+		t.Fatal(err)
+	}
+	home := computers.BotHome(bot)
+	// Random data does not compress, so the archive keeps its size.
+	cmd := fmt.Sprintf("head -c %d /dev/urandom > %s/data.bin", sizeMiB<<20, home)
+	if res, err := l.Client.Exec(ctx, client.ExecRequest{Shell: cmd, TimeoutMS: 300000}, nil); err != nil || res.ExitCode != 0 {
+		t.Fatalf("write workspace data: %v %+v", err, res)
+	}
+	l.Release()
+	c, _ := mgr.Current(ctx, personal.ID())
+	t.Cleanup(func() {
+		if c2, _ := mgr.Current(context.Background(), personal.ID()); c2 != nil {
+			_ = mgr.Destroy(context.Background(), c2.ID())
+		}
+	})
+	if err := mgr.Sleep(ctx, c.ID()); err != nil {
+		t.Fatalf("sleep: %v", err)
+	}
+	start := time.Now()
+	l, err = mgr.Acquire(ctx, personal.ID())
+	if err != nil {
+		t.Fatalf("resume: %v", err)
+	}
+	resume = time.Since(start)
+	l.Release()
+	// A new manager does not know the token: it starts a new machine and imports the home.
+	mgr2 := newManager()
+	start = time.Now()
+	l, err = mgr2.Acquire(ctx, personal.ID())
+	if err != nil {
+		t.Fatalf("replace: %v", err)
+	}
+	if err := mgr2.EnsureBotHome(ctx, l, bot); err != nil {
+		t.Fatal(err)
+	}
+	replace = time.Since(start)
+	st, err := l.Client.Stat(ctx, home+"/data.bin")
+	if err != nil || st.Size != int64(sizeMiB)<<20 {
+		t.Fatalf("imported file %+v %v", st, err)
+	}
+	l.Release()
+	if old, _ := mgr.Current(ctx, personal.ID()); old != nil {
+		_ = mgr.Destroy(context.Background(), c.ID())
+	}
+	return resume, replace
 }

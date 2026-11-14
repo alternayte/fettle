@@ -105,9 +105,14 @@ e2e: build image
     go test -count=1 -tags e2e ./tests/flows/...
     cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 
+# recipe: providers
+# Provider conformance and resume times on this host (layer P); docker in S2.
+providers: image
+    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags providers -timeout 20m ./internal/providers/docker/
+
 # recipe: ci
 # The gate (grows by slice, D-105).
-ci: gen-check fmt-check lint test contract e2e
+ci: gen-check fmt-check lint test contract e2e providers
 
 # recipe: check
 # The owner's gate name; runs the same recipes as ci (D-101).
