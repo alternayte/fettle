@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 // Package auth handles users, the local token and sessions.
 package auth
 

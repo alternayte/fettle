@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
+
+	"golang.org/x/net/http/httpproxy"
 )
 
 // NewHTTPClient returns the client for all outbound HTTP (C-08, REQ-CORE-007). It uses
@@ -27,7 +30,7 @@ func NewHTTPClient(extraCAFile string) (*http.Client, error) {
 		}
 	}
 	tr := &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
+		Proxy:                 proxyFunc(),
 		DialContext:           (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
@@ -37,4 +40,11 @@ func NewHTTPClient(extraCAFile string) (*http.Client, error) {
 		TLSClientConfig:       &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
 	}
 	return &http.Client{Transport: tr}, nil
+}
+
+// proxyFunc reads HTTP_PROXY, HTTPS_PROXY and NO_PROXY when the client is built, not once
+// per process as http.ProxyFromEnvironment does.
+func proxyFunc() func(*http.Request) (*url.URL, error) {
+	f := httpproxy.FromEnvironment().ProxyFunc()
+	return func(r *http.Request) (*url.URL, error) { return f(r.URL) }
 }

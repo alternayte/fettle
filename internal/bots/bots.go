@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 // Package bots keeps bots, their instruction history, memory and open work.
 package bots
 

@@ -29,7 +29,7 @@ func TestMigrationsVerify(t *testing.T) {
 			}
 			cmd := exec.Command(drelBin, "migrate", "verify", "--config", conf)
 			cmd.Dir = root
-			cmd.Env = append(os.Environ(), "DATABASE_URL="+dsn, "GOFLAGS=-tags=drelgen")
+			cmd.Env = append(os.Environ(), "DATABASE_URL="+dsn)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				t.Fatalf("drel migrate verify (%s): %v\n%s", d, err, out)

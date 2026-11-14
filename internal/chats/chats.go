@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 // Package chats keeps chats, messages, cards and the realtime hub.
 package chats
 

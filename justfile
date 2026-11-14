@@ -13,7 +13,7 @@ default:
 # recipe: setup
 # Install the pinned Go tools and the UI packages.
 setup:
-    go install github.com/alternayte/drel/cmd/drel@v0.10.3
+    go install github.com/alternayte/drel/cmd/drel@v0.10.4
     go install golang.org/x/tools/cmd/goimports@v0.38.0
     go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
     cd ui && bun install --frozen-lockfile
@@ -41,7 +41,7 @@ dev:
 # recipe: gen
 # Generate drel code, the migration list, the OpenAPI document and the TypeScript client.
 gen:
-    GOFLAGS=-tags=drelgen drel generate
+    drel generate
     scripts/gen-migrations.sh
     go run ./cmd/fettle openapi > ui/src/api/openapi.json
     cd ui && bunx openapi-typescript src/api/openapi.json -o src/api/schema.d.ts --root-types >/dev/null && bunx prettier --write src/api/schema.d.ts >/dev/null

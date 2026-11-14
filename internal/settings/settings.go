@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 // Package settings keeps versioned instance and space settings with history (REQ-CORE-009).
 package settings
 

@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 package bots
 
 import (

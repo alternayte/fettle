@@ -1,5 +1,3 @@
-//go:build !drelgen
-
 // Package runs keeps runs and their journals (§7). The journal is the append-only
 // list of a run's steps; it is the checkpoint and the timeline of the run.
 package runs
