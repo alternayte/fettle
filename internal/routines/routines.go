@@ -133,7 +133,23 @@ func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UU
 		return nil, "", err
 	}
 	r := &Routine{SpaceID: spaceID, BotID: in.BotID, Name: in.Name, Prompt: in.Prompt, Trigger: in.Trigger, Cron: in.Cron, TZ: in.TZ, Notify: in.Notify, Enabled: in.Enabled, CreatedBy: actor.Kind + ":" + actor.ID}
+	r.SetID(uuid.Must(uuid.NewV7()))
 	secret := ""
+	// Seal before the row is tracked: the first seal of a space creates its data key in a
+	// nested transaction, which writes tracked rows as they are at that moment.
+	if r.Trigger == "webhook" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			return nil, "", err
+		}
+		secret = hex.EncodeToString(b)
+		sealed, err := s.sealer.Seal(ctx, spaceID, []byte(secret), "routine:"+r.ID().String())
+		if err != nil {
+			return nil, "", err
+		}
+		h := sha256.Sum256([]byte(secret))
+		r.WebhookSecret, r.WebhookSecretHash = base64.StdEncoding.EncodeToString(sealed), hex.EncodeToString(h[:])
+	}
 	err := s.e.WithTx(ctx, func(ctx context.Context) error {
 		tx := drel.MustFromContext(ctx)
 		var n int
@@ -149,25 +165,12 @@ func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UU
 		if n >= limit {
 			return ErrLimit
 		}
-		repo := drel.Repo(tx, RoutineMeta)
-		repo.Add(r)
-		if r.Trigger == "webhook" {
-			b := make([]byte, 32)
-			if _, err := rand.Read(b); err != nil {
-				return err
-			}
-			secret = hex.EncodeToString(b)
-			sealed, err := s.sealer.Seal(ctx, spaceID, []byte(secret), "routine:"+r.ID().String())
-			if err != nil {
-				return err
-			}
-			h := sha256.Sum256([]byte(secret))
-			r.WebhookSecret, r.WebhookSecretHash = base64.StdEncoding.EncodeToString(sealed), hex.EncodeToString(h[:])
-		} else {
+		if r.Trigger == "cron" {
 			sch, loc, _ := schedule(r.Cron, r.TZ)
 			n := next(sch, loc, s.now())
 			r.NextAt = &n
 		}
+		drel.Repo(tx, RoutineMeta).Add(r)
 		return s.audit.Record(ctx, actor, &spaceID, "routine.create", "routine:"+r.ID().String(), map[string]string{"name": r.Name, "trigger": r.Trigger, "bot": r.BotID.String()})
 	})
 	if err != nil {

@@ -56,6 +56,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/connectors/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Known remote MCP servers for the Connect screen */
+    get: operations["connector-catalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/instance": {
     parameters: {
       query?: never;
@@ -396,6 +413,126 @@ export interface paths {
     put?: never;
     /** Ask to turn on the host provider. It is on after a person allows the card. */
     post: operations["enable-host-provider"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the connectors of a space */
+    get: operations["list-connectors"];
+    put?: never;
+    /** Add an MCP connector. An OAuth connector registers Fettle at its sign-in server. */
+    post: operations["create-connector"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/composio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Composio's MCP endpoint with a Composio key */
+    post: operations["add-composio"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a connector, its accounts and their grants */
+    delete: operations["delete-connector"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add an account with a header key, or a stdio account */
+    post: operations["add-connector-account"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}/authorize": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start an OAuth sign-in for a new account; open the returned URL */
+    post: operations["authorize-connector"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** List the tools of a connector with their classes, through one account */
+    post: operations["test-connector"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}/tools/{tool}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Change the class of a connector tool, or turn it off. It applies to the next run. */
+    put: operations["set-connector-tool"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -856,6 +993,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    AccountView: {
+      id: string;
+      label: string;
+      /** @description Names of the zones that hold this account. */
+      zones: string[] | null;
+    };
+    "Add-composioRequest": {
+      key: string;
+    };
+    "Add-connector-accountRequest": {
+      label: string;
+      /** @description Write only. The API never returns it. */
+      value?: string;
+    };
     "Add-policy-ruleRequest": {
       connector?: string;
       /** @enum {string} */
@@ -894,6 +1045,12 @@ export interface components {
         [key: string]: string;
       };
       target: string;
+    };
+    "Authorize-connectorRequest": {
+      label: string;
+    };
+    "Authorize-connectorResponse": {
+      url: string;
     };
     BotBody: {
       avatar?: string;
@@ -990,12 +1147,50 @@ export interface components {
       kind: string;
       name: string;
     };
+    "Connector-catalogResponse": {
+      connectors: components["schemas"]["Entry"][] | null;
+    };
+    ConnectorView: {
+      accounts: components["schemas"]["AccountView"][] | null;
+      /** @enum {string} */
+      auth: "none" | "oauth" | "header";
+      command: string[] | null;
+      header_name?: string;
+      icon: string;
+      id: string;
+      /** @enum {string} */
+      kind: "mcp_remote" | "mcp_stdio" | "composio";
+      name: string;
+      tools: {
+        [key: string]: components["schemas"]["ToolSetting"];
+      };
+      url?: string;
+    };
+    "Create-connectorRequest": {
+      /** @enum {string} */
+      auth?: "none" | "oauth" | "header";
+      command?: string[] | null;
+      header_name?: string;
+      icon?: string;
+      /** @enum {string} */
+      kind?: "mcp_remote" | "mcp_stdio";
+      name: string;
+      url?: string;
+    };
     CreateOutBody: {
       routine: components["schemas"]["RoutineView"];
       secret?: string;
     };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
+    };
+    Entry: {
+      /** @enum {string} */
+      auth: "oauth" | "header" | "none";
+      header_name?: string;
+      icon: string;
+      name: string;
+      url: string;
     };
     ErrorDetail: {
       /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -1089,6 +1284,9 @@ export interface components {
     };
     ListOutBody: {
       routines: components["schemas"]["RoutineView"][] | null;
+    };
+    ListOutBody1: {
+      connectors: components["schemas"]["ConnectorView"][] | null;
     };
     LocalAuthInBody: {
       token: string;
@@ -1344,6 +1542,11 @@ export interface components {
       /** @enum {string} */
       mode: "ask" | "auto" | "never";
     };
+    "Set-connector-toolRequest": {
+      /** @enum {string} */
+      class?: "read" | "write_local" | "write_external" | "send" | "admin";
+      disabled: boolean;
+    };
     "Set-model-roleRequest": {
       bot_id?: string;
       targets: components["schemas"]["Target"][] | null;
@@ -1417,8 +1620,29 @@ export interface components {
       fields: string[] | null;
       preview: components["schemas"]["TelemetryCounts"];
     };
+    "Test-connectorRequest": {
+      account_id: string;
+      /** @description For a stdio connector: the bot whose zone computer runs it. Default: the primary bot. */
+      bot_id?: string;
+    };
+    "Test-connectorResponse": {
+      tools: components["schemas"]["ToolInfo"][] | null;
+    };
     "Test-model-providerRequest": {
       model?: string;
+    };
+    ToolInfo: {
+      class: string;
+      description: string;
+      destructive_hint: boolean;
+      disabled: boolean;
+      name: string;
+      read_only_hint: boolean;
+      schema: unknown;
+    };
+    ToolSetting: {
+      class?: string;
+      disabled?: boolean;
     };
     "Update-meRequest": {
       name: string;
@@ -1493,11 +1717,16 @@ export interface components {
   headers: never;
   pathItems: never;
 }
+export type SchemaAccountView = components["schemas"]["AccountView"];
+export type SchemaAddComposioRequest = components["schemas"]["Add-composioRequest"];
+export type SchemaAddConnectorAccountRequest = components["schemas"]["Add-connector-accountRequest"];
 export type SchemaAddPolicyRuleRequest = components["schemas"]["Add-policy-ruleRequest"];
 export type SchemaAddZoneGrantRequest = components["schemas"]["Add-zone-grantRequest"];
 export type SchemaAnswerCardRequest = components["schemas"]["Answer-cardRequest"];
 export type SchemaAttachment = components["schemas"]["Attachment"];
 export type SchemaAuditView = components["schemas"]["AuditView"];
+export type SchemaAuthorizeConnectorRequest = components["schemas"]["Authorize-connectorRequest"];
+export type SchemaAuthorizeConnectorResponse = components["schemas"]["Authorize-connectorResponse"];
 export type SchemaBotBody = components["schemas"]["BotBody"];
 export type SchemaBotView = components["schemas"]["BotView"];
 export type SchemaBotsOutBody = components["schemas"]["BotsOutBody"];
@@ -1508,8 +1737,12 @@ export type SchemaChatView = components["schemas"]["ChatView"];
 export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
 export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
+export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-catalogResponse"];
+export type SchemaConnectorView = components["schemas"]["ConnectorView"];
+export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
+export type SchemaEntry = components["schemas"]["Entry"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
 export type SchemaEventView = components["schemas"]["EventView"];
@@ -1525,6 +1758,7 @@ export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
+export type SchemaListOutBody1 = components["schemas"]["ListOutBody1"];
 export type SchemaLocalAuthInBody = components["schemas"]["LocalAuthInBody"];
 export type SchemaLocalAuthOutBody = components["schemas"]["LocalAuthOutBody"];
 export type SchemaMeView = components["schemas"]["MeView"];
@@ -1556,6 +1790,7 @@ export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
 export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
+export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
 export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequest"];
@@ -1568,7 +1803,11 @@ export type SchemaSpaceView = components["schemas"]["SpaceView"];
 export type SchemaTarget = components["schemas"]["Target"];
 export type SchemaTelemetryCounts = components["schemas"]["TelemetryCounts"];
 export type SchemaTelemetryView = components["schemas"]["TelemetryView"];
+export type SchemaTestConnectorRequest = components["schemas"]["Test-connectorRequest"];
+export type SchemaTestConnectorResponse = components["schemas"]["Test-connectorResponse"];
 export type SchemaTestModelProviderRequest = components["schemas"]["Test-model-providerRequest"];
+export type SchemaToolInfo = components["schemas"]["ToolInfo"];
+export type SchemaToolSetting = components["schemas"]["ToolSetting"];
 export type SchemaUpdateMeRequest = components["schemas"]["Update-meRequest"];
 export type SchemaUsageViewResponse = components["schemas"]["Usage-viewResponse"];
 export type SchemaVaultBody = components["schemas"]["VaultBody"];
@@ -1691,6 +1930,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LocalAuthOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "connector-catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Connector-catalogResponse"];
         };
       };
       /** @description Error */
@@ -2622,6 +2890,288 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["CardReply"];
         };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-connectors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ListOutBody1"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-connector": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Create-connectorRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConnectorView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-composio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Add-composioRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConnectorView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "delete-connector": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-connector-account": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Add-connector-accountRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "authorize-connector": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Authorize-connectorRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Authorize-connectorResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "test-connector": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Test-connectorRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Test-connectorResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "set-connector-tool": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+        tool: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Set-connector-toolRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Error */
       default: {

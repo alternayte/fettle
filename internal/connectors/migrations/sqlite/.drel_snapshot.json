@@ -1,0 +1,221 @@
+{
+  "tables": [
+    {
+      "name": "connectors",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('mcp_remote','mcp_stdio','composio')"
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "command",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "auth",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "auth IN ('none','oauth','header')"
+        },
+        {
+          "name": "header_name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "oauth",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "tools",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "icon",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_connectors_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "connector_accounts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "connector_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "connectors",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "label",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "token_ciphertext",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "scopes",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "expires_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_connector_accounts_connector",
+          "columns": [
+            "connector_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "oauth_states",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "state",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "connector_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "connectors",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "label",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "verifier",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "user_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "expires_at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_oauth_states_state",
+          "columns": [
+            "state"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

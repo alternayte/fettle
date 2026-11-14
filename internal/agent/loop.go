@@ -373,7 +373,7 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 	direct := st.step == "direct"
 	var tools []Tool
 	if !direct {
-		tools = a.Tools.For(x.env.Capabilities, x.run.Kind == "subagent")
+		tools = x.tools(ctx)
 	}
 	req := models.Request{System: c.System, Messages: c.Messages, Tools: toolDefs(tools), MaxTokens: 4096}
 
@@ -513,19 +513,36 @@ func (x *exec) fail(ctx context.Context, st *state, userText string, cause error
 	return x.finish(ctx, st, runs.StatusFailed, userText)
 }
 
-// runTool executes one pending tool call with intent and result events for side effects (§7.3).
-func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) error {
-	a := x.a
-	tool, ok := a.Tools.Get(call.Name)
-	allowed := false
-	if ok {
-		for _, t := range a.Tools.For(x.env.Capabilities, x.run.Kind == "subagent") {
-			if t.Name == call.Name {
-				allowed = true
+// tools returns the tools of this run: the built-in tools and the bot's connector tools,
+// filtered by the envelope's capabilities and the step (REQ-AGT-004).
+func (x *exec) tools(ctx context.Context) []Tool {
+	sub := x.run.Kind == "subagent"
+	out := x.a.Tools.For(x.env.Capabilities, sub)
+	if x.a.Dynamic != nil {
+		dyn, err := x.a.Dynamic(ctx, x.run.SpaceID, x.run.BotID)
+		if err != nil {
+			x.a.Log.Warn("connector tools unavailable", "bot", x.run.BotID, "error", x.a.Vault.Redactor.Global(err.Error()))
+		}
+		for _, t := range dyn {
+			if Allowed(x.env.Capabilities, sub, t.Class) {
+				out = append(out, t)
 			}
 		}
 	}
-	if !ok || !allowed {
+	return out
+}
+
+// runTool executes one pending tool call with intent and result events for side effects (§7.3).
+func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) error {
+	a := x.a
+	var tool Tool
+	ok := false
+	for _, t := range x.tools(ctx) {
+		if t.Name == call.Name {
+			tool, ok = t, true
+		}
+	}
+	if !ok {
 		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Args: call.Args, Error: "This tool is not available in this run."}})
 		return err
 	}

@@ -106,6 +106,8 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/browser/{ctx}/act", s.browserAct)
 	mux.HandleFunc("POST /v1/browser/{ctx}/screenshot", s.browserScreenshot)
 	mux.HandleFunc("POST /v1/browser/{ctx}/downloads", s.browserDownloads)
+	// A websocket upgrade is a GET; Appendix B names this route POST /v1/mcp/stdio (D-135).
+	mux.HandleFunc("GET /v1/mcp/stdio", s.mcpStdio)
 	for _, p := range []string{"/v1/health", "/v1/exec", "/v1/files", "/v1/files/list", "/v1/files/stat",
 		"/v1/workspace/export", "/v1/workspace/import", "/v1/workspace/manifest", "/v1/workspace/diff"} {
 		mux.HandleFunc(p, func(w http.ResponseWriter, _ *http.Request) {

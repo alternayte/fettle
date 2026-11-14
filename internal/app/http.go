@@ -35,6 +35,8 @@ func (a *App) Handler() http.Handler {
 
 	// Webhooks sign their bodies instead of signing in (SI-17).
 	r.Post("/hooks/{id}", a.webhook)
+	// The OAuth sign-in of a connector returns here; its state is the secret (§12.1).
+	r.Get(APIPrefix+"/oauth/callback", a.oauthCallback)
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}

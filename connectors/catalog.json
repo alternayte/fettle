@@ -1,0 +1,10 @@
+{
+  "connectors": [
+    { "name": "Notion", "url": "https://mcp.notion.com/mcp", "auth": "oauth", "icon": "notebook" },
+    { "name": "Linear", "url": "https://mcp.linear.app/mcp", "auth": "oauth", "icon": "list-checks" },
+    { "name": "Sentry", "url": "https://mcp.sentry.dev/mcp", "auth": "oauth", "icon": "bug" },
+    { "name": "GitHub", "url": "https://api.githubcopilot.com/mcp/", "auth": "header", "header_name": "Authorization", "icon": "git-branch" },
+    { "name": "Stripe", "url": "https://mcp.stripe.com", "auth": "header", "header_name": "Authorization", "icon": "credit-card" },
+    { "name": "Cloudflare docs", "url": "https://docs.mcp.cloudflare.com/mcp", "auth": "none", "icon": "book-open" }
+  ]
+}

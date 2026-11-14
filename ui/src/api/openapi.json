@@ -1,6 +1,66 @@
 {
   "components": {
     "schemas": {
+      "AccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "zones": {
+            "description": "Names of the zones that hold this account.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "zones"
+        ],
+        "type": "object"
+      },
+      "Add-composioRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 500,
+            "minLength": 8,
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "Add-connector-accountRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "value": {
+            "description": "Write only. The API never returns it.",
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "type": "object"
+      },
       "Add-policy-ruleRequest": {
         "additionalProperties": false,
         "properties": {
@@ -145,6 +205,32 @@
           "action",
           "target",
           "details"
+        ],
+        "type": "object"
+      },
+      "Authorize-connectorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "type": "object"
+      },
+      "Authorize-connectorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
         ],
         "type": "object"
       },
@@ -503,6 +589,146 @@
         ],
         "type": "object"
       },
+      "Connector-catalogResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "connectors"
+        ],
+        "type": "object"
+      },
+      "ConnectorView": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "auth": {
+            "enum": [
+              "none",
+              "oauth",
+              "header"
+            ],
+            "type": "string"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "header_name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio",
+              "composio"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tools": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ToolSetting"
+            },
+            "type": "object"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "command",
+          "auth",
+          "icon",
+          "tools",
+          "accounts"
+        ],
+        "type": "object"
+      },
+      "Create-connectorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "enum": [
+              "none",
+              "oauth",
+              "header"
+            ],
+            "type": "string"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "header_name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "icon": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "CreateOutBody": {
         "additionalProperties": false,
         "properties": {
@@ -533,6 +759,38 @@
         },
         "required": [
           "checks"
+        ],
+        "type": "object"
+      },
+      "Entry": {
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "enum": [
+              "oauth",
+              "header",
+              "none"
+            ],
+            "type": "string"
+          },
+          "header_name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "auth",
+          "icon"
         ],
         "type": "object"
       },
@@ -865,6 +1123,24 @@
         },
         "required": [
           "routines"
+        ],
+        "type": "object"
+      },
+      "ListOutBody1": {
+        "additionalProperties": false,
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "connectors"
         ],
         "type": "object"
       },
@@ -1854,6 +2130,28 @@
         ],
         "type": "object"
       },
+      "Set-connector-toolRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "enum": [
+              "read",
+              "write_local",
+              "write_external",
+              "send",
+              "admin"
+            ],
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "disabled"
+        ],
+        "type": "object"
+      },
       "Set-model-roleRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2135,12 +2433,92 @@
         ],
         "type": "object"
       },
+      "Test-connectorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "type": "string"
+          },
+          "bot_id": {
+            "description": "For a stdio connector: the bot whose zone computer runs it. Default: the primary bot.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "type": "object"
+      },
+      "Test-connectorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "tools"
+        ],
+        "type": "object"
+      },
       "Test-model-providerRequest": {
         "additionalProperties": false,
         "properties": {
           "model": {
             "maxLength": 200,
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ToolInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "destructive_hint": {
+            "type": "boolean"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "read_only_hint": {
+            "type": "boolean"
+          },
+          "schema": {}
+        },
+        "required": [
+          "name",
+          "description",
+          "class",
+          "disabled",
+          "schema",
+          "read_only_hint",
+          "destructive_hint"
+        ],
+        "type": "object"
+      },
+      "ToolSetting": {
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "disabled": {
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -2571,6 +2949,37 @@
         "summary": "Exchange the local token for a UI cookie",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/connectors/catalog": {
+      "get": {
+        "operationId": "connector-catalog",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connector-catalogResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Known remote MCP servers for the Connect screen",
+        "tags": [
+          "connectors"
         ]
       }
     },
@@ -4003,6 +4412,442 @@
         "summary": "Ask to turn on the host provider. It is on after a person allows the card.",
         "tags": [
           "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors": {
+      "get": {
+        "operationId": "list-connectors",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOutBody1"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the connectors of a space",
+        "tags": [
+          "connectors"
+        ]
+      },
+      "post": {
+        "operationId": "create-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-connectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add an MCP connector. An OAuth connector registers Fettle at its sign-in server.",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/composio": {
+      "post": {
+        "operationId": "add-composio",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-composioRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add Composio's MCP endpoint with a Composio key",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}": {
+      "delete": {
+        "operationId": "delete-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a connector, its accounts and their grants",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
+      "post": {
+        "operationId": "add-connector-account",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-connector-accountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add an account with a header key, or a stdio account",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/authorize": {
+      "post": {
+        "operationId": "authorize-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Authorize-connectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Authorize-connectorResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start an OAuth sign-in for a new account; open the returned URL",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/test": {
+      "post": {
+        "operationId": "test-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Test-connectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Test-connectorResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the tools of a connector with their classes, through one account",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/tools/{tool}": {
+      "put": {
+        "operationId": "set-connector-tool",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-connector-toolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change the class of a connector tool, or turn it off. It applies to the next run.",
+        "tags": [
+          "connectors"
         ]
       }
     },

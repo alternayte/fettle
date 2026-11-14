@@ -29,6 +29,8 @@ type Tool struct {
 	NeedsComputer bool
 	// MemoryWrite marks remember and forget (§11.3).
 	MemoryWrite bool
+	// Connector names the connector of a connector tool, for rules (§11.2).
+	Connector string
 	// Target returns the site and the recipient that a call touches, for rules.
 	Target func(args json.RawMessage) (site, recipient string)
 	// ClassOf returns the class of one call when it depends on the arguments (browser_act).

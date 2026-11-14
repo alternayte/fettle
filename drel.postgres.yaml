@@ -50,3 +50,6 @@ modules:
   - name: push
     packages: [./internal/push]
     migrations: ./internal/push/migrations/postgres
+  - name: connectors
+    packages: [./internal/connectors]
+    migrations: ./internal/connectors/migrations/postgres

@@ -58,7 +58,7 @@ func (x *exec) authorize(ctx context.Context, st *state, tool Tool, env *ToolEnv
 	if err != nil {
 		return false, err
 	}
-	req := policy.Request{Tool: call.Name, Class: class, HardAsk: tool.HardAsk, ReducedIntent: x.env.Origin != "user", ReadData: st.readData, MemoryWrite: tool.MemoryWrite}
+	req := policy.Request{Tool: call.Name, Connector: tool.Connector, Class: class, HardAsk: tool.HardAsk, ReducedIntent: x.env.Origin != "user", ReadData: st.readData, MemoryWrite: tool.MemoryWrite}
 	if tool.Target != nil {
 		req.Site, req.Recipient = tool.Target(call.Args)
 	}

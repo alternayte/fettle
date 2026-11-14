@@ -11,6 +11,7 @@ import (
 	bots "github.com/alternayte/fettle/internal/bots"
 	chats "github.com/alternayte/fettle/internal/chats"
 	computers "github.com/alternayte/fettle/internal/computers"
+	connectors "github.com/alternayte/fettle/internal/connectors"
 	envelopes "github.com/alternayte/fettle/internal/envelopes"
 	models "github.com/alternayte/fettle/internal/models"
 	policy "github.com/alternayte/fettle/internal/policy"
@@ -38,6 +39,9 @@ type DB struct {
 	Computers           *computers.ComputerRepository
 	ProviderRows        *computers.ProviderRowRepository
 	Workspaces          *computers.WorkspaceRepository
+	Connectors          *connectors.ConnectorRepository
+	ConnectorAccounts   *connectors.ConnectorAccountRepository
+	OAuthStates         *connectors.OAuthStateRepository
 	Envelopes           *envelopes.EnvelopeRepository
 	ModelProviders      *models.ModelProviderRepository
 	ModelRoles          *models.ModelRoleRepository
@@ -80,6 +84,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		Computers:           &computers.ComputerRepository{Repository: drel.NewRepository(engine, computers.ComputerMeta)},
 		ProviderRows:        &computers.ProviderRowRepository{Repository: drel.NewRepository(engine, computers.ProviderRowMeta)},
 		Workspaces:          &computers.WorkspaceRepository{Repository: drel.NewRepository(engine, computers.WorkspaceMeta)},
+		Connectors:          &connectors.ConnectorRepository{Repository: drel.NewRepository(engine, connectors.ConnectorMeta)},
+		ConnectorAccounts:   &connectors.ConnectorAccountRepository{Repository: drel.NewRepository(engine, connectors.ConnectorAccountMeta)},
+		OAuthStates:         &connectors.OAuthStateRepository{Repository: drel.NewRepository(engine, connectors.OAuthStateMeta)},
 		Envelopes:           &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
 		ModelRoles:          &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
@@ -122,6 +129,11 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Computers:    &computers.ComputerRepository{Repository: drel.NewRepository(engine, computers.ComputerMeta)},
 				ProviderRows: &computers.ProviderRowRepository{Repository: drel.NewRepository(engine, computers.ProviderRowMeta)},
 				Workspaces:   &computers.WorkspaceRepository{Repository: drel.NewRepository(engine, computers.WorkspaceMeta)},
+			},
+			Connectors: ConnectorsRepos{
+				Connectors:        &connectors.ConnectorRepository{Repository: drel.NewRepository(engine, connectors.ConnectorMeta)},
+				ConnectorAccounts: &connectors.ConnectorAccountRepository{Repository: drel.NewRepository(engine, connectors.ConnectorAccountMeta)},
+				OAuthStates:       &connectors.OAuthStateRepository{Repository: drel.NewRepository(engine, connectors.OAuthStateMeta)},
 			},
 			Envelopes: EnvelopesRepos{
 				Envelopes: &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
@@ -184,6 +196,9 @@ type TxRepos struct {
 	Computers           *computers.TxComputerRepository
 	ProviderRows        *computers.TxProviderRowRepository
 	Workspaces          *computers.TxWorkspaceRepository
+	Connectors          *connectors.TxConnectorRepository
+	ConnectorAccounts   *connectors.TxConnectorAccountRepository
+	OAuthStates         *connectors.TxOAuthStateRepository
 	Envelopes           *envelopes.TxEnvelopeRepository
 	ModelProviders      *models.TxModelProviderRepository
 	ModelRoles          *models.TxModelRoleRepository
@@ -224,6 +239,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		Computers:           &computers.TxComputerRepository{TxRepository: drel.NewTxRepository(tx, computers.ComputerMeta)},
 		ProviderRows:        &computers.TxProviderRowRepository{TxRepository: drel.NewTxRepository(tx, computers.ProviderRowMeta)},
 		Workspaces:          &computers.TxWorkspaceRepository{TxRepository: drel.NewTxRepository(tx, computers.WorkspaceMeta)},
+		Connectors:          &connectors.TxConnectorRepository{TxRepository: drel.NewTxRepository(tx, connectors.ConnectorMeta)},
+		ConnectorAccounts:   &connectors.TxConnectorAccountRepository{TxRepository: drel.NewTxRepository(tx, connectors.ConnectorAccountMeta)},
+		OAuthStates:         &connectors.TxOAuthStateRepository{TxRepository: drel.NewTxRepository(tx, connectors.OAuthStateMeta)},
 		Envelopes:           &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
 		ModelRoles:          &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
@@ -266,6 +284,11 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				Computers:    &computers.TxComputerRepository{TxRepository: drel.NewTxRepository(tx, computers.ComputerMeta)},
 				ProviderRows: &computers.TxProviderRowRepository{TxRepository: drel.NewTxRepository(tx, computers.ProviderRowMeta)},
 				Workspaces:   &computers.TxWorkspaceRepository{TxRepository: drel.NewTxRepository(tx, computers.WorkspaceMeta)},
+			},
+			Connectors: ConnectorsTxRepos{
+				Connectors:        &connectors.TxConnectorRepository{TxRepository: drel.NewTxRepository(tx, connectors.ConnectorMeta)},
+				ConnectorAccounts: &connectors.TxConnectorAccountRepository{TxRepository: drel.NewTxRepository(tx, connectors.ConnectorAccountMeta)},
+				OAuthStates:       &connectors.TxOAuthStateRepository{TxRepository: drel.NewTxRepository(tx, connectors.OAuthStateMeta)},
 			},
 			Envelopes: EnvelopesTxRepos{
 				Envelopes: &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
@@ -375,6 +398,20 @@ type ComputersTxRepos struct {
 	Computers    *computers.TxComputerRepository
 	ProviderRows *computers.TxProviderRowRepository
 	Workspaces   *computers.TxWorkspaceRepository
+}
+
+// ConnectorsRepos holds the untracked repositories of the "connectors" module.
+type ConnectorsRepos struct {
+	Connectors        *connectors.ConnectorRepository
+	ConnectorAccounts *connectors.ConnectorAccountRepository
+	OAuthStates       *connectors.OAuthStateRepository
+}
+
+// ConnectorsTxRepos holds the tracked repositories of the "connectors" module.
+type ConnectorsTxRepos struct {
+	Connectors        *connectors.TxConnectorRepository
+	ConnectorAccounts *connectors.TxConnectorAccountRepository
+	OAuthStates       *connectors.TxOAuthStateRepository
 }
 
 // EnvelopesRepos holds the untracked repositories of the "envelopes" module.
@@ -508,43 +545,45 @@ type ZonesTxRepos struct {
 // Modules groups the untracked repositories by feature slice, so a slice
 // reaches only its own models.
 type Modules struct {
-	Audit     AuditRepos
-	Auth      AuthRepos
-	Bots      BotsRepos
-	Chats     ChatsRepos
-	Computers ComputersRepos
-	Envelopes EnvelopesRepos
-	Models    ModelsRepos
-	Policy    PolicyRepos
-	Push      PushRepos
-	Routines  RoutinesRepos
-	Runs      RunsRepos
-	Settings  SettingsRepos
-	Spaces    SpacesRepos
-	Usage     UsageRepos
-	Vault     VaultRepos
-	Zones     ZonesRepos
+	Audit      AuditRepos
+	Auth       AuthRepos
+	Bots       BotsRepos
+	Chats      ChatsRepos
+	Computers  ComputersRepos
+	Connectors ConnectorsRepos
+	Envelopes  EnvelopesRepos
+	Models     ModelsRepos
+	Policy     PolicyRepos
+	Push       PushRepos
+	Routines   RoutinesRepos
+	Runs       RunsRepos
+	Settings   SettingsRepos
+	Spaces     SpacesRepos
+	Usage      UsageRepos
+	Vault      VaultRepos
+	Zones      ZonesRepos
 }
 
 // TxModules groups the tracked repositories by feature slice. Every set is
 // bound to the same transaction.
 type TxModules struct {
-	Audit     AuditTxRepos
-	Auth      AuthTxRepos
-	Bots      BotsTxRepos
-	Chats     ChatsTxRepos
-	Computers ComputersTxRepos
-	Envelopes EnvelopesTxRepos
-	Models    ModelsTxRepos
-	Policy    PolicyTxRepos
-	Push      PushTxRepos
-	Routines  RoutinesTxRepos
-	Runs      RunsTxRepos
-	Settings  SettingsTxRepos
-	Spaces    SpacesTxRepos
-	Usage     UsageTxRepos
-	Vault     VaultTxRepos
-	Zones     ZonesTxRepos
+	Audit      AuditTxRepos
+	Auth       AuthTxRepos
+	Bots       BotsTxRepos
+	Chats      ChatsTxRepos
+	Computers  ComputersTxRepos
+	Connectors ConnectorsTxRepos
+	Envelopes  EnvelopesTxRepos
+	Models     ModelsTxRepos
+	Policy     PolicyTxRepos
+	Push       PushTxRepos
+	Routines   RoutinesTxRepos
+	Runs       RunsTxRepos
+	Settings   SettingsTxRepos
+	Spaces     SpacesTxRepos
+	Usage      UsageTxRepos
+	Vault      VaultTxRepos
+	Zones      ZonesTxRepos
 }
 
 // WithTx runs fn inside a transaction and puts that transaction in the

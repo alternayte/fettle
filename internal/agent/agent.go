@@ -48,6 +48,9 @@ type Agent struct {
 	// send is a hard ask (§11.2). RoutineSendApproved records the allowed card.
 	RoutineFirstSend    func(ctx context.Context, routineID uuid.UUID) bool
 	RoutineSendApproved func(ctx context.Context, routineID uuid.UUID) error
+	// Dynamic returns the tools that a bot has beyond the built-in ones: the tools of the
+	// connector accounts that its zone holds (§12).
+	Dynamic func(ctx context.Context, spaceID, botID uuid.UUID) ([]Tool, error)
 	// Notify sends a push notification to the members of a space (§15.2). url is the
 	// path of the card or the run in the app.
 	Notify func(ctx context.Context, spaceID uuid.UUID, kind, title, body, url string)
