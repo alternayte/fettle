@@ -300,3 +300,28 @@ func jobsQueueForRun(r *runs.Run) string {
 	}
 	return QueueFor("bot")
 }
+
+// Submit creates an envelope from a source other than a chat message (a routine firing, a
+// webhook, a handoff) and its owner run in one transaction (§9.1). The envelope's origin
+// picks the queue: user work is interactive, the rest is background.
+func (a *Agent) Submit(ctx context.Context, env *envelopes.Envelope) (*runs.Run, error) {
+	if env.OwnerBotID == nil {
+		return nil, errors.New("the envelope has no owner bot")
+	}
+	if env.Budget == (envelopes.Budget{}) {
+		env.Budget = a.defaultBudget(ctx, env.SpaceID)
+	}
+	var r *runs.Run
+	err := a.E.WithTx(ctx, func(ctx context.Context) error {
+		if err := a.Envelopes.Create(ctx, env, nil); err != nil {
+			return err
+		}
+		r = &runs.Run{SpaceID: env.SpaceID, EnvelopeID: env.ID(), BotID: *env.OwnerBotID, Kind: "owner"}
+		return a.Runs.Create(ctx, r, QueueFor(env.Origin))
+	})
+	if err != nil {
+		return nil, err
+	}
+	a.publishRun(ctx, r.ID())
+	return r, nil
+}

@@ -58,6 +58,8 @@ type (
 		Status  string `json:"status"`
 		Summary string `json:"summary,omitempty"`
 		Error   string `json:"error,omitempty"`
+		// Turn is the one model turn of a direct step, which writes no model_turn event.
+		Turn *evModelTurn `json:"turn,omitempty"`
 	}
 	evSleep struct {
 		CallID string    `json:"call_id"`

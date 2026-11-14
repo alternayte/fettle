@@ -91,6 +91,9 @@ func strp(s string) *string { return &s }
 func (x *exec) loop(ctx context.Context) error {
 	a := x.a
 	lastBeat := time.Now()
+	// The journal is read once, then only its new events: this attempt's appends and the
+	// appends of others (steer, cancel, card answers).
+	var evs []*runs.RunEvent
 	for i := 0; ; i++ {
 		if time.Since(lastBeat) > 15*time.Second && a.Runs.Queue != nil {
 			_ = a.Runs.Queue.Heartbeat(ctx, x.jobID)
@@ -99,10 +102,15 @@ func (x *exec) loop(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		evs, err := a.Journal.Load(ctx, x.run.ID())
+		var after int64
+		if len(evs) > 0 {
+			after = evs[len(evs)-1].Seq
+		}
+		more, err := a.Journal.LoadAfter(ctx, x.run.ID(), after)
 		if err != nil {
 			return err
 		}
+		evs = append(evs, more...)
 		st := rebuild(evs)
 		if st.finished {
 			return nil
@@ -323,7 +331,12 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 			return err
 		}
 	}
-	tools := a.Tools.For(x.env.Capabilities, x.run.Kind == "subagent")
+	// A direct step is one conversational answer with no tools (§9.2).
+	direct := st.step == "direct"
+	var tools []Tool
+	if !direct {
+		tools = a.Tools.For(x.env.Capabilities, x.run.Kind == "subagent")
+	}
 	req := models.Request{System: c.System, Messages: c.Messages, Tools: toolDefs(tools), MaxTokens: 4096}
 
 	// Budget check before the call (§8.4).
@@ -365,6 +378,29 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 		}
 		return x.fail(ctx, st, "The model call failed: "+a.Vault.Redactor.Global(err.Error())+". Check the model provider in Settings, then try again.", err)
 	}
+	// Tool call IDs must be unique in the run, because the journal matches results by ID.
+	// Some providers reuse IDs across turns, so a reused or empty ID gets a new one.
+	used := map[string]bool{}
+	for _, tr := range st.turns {
+		for _, tc := range tr.ToolCalls {
+			used[tc.ID] = true
+		}
+	}
+	for _, ev := range st.events {
+		if ev.Type == runs.EvModelTurn && st.summarySeq > 0 {
+			var d evModelTurn
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			for _, tc := range d.ToolCalls {
+				used[tc.ID] = true
+			}
+		}
+	}
+	for i := range resp.ToolCalls {
+		if id := resp.ToolCalls[i].ID; id == "" || used[id] {
+			resp.ToolCalls[i].ID = fmt.Sprintf("call_t%d_%d", st.modelTurns+1, i)
+		}
+		used[resp.ToolCalls[i].ID] = true
+	}
 	t := targets[idx].Target
 	cost, reported := models.Cost(resp.Usage, t)
 	text := a.Vault.Redactor.String(ctx, x.run.SpaceID, resp.Text)
@@ -380,7 +416,17 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 			}
 			data.MessageID = msgID.String()
 		}
-		if _, err := x.append(ctx, &runs.Update{TokensIn: resp.Usage.In, TokensOut: resp.Usage.Out, CostUSD: cost}, runs.New{Type: runs.EvModelTurn, Data: data}); err != nil {
+		up := &runs.Update{TokensIn: resp.Usage.In, TokensOut: resp.Usage.Out, CostUSD: cost}
+		if direct {
+			// The direct step journals only its start and its finish (NFR-011).
+			up.Status, up.Finished = strp(runs.StatusDone), true
+			if _, err := x.append(ctx, up, runs.New{Type: runs.EvRunFinished, Data: evFinished{Status: runs.StatusDone, Summary: truncate(text, 2000), Turn: &data}}); err != nil {
+				return err
+			}
+			if err := a.Envelopes.SetStatus(ctx, x.env.ID(), "done", &envelopes.Result{Summary: truncate(text, 8000), Artifacts: []string{}, Evidence: []string{}, OpenItems: []string{}}); err != nil {
+				return err
+			}
+		} else if _, err := x.append(ctx, up, runs.New{Type: runs.EvModelTurn, Data: data}); err != nil {
 			return err
 		}
 		botID, runID := x.bot.ID(), x.run.ID()
@@ -392,6 +438,9 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 	}
 	if a.Metrics != nil {
 		a.Metrics.ModelCall(models.RoleOwner, resp.Model, resp.Usage.In, resp.Usage.Out, cost)
+		if direct {
+			a.Metrics.RunFinished(runs.StatusDone, st.step)
+		}
 	}
 	if x.env.ChatID != nil {
 		if msg != nil {

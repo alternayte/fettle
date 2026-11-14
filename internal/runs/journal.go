@@ -209,7 +209,12 @@ func isNoRows(err error) bool {
 
 // Load returns all events of a run in order, with large payloads read back from the object store.
 func (j *Journal) Load(ctx context.Context, runID uuid.UUID) ([]*RunEvent, error) {
-	evs, err := drel.NewRepository(j.e, RunEventMeta).Where(RunEvents.RunID.Eq(runID)).OrderBy(RunEvents.Seq.Asc()).All(ctx)
+	return j.LoadAfter(ctx, runID, 0)
+}
+
+// LoadAfter returns the events of a run after a sequence number, with full payloads.
+func (j *Journal) LoadAfter(ctx context.Context, runID uuid.UUID, afterSeq int64) ([]*RunEvent, error) {
+	evs, err := drel.NewRepository(j.e, RunEventMeta).Where(RunEvents.RunID.Eq(runID)).Where(RunEvents.Seq.GT(afterSeq)).OrderBy(RunEvents.Seq.Asc()).All(ctx)
 	if err != nil {
 		return nil, err
 	}
