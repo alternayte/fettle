@@ -102,6 +102,9 @@ func (x *exec) postApproval(ctx context.Context, call models.ToolCall, env *Tool
 		delete(env.Checked, "routine_id")
 	}
 	for k, v := range env.Checked {
+		if strings.HasPrefix(k, "expect_") {
+			continue // internal: what Run checks again before it acts
+		}
 		preview[k] = x.a.Vault.Redactor.String(ctx, x.run.SpaceID, v)
 	}
 	card := chats.Card{ID: cardID, Kind: "approval", Status: "pending", Title: approvalTitle(call.Name, class), Tool: call.Name, Preview: preview, Detail: reason, HardAsk: hard, RunID: x.run.ID().String(), Data: data}

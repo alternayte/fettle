@@ -522,7 +522,8 @@
       "admin": "Instance",
       "computers": "Computers",
       "approvals": "Approvals",
-      "tokens": "Access tokens"
+      "tokens": "Access tokens",
+      "notifications": "Notifications"
     },
     "ownerOnly": {
       "title": "Only the owner can change settings",
@@ -758,5 +759,22 @@
     "localOnly": "In local mode, the CLI uses the local token. Access tokens are for server mode.",
     "signOut": "Sign out",
     "needName": "Give the token a name."
+  },
+  "notify": {
+    "intro": "Fettle can tell this device when a bot needs you. A notification opens the exact card or run.",
+    "device": "This device",
+    "on": "Notifications are on for this device.",
+    "off": "Notifications are off for this device.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "denied": "The browser blocks notifications. Allow them in the browser settings, then try again.",
+    "failed": "Fettle could not change the notifications",
+    "types": "You get a notification when a bot needs approval, an answer or your screen. Budgets and failures also notify.",
+    "finishedTitle": "Finished work",
+    "finished": "Also notify the members when a bot finishes work.",
+    "unsupported": {
+      "title": "This browser cannot get notifications",
+      "body": "Open Fettle over HTTPS, or install it as an app, then try again."
+    }
   }
 }

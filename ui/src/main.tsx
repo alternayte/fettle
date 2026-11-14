@@ -27,3 +27,8 @@ async function start() {
 }
 
 void start();
+
+// The service worker shows push notifications and makes the app installable (§15.2).
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
+}

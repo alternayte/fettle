@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -73,7 +74,36 @@ func (s *Server) Deliveries() []Delivery {
 	return append([]Delivery(nil), s.got...)
 }
 
+// ServeHTTP takes deliveries at /push/<name>. For end-to-end tests it also hands out
+// subscriptions at POST /subscribe/<name> and lists decrypted deliveries at GET /deliveries.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/subscribe/"):
+		sub, err := s.Subscribe(strings.TrimPrefix(r.URL.Path, "/subscribe/"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"endpoint": sub.Endpoint, "keys": map[string]string{"p256dh": sub.P256dh, "auth": sub.Auth}})
+		return
+	case r.Method == http.MethodGet && r.URL.Path == "/deliveries":
+		out := []map[string]string{}
+		for _, d := range s.Deliveries() {
+			e := ""
+			if d.Err != nil {
+				e = d.Err.Error()
+			}
+			out = append(out, map[string]string{"endpoint": d.Endpoint, "payload": string(d.Payload), "error": e})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(out)
+		return
+	}
+	s.deliver(w, r)
+}
+
+func (s *Server) deliver(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	sub := s.subs[r.URL.Path]
 	s.mu.Unlock()

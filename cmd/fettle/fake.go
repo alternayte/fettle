@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
+	fakepush "github.com/alternayte/fettle/internal/fakes/push"
 	"github.com/alternayte/fettle/internal/fakes/web"
 )
 
@@ -26,6 +27,7 @@ func runFakeServe(ctx context.Context, args []string) error {
 	addr := fs.String("model-addr", "127.0.0.1:0", "listen address of the fake model")
 	scripts := fs.String("scripts", "", "folder with extra YAML scripts")
 	webAddr := fs.String("web-addr", "", "listen address of the fixture web server (docs.test, shop.test, evil.test, slow.test)")
+	pushAddr := fs.String("push-addr", "", "listen address of the push service mock")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -43,6 +45,18 @@ func runFakeServe(ctx context.Context, args []string) error {
 	fmt.Printf("FAKE_MODEL_URL=http://%s/v1\n", ln.Addr())
 	srv := &http.Server{Handler: f}
 	go func() { _ = srv.Serve(ln) }()
+	if *pushAddr != "" {
+		pl, err := net.Listen("tcp", *pushAddr)
+		if err != nil {
+			return err
+		}
+		pm := fakepush.New()
+		pm.URL = "http://" + pl.Addr().String()
+		fmt.Printf("FAKE_PUSH_URL=%s\n", pm.URL)
+		ps := &http.Server{Handler: pm}
+		go func() { _ = ps.Serve(pl) }()
+		defer func() { _ = ps.Close() }()
+	}
 	if *webAddr != "" {
 		wl, err := net.Listen("tcp", *webAddr)
 		if err != nil {

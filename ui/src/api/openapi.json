@@ -171,6 +171,10 @@
           "public_desc": {
             "maxLength": 200,
             "type": "string"
+          },
+          "zone_id": {
+            "description": "Only on create.",
+            "type": "string"
           }
         },
         "required": [

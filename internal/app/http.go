@@ -106,8 +106,14 @@ func spa() http.Handler {
 		p := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 		if p != "" {
 			if st, err := fs.Stat(dist, p); err == nil && !st.IsDir() {
-				if strings.HasPrefix(p, "assets/") {
+				switch {
+				case strings.HasPrefix(p, "assets/"):
 					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				case p == "sw.js":
+					// A new service worker must reach browsers at once.
+					w.Header().Set("Cache-Control", "no-cache")
+				case strings.HasSuffix(p, ".webmanifest"):
+					w.Header().Set("Content-Type", "application/manifest+json")
 				}
 				files.ServeHTTP(w, r)
 				return

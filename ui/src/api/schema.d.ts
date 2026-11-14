@@ -901,6 +901,8 @@ export interface components {
       job?: string;
       name: string;
       public_desc?: string;
+      /** @description Only on create. */
+      zone_id?: string;
     };
     BotView: {
       /**

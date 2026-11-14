@@ -1,6 +1,8 @@
 import { api, expect, signIn, state, test } from "../fixtures";
 
-test("SCN-VLT-002 the eye toggle shows a value before save and the page never holds it after", async ({ page }) => {
+test("SCN-VLT-002 the eye toggle shows a value before save and the page never holds it after", async ({
+  page,
+}) => {
   const secret = "pw-correct-horse-9876";
   await signIn(page, "/settings/vault");
   await page.getByRole("button", { name: "Add an item" }).click();

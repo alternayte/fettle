@@ -25,6 +25,11 @@ export function SettingsNav() {
               </Link>
             </li>
           ))}
+        <li>
+          <Link to="/settings/notifications" className={tabCls} activeProps={{ "aria-current": "page" }}>
+            {t("settings.tabs.notifications")}
+          </Link>
+        </li>
         {me.mode === "server" && (
           <li>
             <Link to="/settings/tokens" className={tabCls} activeProps={{ "aria-current": "page" }}>
@@ -48,7 +53,7 @@ export function SettingsLayout() {
   const { isOwner } = useSession();
   const pathname = useRouterState({ select: (st) => st.location.pathname });
   // Access tokens belong to the caller, so members open them too.
-  const own = pathname.startsWith("/settings/tokens");
+  const own = pathname.startsWith("/settings/tokens") || pathname.startsWith("/settings/notifications");
   return (
     <Page title={t("shell.settings")} wide>
       <SettingsNav />

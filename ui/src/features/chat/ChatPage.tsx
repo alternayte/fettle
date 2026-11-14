@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { CircleAlert, Settings2 } from "lucide-react";
 import { useBots, useChats, useSession, useStopRun } from "@/api/hooks";
@@ -34,6 +34,7 @@ function ChatScreen({ chatId }: { chatId: string }) {
   const chats = useChats();
   const bots = useBots();
   const runParam = useRouterState({ select: (s) => (s.location.search as { run?: string }).run });
+  const cardParam = useRouterState({ select: (s) => (s.location.search as { card?: string }).card });
   const c = useChat(space.id, chatId, me.id);
   const stop = useStopRun();
 
@@ -51,6 +52,15 @@ function ChatScreen({ chatId }: { chatId: string }) {
     for (let i = c.messages.length - 1; i >= 0; i--) if (c.messages[i].run) return c.messages[i].run!.run_id;
     return undefined;
   }, [c.messages]);
+
+  // A notification link opens the exact card (§15.2).
+  const hasCard = !!cardParam && c.messages.some((m) => m.card?.id === cardParam);
+  useEffect(() => {
+    if (!hasCard) return;
+    const el = document.querySelector<HTMLElement>(`[data-card-id="${CSS.escape(cardParam!)}"]`);
+    el?.scrollIntoView({ block: "center" });
+    el?.focus({ preventScroll: true });
+  }, [hasCard, cardParam]);
 
   const streaming = c.messages.some((m) => m.streaming);
   const active = c.activeRun;

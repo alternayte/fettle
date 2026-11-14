@@ -42,7 +42,10 @@ export async function createAppRouter() {
     getParentRoute: () => app,
     path: "/chat/$chatId",
     component: ChatPage,
-    validateSearch: (s: Record<string, unknown>): { run?: string } => ({ run: optionalString(s.run) }),
+    validateSearch: (s: Record<string, unknown>): { run?: string; card?: string } => ({
+      run: optionalString(s.run),
+      card: optionalString(s.card),
+    }),
   });
   const runs = createRoute({
     getParentRoute: () => app,
@@ -102,6 +105,7 @@ export async function createAppRouter() {
         sub("usage", () => import("@/features/settings/UsagePage"), "UsagePage"),
         sub("audit", () => import("@/features/settings/AuditPage"), "AuditPage"),
         sub("tokens", () => import("@/features/settings/TokensPage"), "TokensPage"),
+        sub("notifications", () => import("@/features/settings/NotificationsPage"), "NotificationsPage"),
       ]),
       admin,
     ]),

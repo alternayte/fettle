@@ -76,6 +76,8 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       aria-label={card.title}
+      data-card-id={card.id}
+      tabIndex={-1}
       className="relative mt-2 max-w-[var(--measure)] overflow-hidden rounded-sm border border-rule-strong bg-surface-raised shadow-[var(--shadow-1)]"
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-glaze" />
