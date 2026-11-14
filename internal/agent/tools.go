@@ -97,22 +97,26 @@ func (r *Registry) Names() []string {
 	return out
 }
 
+// Allowed reports whether a run with these capabilities may use a class (REQ-AGT-004):
+// spend never (SI-08), a sub-agent only read (SI-09), else the class must be a capability.
+func Allowed(capabilities []string, subagent bool, class string) bool {
+	switch {
+	case class == envelopes.ClassSpend:
+		return false
+	case subagent && class != envelopes.ClassRead:
+		return false
+	}
+	return slices.Contains(capabilities, class)
+}
+
 // For returns the tools of a run filtered by the envelope's capabilities (REQ-AGT-004).
-// subagent keeps read tools only (SI-09). spend is never offered (SI-08).
+// A tool whose class depends on the call (browser_act) is checked again per call.
 func (r *Registry) For(capabilities []string, subagent bool) []Tool {
 	var out []Tool
 	for _, n := range r.Names() {
-		t := r.tools[n]
-		if t.Class == envelopes.ClassSpend {
-			continue
+		if t := r.tools[n]; Allowed(capabilities, subagent, t.Class) {
+			out = append(out, t)
 		}
-		if subagent && t.Class != envelopes.ClassRead {
-			continue
-		}
-		if !slices.Contains(capabilities, t.Class) {
-			continue
-		}
-		out = append(out, t)
 	}
 	return out
 }

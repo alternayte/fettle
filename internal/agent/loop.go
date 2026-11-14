@@ -546,6 +546,10 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		}
 	}
 	class := tool.classOf(ctx, env, call.Args)
+	if !Allowed(x.env.Capabilities, x.run.Kind == "subagent", class) {
+		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Args: call.Args, Error: "This action is of class " + class + ", which this work may not use."}})
+		return err
+	}
 	side := class != envelopes.ClassRead
 	decision := st.approvals[call.ID]
 	// A decision covers the class that it saw. When the call now has another class (the
