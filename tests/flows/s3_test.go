@@ -26,7 +26,6 @@ type serverMode struct {
 	url     string
 	baseURL string
 	cookie  string
-	space   string
 }
 
 // startServerMode creates the owner with `fettle admin create-user` and runs `fettle serve --mode server`.
