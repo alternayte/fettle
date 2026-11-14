@@ -4,7 +4,9 @@ package flows
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -420,5 +422,129 @@ func TestSCN_RUN_005_UncertainSendIsNeverRepeated(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	if n := strings.Count(s2.fixtureLog("slow.test"), "POST slow.test/posted"); n != 1 {
 		t.Fatalf("the post reached the site %d times, want 1", n)
+	}
+}
+
+// setMode changes the approval mode through its card.
+func (s *server) setMode(mode string) {
+	s.T.Helper()
+	var r cardReply
+	s.MustDo("PUT", s.SP("/approval-mode"), map[string]any{"mode": mode}, &r)
+	s.MustDo("POST", s.SP("/cards/%s/answer", r.CardID), map[string]any{"action": "allow"}, nil)
+}
+
+func TestSCN_POL_002_AskAutoAndNeverModes(t *testing.T) {
+	s := startComputers(t, "sqlite")
+	// The verifier role checks Auto actions against intent; it says yes only when the user asked.
+	s.Fake.AddScript(fakemodel.Script{Name: "intent-no", Match: fakemodel.Match{System: "You check one action of a bot"}, Steps: []fakemodel.Step{{JSON: map[string]any{"matches": false, "reason": "the user did not ask to send"}}}})
+	s.Fake.AddScript(fakemodel.Script{Name: "intent-yes", Match: fakemodel.Match{System: "You check one action of a bot", User: "press Send"}, Steps: []fakemodel.Step{{JSON: map[string]any{"matches": true, "reason": "the user asked to press Send"}}}})
+	send := func(message string) apptest.Run {
+		marker := fmt.Sprintf("send-%d", time.Now().UnixNano())
+		s.script(marker,
+			fakemodel.Step{ToolCalls: call("browser_navigate", map[string]any{"url": "http://shop.test/actions"})},
+			fakemodel.Step{ToolCalls: call("browser_act", map[string]any{"ref": "e2", "action": "click"})},
+			fakemodel.Step{Text: "Done."})
+		chief := s.Chief()
+		s.instruct(chief.ID, marker)
+		run, _ := s.Post(chief.ChatID, message)
+		return s.WaitRun(run, "done", "waiting", "failed")
+	}
+	ran := func(r apptest.Run) bool {
+		for _, res := range toolResults(r, "browser_act") {
+			if strings.Contains(res, "Confirmed: Did click on e2") && strings.Contains(res, "sent") {
+				return true
+			}
+		}
+		return false
+	}
+	deny := func() {
+		for _, m := range s.Messages(s.Chief().ChatID) {
+			if c, ok := m["card"].(map[string]any); ok && c["kind"] == "approval" && c["status"] == "pending" {
+				s.MustDo("POST", s.SP("/cards/%s/answer", c["id"]), map[string]any{"action": "deny"}, nil)
+				s.WaitRun(c["run_id"].(string), "done", "failed")
+			}
+		}
+	}
+	if r := send("Look at the actions page."); r.Line.State != "waiting" || !r.HasEvent("approval_requested") || ran(r) {
+		t.Fatalf("Ask: %s %s", r.Line.State, r.EventTypes())
+	}
+	deny()
+	s.setMode("auto")
+	if r := send("Open the actions page and press Send."); r.Line.State != "done" || !ran(r) {
+		t.Fatalf("Auto with intent: %s %s", r.Line.State, r.EventTypes())
+	}
+	if r := send("Look at the actions page."); r.Line.State != "waiting" || !r.HasEvent("approval_requested") || ran(r) {
+		t.Fatalf("Auto without intent: %s %s", r.Line.State, r.EventTypes())
+	}
+	deny()
+	s.setMode("never")
+	if r := send("Look at the actions page."); r.Line.State != "done" || !ran(r) {
+		t.Fatalf("Never: %s %s", r.Line.State, r.EventTypes())
+	}
+}
+
+func TestSCN_MOD_008_BudgetCardAndAddOneDollar(t *testing.T) {
+	s := startServer(t, "sqlite")
+	s.SetupModel("openai-chat", "", 128000)
+	s.MustDo("PUT", s.SP("/settings/budget.envelope_usd"), map[string]any{"value": 0.01}, nil)
+	chief := s.Chief()
+	before := len(s.Fake.Requests())
+	run, _ := s.Post(chief.ChatID, "Write a long plan for the week.")
+	r := s.WaitRun(run, "escalated")
+	if !r.HasEvent("budget_reached") || len(s.Fake.Requests()) != before {
+		t.Fatalf("the call ran or no budget event: %s", r.EventTypes())
+	}
+	var card map[string]any
+	for _, m := range s.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "budget" {
+			card = c
+		}
+	}
+	if card == nil || card["title"] != "Budget reached" || card["status"] != "pending" {
+		t.Fatalf("no Budget reached card: %v", card)
+	}
+	s.MustDo("POST", s.SP("/cards/%s/answer", card["id"]), map[string]any{"action": "add_budget", "value": "1"}, nil)
+	r = s.WaitRun(run, "done")
+	if len(s.Fake.Requests()) == before {
+		t.Fatal("the run did not call the model after the budget grew")
+	}
+}
+
+func TestSCN_CORE_008_SigtermCheckpointsAndResumes(t *testing.T) {
+	s := startComputers(t, "sqlite")
+	marker := "sigterm"
+	s.script(marker,
+		fakemodel.Step{ToolCalls: call("write_file", map[string]any{"path": "notes.md", "content": "kept over the restart"})},
+		fakemodel.Step{ToolCalls: call("browser_navigate", map[string]any{"url": "http://slow.test/"})},
+		fakemodel.Step{ToolCalls: call("read_file", map[string]any{"path": "notes.md"})},
+		fakemodel.Step{Text: "Done."})
+	chief := s.Chief()
+	s.instruct(chief.ID, marker)
+	run, _ := s.Post(chief.ChatID, "Write the notes and open the slow page.")
+	s.waitEvent(run, "tool_result", 60*time.Second)
+	time.Sleep(time.Second)
+	rev := func() int64 {
+		out, _ := exec.Command("sqlite3", s.data+"/fettle.db", "SELECT COALESCE(MAX(rev), 0) FROM workspaces WHERE kind = 'bot_home'").Output()
+		var n int64
+		fmt.Sscan(strings.TrimSpace(string(out)), &n)
+		return n
+	}
+	r0 := rev()
+	start := time.Now()
+	_ = s.cmd.Process.Signal(syscall.SIGTERM)
+	_ = s.cmd.Wait()
+	if d := time.Since(start); d > 30*time.Second {
+		t.Fatalf("shutdown took %s", d)
+	}
+	if r1 := rev(); r1 <= r0 {
+		t.Fatalf("workspace revision %d -> %d after SIGTERM", r0, r1)
+	}
+	s2 := s.restart()
+	r := s2.waitState(run, 2*time.Minute, "done", "failed")
+	if r.Line.State != "done" || strings.Count(r.EventTypes(), "tool_intent") != 1 {
+		t.Fatalf("after restart: %s %s", r.Line.State, r.EventTypes())
+	}
+	if res := toolResults(r, "read_file"); len(res) != 1 || !strings.Contains(res[0], "kept over the restart") {
+		t.Fatalf("the file did not survive the restart: %v", res)
 	}
 }

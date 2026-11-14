@@ -46,6 +46,8 @@ type Queue interface {
 	Stop(ctx context.Context) error
 	// StopFetching stops new jobs and lets running jobs reach a safe point.
 	StopFetching(ctx context.Context) error
+	// StopAndCancel stops and cancels the work contexts of running jobs; they resume later.
+	StopAndCancel(ctx context.Context) error
 	JobCancel(ctx context.Context, jobID int64) error
 }
 
@@ -74,6 +76,9 @@ func (q *queue[TTx]) Start(ctx context.Context) error { return q.client.Start(ct
 func (q *queue[TTx]) Stop(ctx context.Context) error  { return q.client.Stop(ctx) }
 func (q *queue[TTx]) StopFetching(ctx context.Context) error {
 	return q.client.Stop(ctx)
+}
+func (q *queue[TTx]) StopAndCancel(ctx context.Context) error {
+	return q.client.StopAndCancel(ctx)
 }
 func (q *queue[TTx]) JobCancel(ctx context.Context, jobID int64) error {
 	_, err := q.client.JobCancel(ctx, jobID)

@@ -314,8 +314,22 @@ func (a *App) Shutdown(ctx context.Context) error {
 		cancel()
 	}
 	if a.Queue != nil {
-		if err := a.Queue.Stop(ctx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
-			errs = append(errs, err)
+		// Running steps get most of the time to finish; then their contexts end at a safe
+		// point, and the runs resume from their journals after a restart. The rest of the
+		// time is for the workspace checkpoints (REQ-CORE-008).
+		soft := 18 * time.Second
+		if d, ok := ctx.Deadline(); ok {
+			soft = min(soft, time.Until(d)*6/10)
+		}
+		sctx, cancel := context.WithTimeout(ctx, soft)
+		err := a.Queue.Stop(sctx)
+		cancel()
+		if err != nil {
+			hctx, hcancel := context.WithTimeout(ctx, 5*time.Second)
+			if err := a.Queue.StopAndCancel(hctx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
+				errs = append(errs, err)
+			}
+			hcancel()
 		}
 	}
 	if a.Computers != nil {
