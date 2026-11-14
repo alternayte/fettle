@@ -504,7 +504,7 @@ func TestSCN_MOD_008_BudgetCardAndAddOneDollar(t *testing.T) {
 		t.Fatalf("no Budget reached card: %v", card)
 	}
 	s.MustDo("POST", s.SP("/cards/%s/answer", card["id"]), map[string]any{"action": "add_budget", "value": "1"}, nil)
-	r = s.WaitRun(run, "done")
+	s.WaitRun(run, "done")
 	if len(s.Fake.Requests()) == before {
 		t.Fatal("the run did not call the model after the budget grew")
 	}
@@ -526,7 +526,7 @@ func TestSCN_CORE_008_SigtermCheckpointsAndResumes(t *testing.T) {
 	rev := func() int64 {
 		out, _ := exec.Command("sqlite3", s.data+"/fettle.db", "SELECT COALESCE(MAX(rev), 0) FROM workspaces WHERE kind = 'bot_home'").Output()
 		var n int64
-		fmt.Sscan(strings.TrimSpace(string(out)), &n)
+		_, _ = fmt.Sscan(strings.TrimSpace(string(out)), &n)
 		return n
 	}
 	r0 := rev()
