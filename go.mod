@@ -8,7 +8,7 @@ require (
 	github.com/alternayte/drel v0.10.4
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.21.0
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.23.24
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.5.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.10
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f
 	github.com/chromedp/chromedp v0.16.0
