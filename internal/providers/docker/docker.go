@@ -34,7 +34,7 @@ type Provider struct {
 
 // New connects to the Docker Engine from DOCKER_HOST or the default socket.
 func New(image string) (*Provider, error) {
-	c, err := client.New(client.FromEnv, client.WithAPIVersionNegotiation())
+	c, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 	}
 	defer rc.Close()
 	dec := json.NewDecoder(rc)
-	var total, current map[string]int64 = map[string]int64{}, map[string]int64{}
+	total, current := map[string]int64{}, map[string]int64{}
 	for {
 		var m struct {
 			ID             string `json:"id"`
