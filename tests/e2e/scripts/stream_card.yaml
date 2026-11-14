@@ -1,0 +1,17 @@
+# A streamed reply that ends with an approval card, for SCN-BOT-004.
+name: stream_card
+match:
+  user: "[[stream-card]]"
+steps:
+  - text: "I open the actions page of the shop first. Then I press its Send button, which needs your approval. This takes a moment, so I write a few more words while I work."
+    chunk_ms: 40
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://shop.test/actions"
+  - tool_calls:
+      - name: browser_act
+        args:
+          ref: e2
+          action: click
+  - text: "Done."

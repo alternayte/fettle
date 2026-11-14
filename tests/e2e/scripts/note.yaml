@@ -1,0 +1,6 @@
+# A short reply for messages sent while a card is open.
+name: note
+match:
+  user: "[[note]]"
+steps:
+  - text: "Noted."

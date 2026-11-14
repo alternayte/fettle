@@ -50,6 +50,8 @@ type Step struct {
 	Cost *float64 `yaml:"cost"`
 	// Repeat makes the step answer every later turn too.
 	Repeat bool `yaml:"repeat"`
+	// ChunkMS paces the stream of this step, as the chunkms flag does for all steps.
+	ChunkMS int `yaml:"chunk_ms"`
 }
 
 // ScriptCall is one scripted tool call.
@@ -270,6 +272,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet && path == "/models":
 		s.models(w, fl)
+	case r.Method == http.MethodGet && path == "/__fake/first-tokens":
+		// End-to-end tests compare these times with the time the UI shows a token.
+		s.mu.Lock()
+		ms := make([]int64, len(s.firstToken))
+		for i, ft := range s.firstToken {
+			ms[i] = ft.UnixMilli()
+		}
+		s.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string][]int64{"first_tokens_ms": ms})
 	case r.Method == http.MethodPost && path == "/chat/completions":
 		s.handle(w, r, "openai-chat", fl)
 	case r.Method == http.MethodPost && path == "/responses":
@@ -368,7 +380,11 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request, api string, fl f
 	if fl.cost != nil {
 		cost = fl.cost
 	}
-	st := &streamer{w: w, api: api, model: req.model, chunk: fl.chunk, cut: fl.cut, onFirst: func() {
+	chunk := fl.chunk
+	if step.ChunkMS > 0 {
+		chunk = time.Duration(step.ChunkMS) * time.Millisecond
+	}
+	st := &streamer{w: w, api: api, model: req.model, chunk: chunk, cut: fl.cut, onFirst: func() {
 		s.mu.Lock()
 		s.firstToken = append(s.firstToken, time.Now())
 		s.mu.Unlock()
