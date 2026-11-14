@@ -65,7 +65,7 @@ func (l *Log) List(ctx context.Context, f Filter) ([]*AuditEntry, error) {
 		q = q.Where(AuditEntries.Action.Eq(f.Action))
 	}
 	if f.Since != nil {
-		q = q.Where(AuditEntries.CreatedAt.GTE(*f.Since))
+		q = q.Where(AuditEntries.CreatedAt.GTE(f.Since.UTC()))
 	}
 	return q.OrderBy(AuditEntries.CreatedAt.Desc()).All(ctx)
 }

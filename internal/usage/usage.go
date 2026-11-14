@@ -53,6 +53,7 @@ type Row struct {
 
 // View groups the usage of a space by one dimension since a time.
 func (s *Service) View(ctx context.Context, spaceID uuid.UUID, dim string, since time.Time) ([]Row, error) {
+	since = since.UTC() // SQLite compares times as text
 	col, ok := Dimensions[dim]
 	if !ok {
 		return nil, fmt.Errorf("unknown cost dimension %q", dim)
@@ -93,6 +94,7 @@ func (s *Service) View(ctx context.Context, spaceID uuid.UUID, dim string, since
 func (s *Service) Spent(ctx context.Context, spaceID uuid.UUID, botID *uuid.UUID, since time.Time) (float64, error) {
 	var v float64
 	var err error
+	since = since.UTC()
 	if botID != nil {
 		err = s.e.QueryRow(ctx, "SELECT COALESCE(SUM(cost_usd),0) FROM usage_events WHERE space_id = $1 AND bot_id = $2 AND at >= $3", spaceID, *botID, since).Scan(&v)
 	} else {

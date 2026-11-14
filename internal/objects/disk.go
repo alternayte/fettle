@@ -99,7 +99,7 @@ func (d *Disk) List(_ context.Context, prefix string) ([]string, error) {
 }
 
 func (d *Disk) Check(ctx context.Context) error {
-	const k = ".health/check"
+	const k = ".health-check"
 	if err := d.Put(ctx, k, bytes.NewReader([]byte("ok")), 2); err != nil {
 		return fmt.Errorf("object store is not writable: %w", err)
 	}

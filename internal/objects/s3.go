@@ -88,7 +88,7 @@ func (s *S3) List(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (s *S3) Check(ctx context.Context) error {
-	const k = ".health/check"
+	const k = ".health-check"
 	if err := s.Put(ctx, k, bytes.NewReader([]byte("ok")), 2); err != nil {
 		return fmt.Errorf("object store is not writable: %w", err)
 	}
