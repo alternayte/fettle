@@ -4,6 +4,8 @@ package testenv
 
 import (
 	"context"
+	"io"
+	stdlog "log"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 	"github.com/alternayte/fettle/internal/app"
 	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
+	tclog "github.com/testcontainers/testcontainers-go/log"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -39,6 +42,7 @@ func startPostgres() {
 		pgBaseURL = u
 		return
 	}
+	tclog.SetDefault(stdlog.New(io.Discard, "", 0))
 	ctx := context.Background()
 	c, err := tcpostgres.Run(ctx, "postgres:16-alpine",
 		tcpostgres.WithDatabase("postgres"),

@@ -38,13 +38,7 @@ func (a *App) Handler() http.Handler {
 		} else {
 			g.Use(a.serverAuth)
 		}
-		cfg := huma.DefaultConfig("Fettle API", a.Cfg.Version)
-		cfg.OpenAPIPath = APIPrefix + "/openapi"
-		cfg.DocsPath = ""
-		cfg.CreateHooks = nil
-		cfg.SchemasPath = APIPrefix + "/schemas"
-		cfg.Info.Description = "The HTTP API of Fettle. Every route needs the local token in local mode, or a session or access token in server mode."
-		a.registerAPI(humachi.New(g, cfg))
+		a.registerAPI(humachi.New(g, apiConfig(a.Cfg.Version)))
 	})
 	r.Handle("/*", spa())
 	return r
@@ -158,4 +152,23 @@ func apiError(err error) error {
 		return huma.Error422UnprocessableEntity(err.Error())
 	}
 	return err
+}
+
+// OpenAPI returns the OpenAPI document without storage, for code generation.
+func OpenAPI(version string) ([]byte, error) {
+	a := &App{Cfg: &Config{Version: version}}
+	r := chi.NewRouter()
+	api := humachi.New(r, apiConfig(version))
+	a.registerAPI(api)
+	return api.OpenAPI().MarshalJSON()
+}
+
+func apiConfig(version string) huma.Config {
+	cfg := huma.DefaultConfig("Fettle API", version)
+	cfg.OpenAPIPath = APIPrefix + "/openapi"
+	cfg.DocsPath = ""
+	cfg.CreateHooks = nil
+	cfg.SchemasPath = APIPrefix + "/schemas"
+	cfg.Info.Description = "The HTTP API of Fettle. Every route needs the local token in local mode, or a session or access token in server mode."
+	return cfg
 }
