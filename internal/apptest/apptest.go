@@ -65,6 +65,20 @@ func Start(t testing.TB, dialect string, opts ...Option) *Env {
 		_ = a.Shutdown(sctx)
 	})
 	e := &Env{T: t, App: a, URL: a.URL(), Token: a.LocalToken, Fake: fake, FakeURL: fs.URL, Cfg: cfg}
+	e.loadMe()
+	return e
+}
+
+// Attach returns an environment for a server that runs in another process.
+func Attach(t testing.TB, url, token string, fake *fakemodel.Server, fakeURL string) *Env {
+	t.Helper()
+	models.RetryBackoff = func(int) time.Duration { return time.Millisecond }
+	e := &Env{T: t, URL: url, Token: token, Fake: fake, FakeURL: fakeURL}
+	e.loadMe()
+	return e
+}
+
+func (e *Env) loadMe() {
 	var me struct {
 		ID     string `json:"id"`
 		Spaces []struct {
@@ -73,7 +87,6 @@ func Start(t testing.TB, dialect string, opts ...Option) *Env {
 	}
 	e.MustDo("GET", "/me", nil, &me)
 	e.Space, e.Owner = me.Spaces[0].ID, me.ID
-	return e
 }
 
 // Do sends an API request with the local token. path starts after /api/v1.
