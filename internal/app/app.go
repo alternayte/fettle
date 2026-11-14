@@ -23,6 +23,7 @@ import (
 	"github.com/alternayte/fettle/internal/auth"
 	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/chats"
+	"github.com/alternayte/fettle/internal/computers"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/alternayte/fettle/internal/models"
@@ -38,29 +39,30 @@ import (
 
 // App is one running Fettle instance: storage, services, jobs and the HTTP server.
 type App struct {
-	Cfg      *Config
-	DB       *Database
-	Objects  objects.Store
-	HTTP     *http.Client
-	Log      *slog.Logger
-	Metrics  *Metrics
-	Hub      *chats.Hub
-	Audit    *audit.Log
-	Vault    *vault.Vault
-	Settings *settings.Store
-	Users    *auth.UserStore
-	Spaces   *spaces.Service
-	Bots     *bots.Service
-	Chats    *chats.Service
-	Envs     *envelopes.Service
-	Runs     *runs.Service
-	Journal  *runs.Journal
-	Models   *models.Service
-	Usage    *usage.Service
-	Policy   *policy.Service
-	Zones    *zones.Service
-	Agent    *agent.Agent
-	Queue    jobs.Queue
+	Cfg       *Config
+	DB        *Database
+	Objects   objects.Store
+	HTTP      *http.Client
+	Log       *slog.Logger
+	Metrics   *Metrics
+	Hub       *chats.Hub
+	Audit     *audit.Log
+	Vault     *vault.Vault
+	Settings  *settings.Store
+	Users     *auth.UserStore
+	Spaces    *spaces.Service
+	Bots      *bots.Service
+	Chats     *chats.Service
+	Envs      *envelopes.Service
+	Runs      *runs.Service
+	Journal   *runs.Journal
+	Models    *models.Service
+	Usage     *usage.Service
+	Policy    *policy.Service
+	Zones     *zones.Service
+	Computers *computers.Manager
+	Agent     *agent.Agent
+	Queue     jobs.Queue
 
 	MasterKeySource vault.MasterKeySource
 	LocalToken      string
@@ -129,8 +131,10 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Agent = agent.New(agent.Agent{E: e, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
 	a.Telemetry = NewTelemetry(a)
 
+	a.setupComputers(ctx)
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})
+	river.AddWorker(workers, &maintenanceWorker{a: a})
 	interactive, background := 4, 2
 	if cfg.Mode == ModeServer {
 		interactive, background = 16, 8
@@ -138,7 +142,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	if cfg.Workers > 0 {
 		interactive = cfg.Workers
 	}
-	jc := jobs.Config{Interactive: interactive, Background: background, Maintenance: 1, Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})), FetchPoll: 100 * time.Millisecond}
+	jc := jobs.Config{Interactive: interactive, Background: background, Maintenance: 1, Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})), FetchPoll: 100 * time.Millisecond, PeriodicJobs: maintenanceJobs()}
 	if cfg.RescueAfterSeconds > 0 {
 		jc.RescueAfter = time.Duration(cfg.RescueAfterSeconds) * time.Second
 	}
@@ -308,6 +312,11 @@ func (a *App) Shutdown(ctx context.Context) error {
 	}
 	if a.Queue != nil {
 		if err := a.Queue.Stop(ctx); err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			errs = append(errs, err)
+		}
+	}
+	if a.Computers != nil {
+		if err := a.Computers.CheckpointAll(ctx); err != nil {
 			errs = append(errs, err)
 		}
 	}

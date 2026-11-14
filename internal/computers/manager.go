@@ -430,6 +430,10 @@ func (m *Manager) importShared(ctx context.Context, z *zones.Zone, lv *live) err
 		if err := m.importArchive(ctx, z.SpaceID, lv, ws, SharedPath); err != nil {
 			return err
 		}
+	} else if _, err := lv.client.Stat(ctx, SharedPath); errors.Is(err, client.ErrNotFound) {
+		if err := lv.client.WriteFile(ctx, SharedPath+"/README", []byte("Files in this folder are shared by the bots of one zone.\n"), 0o644); err != nil {
+			return err
+		}
 	}
 	m.mu.Lock()
 	lv.imported[SharedPath] = true
@@ -639,4 +643,99 @@ func (m *Manager) Destroy(ctx context.Context, computerID uuid.UUID) error {
 		_ = lv.machine.Destroy(ctx)
 	}
 	return m.setState(ctx, computerID, StateNone, "")
+}
+
+// Fork is a temporary machine with a copy of a zone's workspaces (§10.4, forked sub-agents).
+type Fork struct {
+	m       *Manager
+	machine Machine
+	Client  *client.Client
+	ZoneID  uuid.UUID
+}
+
+// Destroy removes the fork machine.
+func (f *Fork) Destroy(ctx context.Context) error { return f.machine.Destroy(ctx) }
+
+// Fork checkpoints the zone's computer and starts a fork: native when the provider supports
+// it, else a new machine that imports the current workspace revisions ("copy" fork).
+func (m *Manager) Fork(ctx context.Context, zoneID uuid.UUID, botIDs []uuid.UUID) (*Fork, error) {
+	l, err := m.Acquire(ctx, zoneID)
+	if err != nil {
+		return nil, err
+	}
+	defer l.Release()
+	for _, b := range botIDs {
+		if err := m.EnsureBotHome(ctx, l, b); err != nil {
+			return nil, err
+		}
+	}
+	if err := m.Checkpoint(ctx, l.Computer); err != nil {
+		return nil, err
+	}
+	z, err := m.Zones.Find(ctx, zoneID)
+	if err != nil {
+		return nil, err
+	}
+	prov, _, err := m.providerFor(ctx, z)
+	if err != nil {
+		return nil, err
+	}
+	m.mu.Lock()
+	parent := m.live[l.Computer]
+	m.mu.Unlock()
+	if prov.Caps().NativeFork && parent != nil {
+		if mach, err := parent.machine.Fork(ctx); err == nil {
+			c, _ := drel.NewRepository(m.E, ComputerMeta).Where(Computers.ID.Eq(l.Computer)).First(ctx)
+			lv := &live{token: parent.token, machine: mach, imported: map[string]bool{}}
+			if err := m.waitHealthy(ctx, lv, c, mach); err != nil {
+				_ = mach.Destroy(ctx)
+				return nil, err
+			}
+			return &Fork{m: m, machine: mach, Client: lv.client, ZoneID: zoneID}, nil
+		}
+	}
+	token := newToken()
+	certPEM, keyPEM, err := agentd.GenerateCert([]string{"fettle-computer"})
+	if err != nil {
+		return nil, err
+	}
+	if m.Redact != nil {
+		m.Redact("computer token", token)
+	}
+	netCfg, _ := json.Marshal(map[string]any{"mode": z.Network, "allow_hosts": z.AllowHosts})
+	mach, err := prov.Create(ctx, Spec{ZoneID: zoneID.String(), Image: m.Image, Size: Size(z.Size), ExtraHosts: m.ExtraHosts, Env: map[string]string{
+		"FETTLE_AGENTD_TOKEN": token, "FETTLE_AGENTD_TLS_CERT": string(certPEM), "FETTLE_AGENTD_TLS_KEY": string(keyPEM), "FETTLE_AGENTD_NETWORK": string(netCfg),
+	}})
+	if err != nil {
+		return nil, err
+	}
+	lv := &live{token: token, machine: mach, imported: map[string]bool{}}
+	tmp := &Computer{CertPEM: string(certPEM)}
+	tmp.SetID(uuid.New())
+	if err := m.waitHealthy(ctx, lv, tmp, mach); err != nil {
+		_ = mach.Destroy(ctx)
+		return nil, err
+	}
+	paths := map[string]string{SharedPath: zoneID.String()}
+	for _, b := range botIDs {
+		paths[BotHome(b)] = b.String()
+	}
+	for p, owner := range paths {
+		kind := "bot_home"
+		if p == SharedPath {
+			kind = "zone_shared"
+		}
+		ws, err := m.workspace(ctx, owner, kind)
+		if err != nil {
+			_ = mach.Destroy(ctx)
+			return nil, err
+		}
+		if ws != nil && ws.ObjectKey != "" {
+			if err := m.importArchive(ctx, z.SpaceID, lv, ws, p); err != nil {
+				_ = mach.Destroy(ctx)
+				return nil, err
+			}
+		}
+	}
+	return &Fork{m: m, machine: mach, Client: lv.client, ZoneID: zoneID}, nil
 }
