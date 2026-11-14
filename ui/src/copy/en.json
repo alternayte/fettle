@@ -776,5 +776,52 @@
       "title": "This browser cannot get notifications",
       "body": "Open Fettle over HTTPS, or install it as an app, then try again."
     }
+  },
+  "routines": {
+    "title": "Routines",
+    "intro": "A routine gives a bot work on a schedule or when another service calls a webhook. Results go to the bot's chat.",
+    "new": "New routine",
+    "none": "No routines yet.",
+    "bot": "Bot",
+    "name": "Name",
+    "prompt": "What the bot does",
+    "promptHint": "Write it as a message to the bot.",
+    "trigger": "Starts",
+    "triggers": {
+      "cron": "On a schedule",
+      "webhook": "From a webhook"
+    },
+    "cron": "Schedule",
+    "cronHint": "A cron line, for example 0 9 * * 1-5 for 09:00 on work days.",
+    "tz": "Time zone",
+    "notify": "Notify",
+    "notifies": {
+      "always": "Always",
+      "on_failure": "When it fails",
+      "never": "Never"
+    },
+    "enabled": "On",
+    "paused": "Paused",
+    "next": "Next {when}",
+    "runNow": "Run now",
+    "started": "The routine started.",
+    "saved": "The routine is saved.",
+    "failed": "Fettle did not save the routine",
+    "deleted": "The routine is deleted.",
+    "delete": "Delete",
+    "secretTitle": "Webhook secret",
+    "secretBody": "Copy the secret now. Fettle does not show it again. Sign each body with HMAC-SHA256 in X-Fettle-Signature, or send the secret in X-Fettle-Secret.",
+    "history": "Last runs",
+    "noRuns": "No runs yet.",
+    "missed": "Missed while Fettle was closed",
+    "coalesced": "Covered by a later run",
+    "source": {
+      "cron": "Schedule",
+      "webhook": "Webhook",
+      "manual": "Run now"
+    },
+    "needName": "Give the routine a name and a prompt.",
+    "needCron": "Give a schedule.",
+    "ownerOnly": "Only an owner can change routines."
   }
 }

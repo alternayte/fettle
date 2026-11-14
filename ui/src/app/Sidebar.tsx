@@ -1,11 +1,23 @@
-import { Activity, Hourglass, Loader, Monitor, Moon, Search, Settings, Sparkles, Sun, Users } from "lucide-react";
+import {
+  Activity,
+  AlarmClock,
+  Hourglass,
+  Loader,
+  Monitor,
+  Moon,
+  Search,
+  Settings,
+  Sparkles,
+  Sun,
+  Users,
+} from "lucide-react";
 import { t } from "@/lib/copy";
 import { useTheme, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { BotMark } from "@/features/chat/BotMark";
 import type { Bot, ChatSummary } from "@/features/chat/types";
 
-export type NavTarget = { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "settings" };
+export type NavTarget = { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "settings" };
 
 function Row({
   active,
@@ -152,6 +164,12 @@ export function Sidebar({
             <Row active={isPage("runs")} onClick={() => onNavigate({ kind: "page", page: "runs" })}>
               <Activity aria-hidden className="size-4 text-ink-faint" />
               {t("shell.runs")}
+            </Row>
+          </li>
+          <li>
+            <Row active={isPage("routines")} onClick={() => onNavigate({ kind: "page", page: "routines" })}>
+              <AlarmClock aria-hidden className="size-4 text-ink-faint" />
+              {t("shell.routines")}
             </Row>
           </li>
           {isOwner && (

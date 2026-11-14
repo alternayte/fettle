@@ -8,6 +8,7 @@ import type {
   SchemaSpaceView,
   SchemaTarget,
   SchemaVaultBody,
+  SchemaRoutineBody,
   SchemaZoneBody,
 } from "./schema";
 
@@ -56,6 +57,8 @@ export const keys = {
   zones: (s: string) => ["s", s, "zones"] as const,
   computerProviders: (s: string) => ["s", s, "computer-providers"] as const,
   policy: (s: string) => ["s", s, "policy"] as const,
+  routines: (s: string) => ["s", s, "routines"] as const,
+  routineRuns: (s: string, r: string) => ["s", s, "routines", r, "runs"] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -586,5 +589,64 @@ export function useAnswerChange() {
       void qc.invalidateQueries({ queryKey: keys.policy(space) });
       void qc.invalidateQueries({ queryKey: keys.settings(space) });
     },
+  });
+}
+
+// ---------------------------------------------------------------- routines
+
+export function useRoutines() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.routines(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/routines", { params: { path: { space } } }))).routines ?? [],
+  });
+}
+
+export function useRoutineRuns(routine: string | null) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.routineRuns(space, routine ?? ""),
+    enabled: !!routine,
+    queryFn: async () =>
+      (
+        await must(
+          api.GET("/api/v1/spaces/{space}/routines/{routine}/runs", { params: { path: { space, routine: routine! } } }),
+        )
+      ).runs ?? [],
+  });
+}
+
+export function useSaveRoutine() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, body }: { id?: string; body: SchemaRoutineBody }) =>
+      id
+        ? must(
+            api.PATCH("/api/v1/spaces/{space}/routines/{routine}", { params: { path: { space, routine: id } }, body }),
+          ).then((routine) => ({ routine, secret: undefined as string | undefined }))
+        : must(api.POST("/api/v1/spaces/{space}/routines", { params: { path: { space } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.routines(space) }),
+  });
+}
+
+export function useDeleteRoutine() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (id: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/routines/{routine}", { params: { path: { space, routine: id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.routines(space) }),
+  });
+}
+
+export function useRunRoutine() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (id: string) =>
+      must(api.POST("/api/v1/spaces/{space}/routines/{routine}/run", { params: { path: { space, routine: id } } })),
+    onSuccess: (_, id) => qc.invalidateQueries({ queryKey: keys.routineRuns(space, id) }),
   });
 }

@@ -57,6 +57,11 @@ export async function createAppRouter() {
     path: "/runs/$runId",
     component: lazyRouteComponent(() => import("@/features/runs/RunsPage"), "RunPage"),
   });
+  const routinesRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/routines",
+    component: lazyRouteComponent(() => import("@/features/routines/RoutinesPage"), "RoutinesPage"),
+  });
   const bot = createRoute({
     getParentRoute: () => app,
     path: "/bots/$botId",
@@ -94,6 +99,7 @@ export async function createAppRouter() {
       chat,
       runs,
       run,
+      routinesRoute,
       bot,
       settings.addChildren([
         settingsIndex,

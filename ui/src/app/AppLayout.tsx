@@ -73,15 +73,18 @@ export function AppLayout() {
     ? { kind: "chat", chatId: pathname.split("/")[2] ?? "" }
     : pathname.startsWith("/runs")
       ? { kind: "page", page: "runs" }
-      : pathname.startsWith("/settings") || pathname.startsWith("/admin")
-        ? { kind: "page", page: "settings" }
-        : null;
+      : pathname.startsWith("/routines")
+        ? { kind: "page", page: "routines" }
+        : pathname.startsWith("/settings") || pathname.startsWith("/admin")
+          ? { kind: "page", page: "settings" }
+          : null;
 
   const onNavigate = useCallback(
     (to: NavTarget) => {
       setMenu(false);
       if (to.kind === "chat") void navigate({ to: "/chat/$chatId", params: { chatId: to.chatId } });
       else if (to.page === "runs") void navigate({ to: "/runs" });
+      else if (to.page === "routines") void navigate({ to: "/routines" });
       else void navigate({ to: "/settings/models" });
     },
     [navigate],
