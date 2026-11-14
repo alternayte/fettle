@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alternayte/fettle/internal/audit"
+	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/envelopes"
 )
 
@@ -88,6 +90,48 @@ func (a *Agent) registerMemoryTools() {
 				fmt.Fprintf(&b, "next_cursor: %d", next)
 			}
 			return ToolOutput{Text: b.String(), Origin: OriginMemory}, nil
+		},
+	})
+	a.Tools.Add(Tool{
+		Name:        "add_open_work",
+		Description: "Add an item to your open work list: something you started and must finish. Give due as an RFC 3339 time to be woken then.",
+		Class:       envelopes.ClassWriteLocal,
+		Schema:      schema(`{"type":"object","properties":{"text":{"type":"string"},"due":{"type":"string"}},"required":["text"],"additionalProperties":false}`),
+		Run: func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error) {
+			in, err := decode[struct{ Text, Due string }](args)
+			if err != nil {
+				return ToolOutput{}, err
+			}
+			var due *time.Time
+			if strings.TrimSpace(in.Due) != "" {
+				t, err := time.Parse(time.RFC3339, strings.TrimSpace(in.Due))
+				if err != nil {
+					return ToolOutput{}, fmt.Errorf("due must be RFC 3339 with a zone, for example 2026-11-15T09:00:00+01:00")
+				}
+				due = &t
+			}
+			it, err := a.Bots.AddOpenWork(ctx, env.BotID, in.Text, due)
+			if err != nil {
+				return ToolOutput{}, err
+			}
+			return ToolOutput{Text: "Added open work [" + bots.ShortID(it.ID()) + "]."}, nil
+		},
+	})
+	a.Tools.Add(Tool{
+		Name:        "complete_open_work",
+		Description: "Mark an item of your open work as done, by the ID in square brackets. A done item does not wake you.",
+		Class:       envelopes.ClassWriteLocal,
+		Schema:      schema(`{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}`),
+		Run: func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error) {
+			in, err := decode[struct{ ID string }](args)
+			if err != nil {
+				return ToolOutput{}, err
+			}
+			it, err := a.Bots.CompleteOpenWork(ctx, env.BotID, in.ID, a.now())
+			if err != nil {
+				return ToolOutput{}, err
+			}
+			return ToolOutput{Text: "Done: " + it.Text}, nil
 		},
 	})
 }

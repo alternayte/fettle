@@ -1,0 +1,1 @@
+ALTER TABLE "open_work" ADD COLUMN "woken_at" timestamptz;

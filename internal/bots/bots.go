@@ -226,3 +226,15 @@ func (s *Service) Restore(ctx context.Context, actor audit.Actor, spaceID, id uu
 	})
 	return out, err
 }
+
+// Find returns a bot by ID in any space (background jobs only).
+func (s *Service) Find(ctx context.Context, id uuid.UUID) (*Bot, error) {
+	b, err := drel.NewRepository(s.e, BotMeta).Where(Bots.ID.Eq(id)).FirstOrNil(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, ErrNotFound
+	}
+	return b, nil
+}

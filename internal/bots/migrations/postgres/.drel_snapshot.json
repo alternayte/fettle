@@ -270,6 +270,11 @@
           "notNull": false
         },
         {
+          "name": "woken_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
           "name": "created_at",
           "type": "timestamptz",
           "notNull": true,

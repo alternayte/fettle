@@ -1,0 +1,1 @@
+ALTER TABLE "open_work" DROP COLUMN "woken_at";

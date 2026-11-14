@@ -16,6 +16,7 @@ var OpenWorks = struct {
 	Text      drel.StringColumn
 	DueAt     drel.ComparableColumn[*time.Time]
 	DoneAt    drel.ComparableColumn[*time.Time]
+	WokenAt   drel.ComparableColumn[*time.Time]
 	CreatedAt drel.TimeColumn
 	UpdatedAt drel.TimeColumn
 }{
@@ -24,6 +25,7 @@ var OpenWorks = struct {
 	Text:      drel.NewStringCol("text"),
 	DueAt:     drel.NewComparableCol[*time.Time]("due_at"),
 	DoneAt:    drel.NewComparableCol[*time.Time]("done_at"),
+	WokenAt:   drel.NewComparableCol[*time.Time]("woken_at"),
 	CreatedAt: drel.NewTimeCol("created_at"),
 	UpdatedAt: drel.NewTimeCol("updated_at"),
 }
@@ -31,7 +33,7 @@ var OpenWorks = struct {
 func scanOpenwork(row drel.Row) (*OpenWork, error) {
 	p := &OpenWork{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.BotID, &p.Text, &p.DueAt, &p.DoneAt, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.BotID, &p.Text, &p.DueAt, &p.DoneAt, &p.WokenAt, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -39,14 +41,15 @@ func scanOpenwork(row drel.Row) (*OpenWork, error) {
 }
 
 type openworkSnapshot struct {
-	BotID  uuid.UUID
-	Text   string
-	DueAt  *time.Time
-	DoneAt *time.Time
+	BotID   uuid.UUID
+	Text    string
+	DueAt   *time.Time
+	DoneAt  *time.Time
+	WokenAt *time.Time
 }
 
 func snapshotOpenwork(p *OpenWork) any {
-	return openworkSnapshot{BotID: p.BotID, Text: p.Text, DueAt: p.DueAt, DoneAt: p.DoneAt}
+	return openworkSnapshot{BotID: p.BotID, Text: p.Text, DueAt: p.DueAt, DoneAt: p.DoneAt, WokenAt: p.WokenAt}
 }
 
 func diffOpenwork(p *OpenWork, snap any) []drel.FieldChange {
@@ -63,6 +66,9 @@ func diffOpenwork(p *OpenWork, snap any) []drel.FieldChange {
 	}
 	if p.DoneAt != s.DoneAt {
 		changes = append(changes, drel.FieldChange{Column: "done_at", Value: p.DoneAt})
+	}
+	if p.WokenAt != s.WokenAt {
+		changes = append(changes, drel.FieldChange{Column: "woken_at", Value: p.WokenAt})
 	}
 	return changes
 }
@@ -84,15 +90,17 @@ func openworkColumnValue(p *OpenWork, idx int) any {
 	case 4:
 		return p.DoneAt
 	case 5:
-		return p.CreatedAt()
+		return p.WokenAt
 	case 6:
+		return p.CreatedAt()
+	case 7:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func openworkInsertColumns(p *OpenWork) ([]string, []any) {
-	return []string{"bot_id", "text", "due_at", "done_at"}, []any{p.BotID, p.Text, p.DueAt, p.DoneAt}
+	return []string{"bot_id", "text", "due_at", "done_at", "woken_at"}, []any{p.BotID, p.Text, p.DueAt, p.DoneAt, p.WokenAt}
 }
 
 func openworkScanReturning(p *OpenWork, row drel.Row) error {
@@ -116,7 +124,7 @@ func openworkScanGenerated(p *OpenWork, row drel.Row) error {
 
 var OpenWorkMeta = drel.ModelMeta[OpenWork]{
 	Table:         "open_work",
-	Columns:       []string{"id", "bot_id", "text", "due_at", "done_at", "created_at", "updated_at"},
+	Columns:       []string{"id", "bot_id", "text", "due_at", "done_at", "woken_at", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanOpenwork,
 	Snapshot:      snapshotOpenwork,

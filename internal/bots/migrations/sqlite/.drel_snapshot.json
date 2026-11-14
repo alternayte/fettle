@@ -270,6 +270,11 @@
           "notNull": false
         },
         {
+          "name": "woken_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
           "name": "created_at",
           "type": "DATETIME",
           "notNull": true,

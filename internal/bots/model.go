@@ -54,4 +54,6 @@ type OpenWork struct {
 	Text                  string     `db:"text"`
 	DueAt                 *time.Time `db:"due_at"`
 	DoneAt                *time.Time `db:"done_at"`
+	// WokenAt is set when the due time woke the bot, so it wakes once.
+	WokenAt *time.Time `db:"woken_at"`
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alternayte/drel"
 	"github.com/google/uuid"
@@ -172,11 +173,78 @@ func (s *Service) OpenWorkList(ctx context.Context, botID uuid.UUID) ([]string, 
 	}
 	out := make([]string, 0, len(items))
 	for _, it := range items {
-		line := it.Text
+		line := "[" + ShortID(it.ID()) + "] " + it.Text
 		if it.DueAt != nil {
 			line += " (due " + it.DueAt.UTC().Format("2006-01-02 15:04 UTC") + ")"
 		}
 		out = append(out, line)
+	}
+	return out, nil
+}
+
+// Errors of open work.
+var (
+	ErrWorkNotFound = errors.New("no open work item has this ID")
+	ErrWorkEmpty    = errors.New("an open work item needs a text")
+)
+
+// AddOpenWork adds an item to a bot's open work list, with an optional due time.
+func (s *Service) AddOpenWork(ctx context.Context, botID uuid.UUID, text string, due *time.Time) (*OpenWork, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil, ErrWorkEmpty
+	}
+	if due != nil {
+		d := due.UTC()
+		due = &d
+	}
+	it := &OpenWork{BotID: botID, Text: text, DueAt: due}
+	err := s.e.WithTx(ctx, func(ctx context.Context) error {
+		drel.Repo(drel.MustFromContext(ctx), OpenWorkMeta).Add(it)
+		return nil
+	})
+	return it, err
+}
+
+// ShortID is the last 8 characters of an ID. The first characters of a UUIDv7 are its
+// time, so items made in the same millisecond share them.
+func ShortID(id uuid.UUID) string {
+	s := id.String()
+	return s[len(s)-8:]
+}
+
+// CompleteOpenWork marks an item done by its ID or its short ID.
+func (s *Service) CompleteOpenWork(ctx context.Context, botID uuid.UUID, idPrefix string, now time.Time) (*OpenWork, error) {
+	idPrefix = strings.ToLower(strings.Trim(strings.TrimSpace(idPrefix), "[]"))
+	items, err := drel.NewRepository(s.e, OpenWorkMeta).Where(OpenWorks.BotID.Eq(botID)).Where(OpenWorks.DoneAt.IsNull()).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, it := range items {
+		if idPrefix != "" && (it.ID().String() == idPrefix || ShortID(it.ID()) == idPrefix) {
+			_, err := s.e.Exec(ctx, "UPDATE open_work SET done_at = $1, updated_at = $2 WHERE id = $3", now.UTC(), now.UTC(), it.ID())
+			return it, err
+		}
+	}
+	return nil, ErrWorkNotFound
+}
+
+// ClaimDue returns the open items that are due and not done, and marks each as woken in
+// the same statement, so one item wakes its bot once even with several processes.
+func (s *Service) ClaimDue(ctx context.Context, now time.Time) ([]*OpenWork, error) {
+	due, err := drel.NewRepository(s.e, OpenWorkMeta).Where(OpenWorks.DoneAt.IsNull()).Where(OpenWorks.WokenAt.IsNull()).Where(OpenWorks.DueAt.LTE(&now)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []*OpenWork
+	for _, it := range due {
+		n, err := s.e.Exec(ctx, "UPDATE open_work SET woken_at = $1 WHERE id = $2 AND woken_at IS NULL AND done_at IS NULL", now.UTC(), it.ID())
+		if err != nil {
+			return out, err
+		}
+		if n == 1 {
+			out = append(out, it)
+		}
 	}
 	return out, nil
 }
