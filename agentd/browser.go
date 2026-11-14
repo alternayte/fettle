@@ -583,3 +583,80 @@ func (s *Server) browserDownloads(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
+
+// sameSite reports whether a page host may receive the values of a login for site: the
+// same host or a subdomain of it (§11.4, SI-03).
+func sameSite(pageURL, site string) bool {
+	p, err := url.Parse(pageURL)
+	if err != nil || p.Host == "" {
+		return false
+	}
+	s := strings.TrimSpace(site)
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+	u, err := url.Parse(s)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	ph, sh := strings.ToLower(p.Hostname()), strings.ToLower(u.Hostname())
+	return ph == sh || strings.HasSuffix(ph, "."+sh)
+}
+
+// browserFill types values from the broker into referenced fields, only when the page's
+// origin matches the login's site. agentd keeps no value after the request (§10.6).
+func (s *Server) browserFill(w http.ResponseWriter, r *http.Request) {
+	c, err := s.browserOf(r)
+	if err != nil {
+		s.fail(w, "browser", err)
+		return
+	}
+	var req client.FillRequest
+	if err := decodeJSON(w, r, 64<<10, &req); err != nil {
+		s.fail(w, "browser", err)
+		return
+	}
+	if len(req.Fields) == 0 || req.Site == "" {
+		s.fail(w, "browser", badRequest("fill needs a site and at least one field"))
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	ctx, cancel := context.WithTimeout(c.tab, 30*time.Second)
+	defer cancel()
+	fresh, err := c.snapshot(ctx)
+	if err != nil {
+		s.fail(w, "browser", &httpError{status: http.StatusBadGateway, msg: "the page could not be read: " + cleanCDP(err)})
+		return
+	}
+	if !sameSite(fresh.URL, req.Site) {
+		s.fail(w, "browser", &httpError{status: http.StatusForbidden, msg: "the page is not on the site of this login, so Fettle did not fill it"})
+		return
+	}
+	for _, f := range req.Fields {
+		el := findElement(fresh, f.Ref)
+		if el == nil || el.Role != "textbox" {
+			s.fail(w, "browser", badRequest("%s is not a text field on this page", f.Ref))
+			return
+		}
+	}
+	for _, f := range req.Fields {
+		sel := fmt.Sprintf(`[data-fettle-ref="%s"]`, f.Ref)
+		err := chromedp.Run(ctx, chromedp.Focus(sel, chromedp.ByQuery),
+			chromedp.Evaluate(fmt.Sprintf(`document.querySelector(%q).value = ''`, sel), nil),
+			chromedp.SendKeys(sel, f.Value, chromedp.ByQuery))
+		if err != nil {
+			s.fail(w, "browser", &httpError{status: http.StatusBadGateway, msg: "the field " + f.Ref + " could not be filled: " + cleanCDP(err)})
+			return
+		}
+	}
+	snap, err := c.snapshot(ctx)
+	if err == nil {
+		c.remember(snap)
+	}
+	refs := make([]string, len(req.Fields))
+	for i, f := range req.Fields {
+		refs[i] = f.Ref
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"filled": refs})
+}

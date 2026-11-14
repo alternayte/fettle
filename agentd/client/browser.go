@@ -140,3 +140,22 @@ func (c *Client) BrowserDownloads(ctx context.Context, id string) ([]Download, e
 	err := c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/downloads", nil, struct{}{}, &out)
 	return out, err
 }
+
+// FillField is one value for one field ref.
+type FillField struct {
+	Ref   string `json:"ref"`
+	Value string `json:"value"`
+}
+
+// FillRequest is the body of POST /v1/browser/{ctx}/fill. Site is the login's site; agentd
+// fills only a page on that site.
+type FillRequest struct {
+	Site   string      `json:"site"`
+	Fields []FillField `json:"fields"`
+}
+
+// BrowserFill types broker values into fields after the origin check.
+func (c *Client) BrowserFill(ctx context.Context, id string, req FillRequest) error {
+	var out map[string]any
+	return c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/fill", nil, req, &out)
+}

@@ -3,6 +3,7 @@ package tools_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/envelopes"
@@ -29,7 +30,9 @@ func registry() *agent.Registry {
 	a := agent.New(agent.Agent{})
 	c := &tools.Computer{}
 	c.Register(a.Tools)
-	(&tools.Browser{Computer: c}).RegisterBrowser(a.Tools)
+	br := &tools.Browser{Computer: c}
+	br.RegisterBrowser(a.Tools)
+	(&tools.Broker{Browser: br}).RegisterBroker(a.Tools)
 	return a.Tools
 }
 
@@ -90,5 +93,13 @@ func TestSCN_AGT_004_ToolSetFollowsCapabilities(t *testing.T) {
 	// A call whose class comes from the action is checked again (a Send click without send).
 	if agent.Allowed(noSend, false, envelopes.ClassSend) || agent.Allowed(all, true, envelopes.ClassWriteExternal) || agent.Allowed(all, false, envelopes.ClassSpend) {
 		t.Fatal("a call of an excluded class is allowed")
+	}
+}
+
+func TestTOTPMatchesRFC6238(t *testing.T) {
+	// RFC 6238 test vector: the ASCII seed "12345678901234567890" at 59 s gives 287082 (6 digits).
+	seed := "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+	if got, err := tools.TOTP(seed, time.Unix(59, 0)); err != nil || got != "287082" {
+		t.Fatalf("TOTP = %s %v", got, err)
 	}
 }

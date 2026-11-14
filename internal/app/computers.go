@@ -127,7 +127,9 @@ func (a *App) setupComputers(ctx context.Context) {
 	}
 	c := &tools.Computer{Bots: a.Bots, Computers: a.Computers}
 	c.Register(a.Agent.Tools)
-	(&tools.Browser{Computer: c, Agent: a.Agent, Models: a.Models}).RegisterBrowser(a.Agent.Tools)
+	br := &tools.Browser{Computer: c, Agent: a.Agent, Models: a.Models}
+	br.RegisterBrowser(a.Agent.Tools)
+	(&tools.Broker{Browser: br, Vault: a.Vault, Zones: a.Zones, Now: a.Agent.Now}).RegisterBroker(a.Agent.Tools)
 }
 
 // wakeComputerWaiters wakes the oldest run that waits for a computer.
