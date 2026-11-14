@@ -5,15 +5,24 @@ Fettle is an open-source team of persistent AI teammates, called bots, that work
 One Go binary, fettle, is the server, the CLI and the desktop backend. A second binary, fettle-agentd, runs inside each computer.
 
 ## Run
-- The repository holds no code yet. The build adds the justfile, and this section lists its recipes after that.
+- `just setup` installs the pinned Go tools and the UI packages once.
+- `just build` builds the UI into ui/dist and the binary into bin/fettle.
+- `just dev` runs the server with a scratch data folder and the Vite dev server with hot reload.
+- `bin/fettle up` starts a local server in the background and prints the URL with the local token; `bin/fettle down` stops it.
+- `just gen` regenerates drel code, the migration list, the OpenAPI document and the TypeScript client. Run it after a model or API change.
 
 ## Test
-- No gate exists yet. The build adds just ci as the gate, and just check runs the same recipes.
+- `just ci` is the gate; `just check` runs the same recipes.
+- `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run.
+- `just contract` runs tests tagged contract; `just e2e` builds the binaries and runs tests/flows and the Playwright suite in tests/e2e.
+- Storage tests use `internal/testenv/testenv.go`; app-level tests use `internal/apptest/apptest.go` with the fake model in `internal/fakes/model`.
 - `checks/agents-md.sh` checks this file.
 
 ## Stack rules
 - The repository is public. Tracked files, fixtures, tests, docs and commit messages contain no employer names, private hostnames, real people, real data or business material. Test data uses only the synthetic acme fixtures.
 - Storage is SQLite by default, or PostgreSQL 16 or later. Every feature works on both.
+- Raw SQL uses each $n placeholder once, because drel rewrites them to positional ? on SQLite. Pass time parameters in UTC, because SQLite compares times as text.
+- A new drel model package needs a module entry in both `drel.yaml` and `drel.postgres.yaml`.
 - Data access and migrations use drel, which generates both dialects. Hot or dialect-specific paths use the drel raw SQL API. Do not use the drel outbox, inbox or event store.
 - Durable runs use River in the same database plus the run journal. No Temporal, Redis or message broker. Only runs keep a journal; all other data is plain tables.
 - A tool call with side effects writes an intent event before it runs and a result event after it. Never replay an intent that has no result.
