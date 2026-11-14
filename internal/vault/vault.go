@@ -355,7 +355,20 @@ func (v *Vault) Rekey(ctx context.Context, newMaster []byte) (int, error) {
 			r.WrappedKey = w
 			count++
 		}
-		return v.audit.Record(ctx, audit.System, nil, "vault.rekey", "master_key", map[string]string{"data_keys": fmt.Sprint(count)})
+		secrets, err := drel.Repo(drel.MustFromContext(ctx), InstanceSecretMeta).Where(InstanceSecrets.Name.NEQ("")).All(ctx)
+		if err != nil {
+			return err
+		}
+		for _, sec := range secrets {
+			raw, err := unwrapKey(v.master, sec.Wrapped, instanceAAD(sec.Name))
+			if err != nil {
+				return fmt.Errorf("instance secret %s does not unwrap with the current master key: %w", sec.Name, err)
+			}
+			if sec.Wrapped, err = wrapKey(newMaster, raw, instanceAAD(sec.Name)); err != nil {
+				return err
+			}
+		}
+		return v.audit.Record(ctx, audit.System, nil, "vault.rekey", "master_key", map[string]string{"data_keys": fmt.Sprint(count), "instance_secrets": fmt.Sprint(len(secrets))})
 	})
 	if err != nil {
 		return 0, err
@@ -379,4 +392,42 @@ func (v *Vault) CheckMaster(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func instanceAAD(name string) string { return "fettle-instance-secret:" + name }
+
+// InstanceSecret returns a secret of the instance. On first use, create makes the value,
+// which is stored wrapped by the master key. Two processes that race keep one value.
+func (v *Vault) InstanceSecret(ctx context.Context, name string, create func() ([]byte, error)) ([]byte, error) {
+	row, err := drel.NewRepository(v.e, InstanceSecretMeta).Where(InstanceSecrets.Name.Eq(name)).FirstOrNil(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		raw, err := create()
+		if err != nil {
+			return nil, err
+		}
+		v.mu.Lock()
+		master := v.master
+		v.mu.Unlock()
+		w, err := wrapKey(master, raw, instanceAAD(name))
+		if err != nil {
+			return nil, err
+		}
+		err = v.e.WithTx(ctx, func(ctx context.Context) error {
+			drel.Repo(drel.MustFromContext(ctx), InstanceSecretMeta).Add(&InstanceSecret{Name: name, Wrapped: w})
+			return nil
+		})
+		if err == nil {
+			return raw, nil
+		}
+		if row, err = drel.NewRepository(v.e, InstanceSecretMeta).Where(InstanceSecrets.Name.Eq(name)).FirstOrNil(ctx); err != nil || row == nil {
+			return nil, fmt.Errorf("store instance secret %s: %w", name, err)
+		}
+	}
+	v.mu.Lock()
+	master := v.master
+	v.mu.Unlock()
+	return unwrapKey(master, row.Wrapped, instanceAAD(name))
 }

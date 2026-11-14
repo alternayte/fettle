@@ -14,6 +14,8 @@ import (
 	envelopes "github.com/alternayte/fettle/internal/envelopes"
 	models "github.com/alternayte/fettle/internal/models"
 	policy "github.com/alternayte/fettle/internal/policy"
+	push "github.com/alternayte/fettle/internal/push"
+	routines "github.com/alternayte/fettle/internal/routines"
 	runs "github.com/alternayte/fettle/internal/runs"
 	settings "github.com/alternayte/fettle/internal/settings"
 	spaces "github.com/alternayte/fettle/internal/spaces"
@@ -41,6 +43,9 @@ type DB struct {
 	ModelRoles          *models.ModelRoleRepository
 	Approvals           *policy.ApprovalRepository
 	Rules               *policy.RuleRepository
+	Subscriptions       *push.SubscriptionRepository
+	Routines            *routines.RoutineRepository
+	RoutineRuns         *routines.RoutineRunRepository
 	Runs                *runs.RunRepository
 	RunEvents           *runs.RunEventRepository
 	Settings            *settings.SettingRepository
@@ -49,6 +54,7 @@ type DB struct {
 	SpaceMembers        *spaces.SpaceMemberRepository
 	UsageEvents         *usage.UsageEventRepository
 	DataKeys            *vault.DataKeyRepository
+	InstanceSecrets     *vault.InstanceSecretRepository
 	VaultItems          *vault.VaultItemRepository
 	Zones               *zones.ZoneRepository
 	ZoneGrants          *zones.ZoneGrantRepository
@@ -79,6 +85,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		ModelRoles:          &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
 		Approvals:           &policy.ApprovalRepository{Repository: drel.NewRepository(engine, policy.ApprovalMeta)},
 		Rules:               &policy.RuleRepository{Repository: drel.NewRepository(engine, policy.RuleMeta)},
+		Subscriptions:       &push.SubscriptionRepository{Repository: drel.NewRepository(engine, push.SubscriptionMeta)},
+		Routines:            &routines.RoutineRepository{Repository: drel.NewRepository(engine, routines.RoutineMeta)},
+		RoutineRuns:         &routines.RoutineRunRepository{Repository: drel.NewRepository(engine, routines.RoutineRunMeta)},
 		Runs:                &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
 		RunEvents:           &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
 		Settings:            &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
@@ -87,6 +96,7 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		SpaceMembers:        &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
 		DataKeys:            &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
+		InstanceSecrets:     &vault.InstanceSecretRepository{Repository: drel.NewRepository(engine, vault.InstanceSecretMeta)},
 		VaultItems:          &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
 		Zones:               &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
 		ZoneGrants:          &zones.ZoneGrantRepository{Repository: drel.NewRepository(engine, zones.ZoneGrantMeta)},
@@ -124,6 +134,13 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Approvals: &policy.ApprovalRepository{Repository: drel.NewRepository(engine, policy.ApprovalMeta)},
 				Rules:     &policy.RuleRepository{Repository: drel.NewRepository(engine, policy.RuleMeta)},
 			},
+			Push: PushRepos{
+				Subscriptions: &push.SubscriptionRepository{Repository: drel.NewRepository(engine, push.SubscriptionMeta)},
+			},
+			Routines: RoutinesRepos{
+				Routines:    &routines.RoutineRepository{Repository: drel.NewRepository(engine, routines.RoutineMeta)},
+				RoutineRuns: &routines.RoutineRunRepository{Repository: drel.NewRepository(engine, routines.RoutineRunMeta)},
+			},
 			Runs: RunsRepos{
 				Runs:      &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
 				RunEvents: &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
@@ -140,8 +157,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				UsageEvents: &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
 			},
 			Vault: VaultRepos{
-				DataKeys:   &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
-				VaultItems: &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
+				DataKeys:        &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
+				InstanceSecrets: &vault.InstanceSecretRepository{Repository: drel.NewRepository(engine, vault.InstanceSecretMeta)},
+				VaultItems:      &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
 			},
 			Zones: ZonesRepos{
 				Zones:      &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
@@ -171,6 +189,9 @@ type TxRepos struct {
 	ModelRoles          *models.TxModelRoleRepository
 	Approvals           *policy.TxApprovalRepository
 	Rules               *policy.TxRuleRepository
+	Subscriptions       *push.TxSubscriptionRepository
+	Routines            *routines.TxRoutineRepository
+	RoutineRuns         *routines.TxRoutineRunRepository
 	Runs                *runs.TxRunRepository
 	RunEvents           *runs.TxRunEventRepository
 	Settings            *settings.TxSettingRepository
@@ -179,6 +200,7 @@ type TxRepos struct {
 	SpaceMembers        *spaces.TxSpaceMemberRepository
 	UsageEvents         *usage.TxUsageEventRepository
 	DataKeys            *vault.TxDataKeyRepository
+	InstanceSecrets     *vault.TxInstanceSecretRepository
 	VaultItems          *vault.TxVaultItemRepository
 	Zones               *zones.TxZoneRepository
 	ZoneGrants          *zones.TxZoneGrantRepository
@@ -207,6 +229,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		ModelRoles:          &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
 		Approvals:           &policy.TxApprovalRepository{TxRepository: drel.NewTxRepository(tx, policy.ApprovalMeta)},
 		Rules:               &policy.TxRuleRepository{TxRepository: drel.NewTxRepository(tx, policy.RuleMeta)},
+		Subscriptions:       &push.TxSubscriptionRepository{TxRepository: drel.NewTxRepository(tx, push.SubscriptionMeta)},
+		Routines:            &routines.TxRoutineRepository{TxRepository: drel.NewTxRepository(tx, routines.RoutineMeta)},
+		RoutineRuns:         &routines.TxRoutineRunRepository{TxRepository: drel.NewTxRepository(tx, routines.RoutineRunMeta)},
 		Runs:                &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
 		RunEvents:           &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
 		Settings:            &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
@@ -215,6 +240,7 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		SpaceMembers:        &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
 		DataKeys:            &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
+		InstanceSecrets:     &vault.TxInstanceSecretRepository{TxRepository: drel.NewTxRepository(tx, vault.InstanceSecretMeta)},
 		VaultItems:          &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
 		Zones:               &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
 		ZoneGrants:          &zones.TxZoneGrantRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneGrantMeta)},
@@ -252,6 +278,13 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				Approvals: &policy.TxApprovalRepository{TxRepository: drel.NewTxRepository(tx, policy.ApprovalMeta)},
 				Rules:     &policy.TxRuleRepository{TxRepository: drel.NewTxRepository(tx, policy.RuleMeta)},
 			},
+			Push: PushTxRepos{
+				Subscriptions: &push.TxSubscriptionRepository{TxRepository: drel.NewTxRepository(tx, push.SubscriptionMeta)},
+			},
+			Routines: RoutinesTxRepos{
+				Routines:    &routines.TxRoutineRepository{TxRepository: drel.NewTxRepository(tx, routines.RoutineMeta)},
+				RoutineRuns: &routines.TxRoutineRunRepository{TxRepository: drel.NewTxRepository(tx, routines.RoutineRunMeta)},
+			},
 			Runs: RunsTxRepos{
 				Runs:      &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
 				RunEvents: &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
@@ -268,8 +301,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				UsageEvents: &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
 			},
 			Vault: VaultTxRepos{
-				DataKeys:   &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
-				VaultItems: &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
+				DataKeys:        &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
+				InstanceSecrets: &vault.TxInstanceSecretRepository{TxRepository: drel.NewTxRepository(tx, vault.InstanceSecretMeta)},
+				VaultItems:      &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
 			},
 			Zones: ZonesTxRepos{
 				Zones:      &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
@@ -377,6 +411,28 @@ type PolicyTxRepos struct {
 	Rules     *policy.TxRuleRepository
 }
 
+// PushRepos holds the untracked repositories of the "push" module.
+type PushRepos struct {
+	Subscriptions *push.SubscriptionRepository
+}
+
+// PushTxRepos holds the tracked repositories of the "push" module.
+type PushTxRepos struct {
+	Subscriptions *push.TxSubscriptionRepository
+}
+
+// RoutinesRepos holds the untracked repositories of the "routines" module.
+type RoutinesRepos struct {
+	Routines    *routines.RoutineRepository
+	RoutineRuns *routines.RoutineRunRepository
+}
+
+// RoutinesTxRepos holds the tracked repositories of the "routines" module.
+type RoutinesTxRepos struct {
+	Routines    *routines.TxRoutineRepository
+	RoutineRuns *routines.TxRoutineRunRepository
+}
+
 // RunsRepos holds the untracked repositories of the "runs" module.
 type RunsRepos struct {
 	Runs      *runs.RunRepository
@@ -425,14 +481,16 @@ type UsageTxRepos struct {
 
 // VaultRepos holds the untracked repositories of the "vault" module.
 type VaultRepos struct {
-	DataKeys   *vault.DataKeyRepository
-	VaultItems *vault.VaultItemRepository
+	DataKeys        *vault.DataKeyRepository
+	InstanceSecrets *vault.InstanceSecretRepository
+	VaultItems      *vault.VaultItemRepository
 }
 
 // VaultTxRepos holds the tracked repositories of the "vault" module.
 type VaultTxRepos struct {
-	DataKeys   *vault.TxDataKeyRepository
-	VaultItems *vault.TxVaultItemRepository
+	DataKeys        *vault.TxDataKeyRepository
+	InstanceSecrets *vault.TxInstanceSecretRepository
+	VaultItems      *vault.TxVaultItemRepository
 }
 
 // ZonesRepos holds the untracked repositories of the "zones" module.
@@ -458,6 +516,8 @@ type Modules struct {
 	Envelopes EnvelopesRepos
 	Models    ModelsRepos
 	Policy    PolicyRepos
+	Push      PushRepos
+	Routines  RoutinesRepos
 	Runs      RunsRepos
 	Settings  SettingsRepos
 	Spaces    SpacesRepos
@@ -477,6 +537,8 @@ type TxModules struct {
 	Envelopes EnvelopesTxRepos
 	Models    ModelsTxRepos
 	Policy    PolicyTxRepos
+	Push      PushTxRepos
+	Routines  RoutinesTxRepos
 	Runs      RunsTxRepos
 	Settings  SettingsTxRepos
 	Spaces    SpacesTxRepos

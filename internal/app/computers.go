@@ -150,6 +150,9 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 	if _, err := w.a.Computers.SleepIdle(ctx); err != nil {
 		w.a.Log.Warn("idle sleep failed", "error", err)
 	}
+	if _, err := w.a.Routines.Tick(ctx); err != nil {
+		w.a.Log.Warn("routine tick failed", "error", err)
+	}
 	return nil
 }
 

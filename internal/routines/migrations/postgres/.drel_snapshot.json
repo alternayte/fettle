@@ -1,0 +1,188 @@
+{
+  "tables": [
+    {
+      "name": "routines",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "prompt",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "trigger",
+          "type": "text",
+          "notNull": true,
+          "check": "trigger IN ('cron','webhook')"
+        },
+        {
+          "name": "cron",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "tz",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "webhook_secret",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "webhook_secret_hash",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "notify",
+          "type": "text",
+          "notNull": true,
+          "check": "notify IN ('always','on_failure','never')"
+        },
+        {
+          "name": "next_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "send_approved",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_routines_bot_id",
+          "columns": [
+            "bot_id"
+          ]
+        },
+        {
+          "name": "idx_routines_due",
+          "columns": [
+            "enabled",
+            "next_at"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "routine_runs",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "routine_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "routines",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "envelope_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "due_at",
+          "type": "timestamptz",
+          "notNull": true
+        },
+        {
+          "name": "started_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "coalesced",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "missed",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "notNull": true,
+          "check": "source IN ('cron','webhook','manual')"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_routine_runs_routine",
+          "columns": [
+            "routine_id",
+            "due_at"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -108,6 +108,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/push/key": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The VAPID public key that browsers subscribe with */
+    get: operations["push-key"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/push/subscriptions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Store a push subscription of the caller */
+    post: operations["push-subscribe"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/push/subscriptions/remove": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Remove a push subscription of the caller */
+    post: operations["push-unsubscribe"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}": {
     parameters: {
       query?: never;
@@ -507,6 +558,76 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/routines": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the routines of a space or of one bot */
+    get: operations["list-routines"];
+    put?: never;
+    /** Create a routine. A webhook routine returns its secret once. */
+    post: operations["create-routine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/routines/{routine}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a routine */
+    delete: operations["delete-routine"];
+    options?: never;
+    head?: never;
+    /** Change a routine */
+    patch: operations["update-routine"];
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/routines/{routine}/run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run a routine now */
+    post: operations["run-routine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/routines/{routine}/runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The 20 newest firings of a routine, with missed and coalesced ticks */
+    get: operations["routine-runs"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/runs": {
     parameters: {
       query?: never;
@@ -866,6 +987,10 @@ export interface components {
       kind: string;
       name: string;
     };
+    CreateOutBody: {
+      routine: components["schemas"]["RoutineView"];
+      secret?: string;
+    };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
     };
@@ -958,6 +1083,9 @@ export interface components {
     };
     "List-vault-itemsResponse": {
       items: components["schemas"]["VaultItemView"][] | null;
+    };
+    ListOutBody: {
+      routines: components["schemas"]["RoutineView"][] | null;
     };
     LocalAuthInBody: {
       token: string;
@@ -1072,6 +1200,22 @@ export interface components {
       /** Format: date-time */
       tested_at: string | null;
     };
+    "Push-keyResponse": {
+      public_key: string;
+      /** Format: int64 */
+      subscriptions: number;
+    };
+    "Push-unsubscribeRequest": {
+      endpoint: string;
+    };
+    PushSubBody: {
+      endpoint: string;
+      keys: components["schemas"]["PushSubBodyKeysStruct"];
+    };
+    PushSubBodyKeysStruct: {
+      auth: string;
+      p256dh: string;
+    };
     "Put-bot-memoryRequest": {
       content: string;
     };
@@ -1082,6 +1226,47 @@ export interface components {
       bot_id?: string;
       role: string;
       targets: components["schemas"]["Target"][] | null;
+    };
+    RoutineBody: {
+      bot_id: string;
+      cron?: string;
+      enabled: boolean;
+      name: string;
+      /** @enum {string} */
+      notify?: "always" | "on_failure" | "never";
+      prompt: string;
+      /** @enum {string} */
+      trigger: "cron" | "webhook";
+      tz?: string;
+    };
+    RoutineRunView: {
+      coalesced: boolean;
+      /** Format: date-time */
+      due_at: string;
+      envelope_id?: string;
+      /** @description The tick came due while Fettle was not running. */
+      missed: boolean;
+      run_id?: string;
+      source: string;
+      /** Format: date-time */
+      started_at?: string;
+      state?: string;
+    };
+    RoutineView: {
+      bot_id: string;
+      cron: string;
+      enabled: boolean;
+      id: string;
+      name: string;
+      /** Format: date-time */
+      next_at?: string;
+      /** @enum {string} */
+      notify: "always" | "on_failure" | "never";
+      prompt: string;
+      /** @enum {string} */
+      trigger: "cron" | "webhook";
+      tz: string;
+      webhook_url?: string;
     };
     Row: {
       /** Format: int64 */
@@ -1110,6 +1295,9 @@ export interface components {
     RulesOutBody: {
       mode: string;
       rules: components["schemas"]["RuleView"][] | null;
+    };
+    "Run-routineResponse": {
+      envelope_id: string;
     };
     RunLine: {
       bot_id: string;
@@ -1145,6 +1333,9 @@ export interface components {
       tokens_in: number;
       /** Format: int64 */
       tokens_out: number;
+    };
+    RunsOutBody: {
+      runs: components["schemas"]["RoutineRunView"][] | null;
     };
     "Set-approval-modeRequest": {
       /** @enum {string} */
@@ -1314,6 +1505,7 @@ export type SchemaChatView = components["schemas"]["ChatView"];
 export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
 export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
+export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
@@ -1329,6 +1521,7 @@ export type SchemaListModelRolesResponse = components["schemas"]["List-model-rol
 export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
+export type SchemaListOutBody = components["schemas"]["ListOutBody"];
 export type SchemaLocalAuthInBody = components["schemas"]["LocalAuthInBody"];
 export type SchemaLocalAuthOutBody = components["schemas"]["LocalAuthOutBody"];
 export type SchemaMeView = components["schemas"]["MeView"];
@@ -1342,14 +1535,23 @@ export type SchemaPreset = components["schemas"]["Preset"];
 export type SchemaProvOutBody = components["schemas"]["ProvOutBody"];
 export type SchemaProviderBody = components["schemas"]["ProviderBody"];
 export type SchemaProviderView = components["schemas"]["ProviderView"];
+export type SchemaPushKeyResponse = components["schemas"]["Push-keyResponse"];
+export type SchemaPushUnsubscribeRequest = components["schemas"]["Push-unsubscribeRequest"];
+export type SchemaPushSubBody = components["schemas"]["PushSubBody"];
+export type SchemaPushSubBodyKeysStruct = components["schemas"]["PushSubBodyKeysStruct"];
 export type SchemaPutBotMemoryRequest = components["schemas"]["Put-bot-memoryRequest"];
 export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-memoryRequest"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
+export type SchemaRoutineBody = components["schemas"]["RoutineBody"];
+export type SchemaRoutineRunView = components["schemas"]["RoutineRunView"];
+export type SchemaRoutineView = components["schemas"]["RoutineView"];
 export type SchemaRow = components["schemas"]["Row"];
 export type SchemaRuleView = components["schemas"]["RuleView"];
 export type SchemaRulesOutBody = components["schemas"]["RulesOutBody"];
+export type SchemaRunRoutineResponse = components["schemas"]["Run-routineResponse"];
 export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
+export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
@@ -1607,6 +1809,99 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["List-model-presetsResponse"];
         };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "push-key": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Push-keyResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "push-subscribe": {
+    parameters: {
+      query?: never;
+      header?: {
+        "User-Agent"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PushSubBody"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "push-unsubscribe": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Push-unsubscribeRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Error */
       default: {
@@ -2733,6 +3028,210 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-routines": {
+    parameters: {
+      query?: {
+        bot?: string;
+      };
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ListOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-routine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoutineBody"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "delete-routine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        routine: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "update-routine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        routine: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoutineBody"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoutineView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "run-routine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        routine: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Run-routineResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "routine-runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        routine: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RunsOutBody"];
+        };
       };
       /** @description Error */
       default: {

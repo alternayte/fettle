@@ -201,6 +201,11 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 			if _, err := tx.Exec(ctx, "UPDATE approvals SET status = $1, decided_by = $2 WHERE card_id = $3", decision, user.ID, cardID); err != nil {
 				return err
 			}
+			if id, err := uuid.Parse(card.Data["routine_id"]); err == nil && decision == "allowed" && a.RoutineSendApproved != nil {
+				if err := a.RoutineSendApproved(ctx, id); err != nil {
+					return err
+				}
+			}
 			if action == "always" {
 				if err := a.Policy.AddRule(ctx, user, &policy.Rule{SpaceID: spaceID, Tool: card.Tool, Effect: "allow", CreatedFromCard: cardID}); err != nil {
 					return err

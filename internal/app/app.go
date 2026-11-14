@@ -29,6 +29,8 @@ import (
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/objects"
 	"github.com/alternayte/fettle/internal/policy"
+	"github.com/alternayte/fettle/internal/push"
+	"github.com/alternayte/fettle/internal/routines"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
@@ -50,6 +52,8 @@ type App struct {
 	Vault    *vault.Vault
 	Settings *settings.Store
 	Users    *auth.UserStore
+	Routines *routines.Service
+	Push     *push.Service
 	// SignIn is the server-mode sign-in; nil in local mode.
 	SignIn    *auth.Server
 	Spaces    *spaces.Service
@@ -142,6 +146,8 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Telemetry = NewTelemetry(a)
 
 	a.setupComputers(ctx)
+	a.setupRoutines()
+	a.setupPush()
 	a.registerChanges()
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})

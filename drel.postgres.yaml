@@ -44,3 +44,9 @@ modules:
   - name: computers
     packages: [./internal/computers]
     migrations: ./internal/computers/migrations/postgres
+  - name: routines
+    packages: [./internal/routines]
+    migrations: ./internal/routines/migrations/postgres
+  - name: push
+    packages: [./internal/push]
+    migrations: ./internal/push/migrations/postgres

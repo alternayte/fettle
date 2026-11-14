@@ -44,6 +44,15 @@ type Agent struct {
 	// Computer brings up the computer of a bot's zone; ErrNoComputer means wait.
 	Computer func(ctx context.Context, spaceID, botID uuid.UUID) error
 	HTTP     *http.Client
+	// RoutineFirstSend reports that a routine has had no allowed external send yet; that
+	// send is a hard ask (§11.2). RoutineSendApproved records the allowed card.
+	RoutineFirstSend    func(ctx context.Context, routineID uuid.UUID) bool
+	RoutineSendApproved func(ctx context.Context, routineID uuid.UUID) error
+	// Notify sends a push notification to the members of a space (§15.2). url is the
+	// path of the card or the run in the app.
+	Notify func(ctx context.Context, spaceID uuid.UUID, kind, title, body, url string)
+	// RoutineNotify returns the notification setting of a routine: always, on_failure or never.
+	RoutineNotify func(ctx context.Context, routineID uuid.UUID) string
 	// RescueAfter is the River rescue timeout; run jobs use it as their timeout.
 	RescueAfter time.Duration
 	Log         *slog.Logger

@@ -27,3 +27,11 @@ type VaultItem struct {
 	Last4                 string     `db:"last4"`
 	UpdatedBy             *uuid.UUID `db:"updated_by"`
 }
+
+// InstanceSecret is a secret of the instance, not of a space (for example the Web Push
+// VAPID key), wrapped by the master key.
+type InstanceSecret struct {
+	drel.Model[uuid.UUID] `db:"table=instance_secrets"`
+	Name                  string `db:"name,unique"`
+	Wrapped               string `db:"wrapped"`
+}

@@ -33,6 +33,8 @@ func (a *App) Handler() http.Handler {
 	r.Get("/readyz", a.readyz)
 	r.Handle("/metrics", promhttp.HandlerFor(a.Metrics.Registry, promhttp.HandlerOpts{}))
 
+	// Webhooks sign their bodies instead of signing in (SI-17).
+	r.Post("/hooks/{id}", a.webhook)
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}

@@ -1,0 +1,67 @@
+{
+  "tables": [
+    {
+      "name": "push_subscriptions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "user_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "endpoint",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "p256dh",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "auth",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "user_agent",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_push_subscriptions_user_id",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "uq_push_subscriptions_endpoint",
+          "columns": [
+            "endpoint"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

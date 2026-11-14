@@ -238,6 +238,7 @@ func (x *exec) finish(ctx context.Context, st *state, status, summary string) er
 	if a.Metrics != nil {
 		a.Metrics.RunFinished(status, st.step)
 	}
+	x.notifyFinished(ctx, status, summary)
 	return nil
 }
 
@@ -479,6 +480,9 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 			a.Metrics.RunFinished(runs.StatusDone, st.step)
 		}
 	}
+	if direct {
+		x.notifyFinished(ctx, runs.StatusDone, text)
+	}
 	if x.env.ChatID != nil {
 		if msg != nil {
 			a.Chats.Publish(chatID, "message", a.MessageView(ctx, msg))
@@ -690,6 +694,7 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 	if a.Metrics != nil {
 		a.Metrics.Card(card.Kind)
 	}
+	x.notifyCard(ctx, card, msg)
 	if msg != nil {
 		a.Chats.Publish(*x.env.ChatID, "message", a.MessageView(ctx, msg))
 	}

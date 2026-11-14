@@ -16,6 +16,7 @@ import (
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/models"
+	"github.com/alternayte/fettle/internal/routines"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
@@ -32,7 +33,7 @@ var errorMap = []struct {
 	code int
 	errs []error
 }{
-	{http.StatusNotFound, []error{bots.ErrNotFound, chats.ErrNotFound, chats.ErrMsgNotFound, chats.ErrCardNotFound, vault.ErrNotFound, models.ErrNotFound, runs.ErrNotFound, envelopes.ErrNotFound, spaces.ErrNotMember, bots.ErrNoVersion}},
+	{http.StatusNotFound, []error{routines.ErrNotFound, bots.ErrNotFound, chats.ErrNotFound, chats.ErrMsgNotFound, chats.ErrCardNotFound, vault.ErrNotFound, models.ErrNotFound, runs.ErrNotFound, envelopes.ErrNotFound, spaces.ErrNotMember, bots.ErrNoVersion}},
 	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit}},
 	{http.StatusUnprocessableEntity, []error{bots.ErrBadName, bots.ErrMemoryFull, bots.ErrFactNotFound, bots.ErrFactAmbiguous, chats.ErrEmptyMessage, chats.ErrMessageLength, models.ErrNoToolsOwner, models.ErrUntestedOwner, models.ErrUnknownRole, models.ErrInvalidBaseURL, settings.ErrUnknown, agent.ErrBadAction}},
 }
@@ -73,6 +74,8 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerVault(api)
 	a.registerZones(api)
 	a.registerPolicy(api)
+	a.registerRoutines(api)
+	a.registerPush(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)

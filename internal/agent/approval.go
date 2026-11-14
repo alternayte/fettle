@@ -65,6 +65,13 @@ func (x *exec) authorize(ctx context.Context, st *state, tool Tool, env *ToolEnv
 	if req.Site == "" {
 		req.Site = env.Checked["site"]
 	}
+	// The first external send of a new routine always needs a card (§11.2).
+	if x.env.Requester.Type == "routine" && (class == envelopes.ClassSend || class == envelopes.ClassWriteExternal) && a.RoutineFirstSend != nil {
+		if id, err := uuid.Parse(x.env.Requester.ID); err == nil && a.RoutineFirstSend(ctx, id) {
+			req.HardAsk = true
+			env.Checked["routine_id"] = id.String()
+		}
+	}
 	d := policy.Decide(mode, rules, req)
 	switch d.Effect {
 	case policy.Run:
@@ -81,7 +88,7 @@ func (x *exec) authorize(ctx context.Context, st *state, tool Tool, env *ToolEnv
 		}
 		d.Reason = "This action does not clearly match what you asked: " + reason
 	}
-	return false, x.postApproval(ctx, call, env, class, tool.HardAsk || !d.AlwaysAllowed, d.Reason)
+	return false, x.postApproval(ctx, call, env, class, req.HardAsk || !d.AlwaysAllowed, d.Reason)
 }
 
 // postApproval posts an approval card, records it and makes the run wait.
@@ -89,10 +96,15 @@ func (x *exec) postApproval(ctx context.Context, call models.ToolCall, env *Tool
 	a := x.a
 	cardID := uuid.NewString()
 	preview := x.argsPreview(ctx, call.Args)
+	data := map[string]string{"call_id": call.ID, "class": class}
+	if id := env.Checked["routine_id"]; id != "" {
+		data["routine_id"] = id
+		delete(env.Checked, "routine_id")
+	}
 	for k, v := range env.Checked {
 		preview[k] = x.a.Vault.Redactor.String(ctx, x.run.SpaceID, v)
 	}
-	card := chats.Card{ID: cardID, Kind: "approval", Status: "pending", Title: approvalTitle(call.Name, class), Tool: call.Name, Preview: preview, Detail: reason, HardAsk: hard, RunID: x.run.ID().String(), Data: map[string]string{"call_id": call.ID, "class": class}}
+	card := chats.Card{ID: cardID, Kind: "approval", Status: "pending", Title: approvalTitle(call.Name, class), Tool: call.Name, Preview: preview, Detail: reason, HardAsk: hard, RunID: x.run.ID().String(), Data: data}
 	var msg *chats.Message
 	err := a.E.WithTx(ctx, func(ctx context.Context) error {
 		if x.env.ChatID != nil {
@@ -118,6 +130,7 @@ func (x *exec) postApproval(ctx context.Context, call models.ToolCall, env *Tool
 	if a.Metrics != nil {
 		a.Metrics.Card("approval")
 	}
+	x.notifyCard(ctx, card, msg)
 	if msg != nil {
 		a.Chats.Publish(*x.env.ChatID, "message", a.MessageView(ctx, msg))
 	}
