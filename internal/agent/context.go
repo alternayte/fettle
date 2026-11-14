@@ -74,10 +74,12 @@ type TurnRecord struct {
 
 // Input is everything that context assembly needs.
 type Input struct {
-	BotName       string
-	BotJob        string
-	Instructions  string
-	Skills        []Skill
+	BotName      string
+	BotJob       string
+	Instructions string
+	Skills       []Skill
+	// LoadedSkill is the text of a skill that the envelope started with (/name, §13.1).
+	LoadedSkill   string
 	SharedMemory  string
 	BotMemory     string
 	OpenWork      []string
@@ -141,6 +143,9 @@ func Assemble(in Input) Context {
 			fmt.Fprintf(&b, "- %s: %s\n", s.Name, s.Description)
 		}
 		add(Item{Section: SecSystem, Name: "skill_index", Origin: OriginSystem, Role: "system", Text: b.String()})
+	}
+	if strings.TrimSpace(in.LoadedSkill) != "" {
+		add(Item{Section: SecSystem, Name: "loaded_skill", Origin: OriginUser, Role: "system", Text: "The user started this work with a skill. Follow it:\n" + in.LoadedSkill})
 	}
 	add(Item{Section: SecSystem, Name: "shared_memory", Origin: OriginMemory, Role: "system", Text: "Shared memory of the space:\n" + dataTag(OriginMemory, "shared", orNone(in.SharedMemory))})
 	add(Item{Section: SecSystem, Name: "bot_memory", Origin: OriginMemory, Role: "system", Text: "Your MEMORY.md:\n" + dataTag(OriginMemory, "MEMORY.md", orNone(in.BotMemory))})

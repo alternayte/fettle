@@ -799,6 +799,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/runs/{run}/draft-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Draft a SKILL.md from a finished run (Save as skill) */
+    post: operations["draft-skill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/runs/{run}/stop": {
     parameters: {
       query?: never;
@@ -859,6 +876,110 @@ export interface paths {
     };
     /** The change history of a setting */
     get: operations["setting-history"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the skill library of a space */
+    get: operations["list-skills"];
+    put?: never;
+    /** Save a skill from its SKILL.md text (Save as skill). The same name makes a new version. */
+    post: operations["save-skill-md"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Import a skill from a zip of its folder. The same name makes a new version. */
+    post: operations["import-skill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills/sync": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Pull the Skael set now */
+    post: operations["sync-skael"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills/{skill}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** A skill with its version history */
+    get: operations["get-skill"];
+    put?: never;
+    post?: never;
+    /** Delete a skill and its versions */
+    delete: operations["delete-skill"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills/{skill}/bots/{bot}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Give a bot a skill, or take it away */
+    put: operations["assign-skill"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/skills/{skill}/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Export the current version of a skill as a zip */
+    get: operations["export-skill"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1027,6 +1148,9 @@ export interface components {
         "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done" | "dismiss";
       value?: string;
     };
+    "Assign-skillRequest": {
+      on: boolean;
+    };
     Attachment: {
       id: string;
       name: string;
@@ -1184,6 +1308,9 @@ export interface components {
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
     };
+    "Draft-skillResponse": {
+      skill_md: string;
+    };
     Entry: {
       /** @enum {string} */
       auth: "oauth" | "header" | "none";
@@ -1247,6 +1374,10 @@ export interface components {
       mode: "local" | "server";
       version: string;
     };
+    "Get-skillResponse": {
+      skill: components["schemas"]["SkillView"];
+      versions: components["schemas"]["SkillVersionView"][] | null;
+    };
     HistoryRow: {
       at: string;
       new_value: string;
@@ -1287,6 +1418,9 @@ export interface components {
     };
     ListOutBody1: {
       connectors: components["schemas"]["ConnectorView"][] | null;
+    };
+    ListOutBody2: {
+      skills: components["schemas"]["SkillView"][] | null;
     };
     LocalAuthInBody: {
       token: string;
@@ -1538,6 +1672,9 @@ export interface components {
     RunsOutBody: {
       runs: components["schemas"]["RoutineRunView"][] | null;
     };
+    "Save-skill-mdRequest": {
+      skill_md: string;
+    };
     "Set-approval-modeRequest": {
       /** @enum {string} */
       mode: "ask" | "auto" | "never";
@@ -1572,6 +1709,29 @@ export interface components {
       needs_model: boolean;
       needs_name: boolean;
     };
+    SkillVersionView: {
+      /** Format: date-time */
+      created_at: string;
+      files: string[] | null;
+      has_evals: boolean;
+      sha256: string;
+      skill_md: string;
+      /** Format: int64 */
+      upstream?: number;
+      /** Format: int64 */
+      version: number;
+    };
+    SkillView: {
+      /** @description IDs of the bots that have this skill. */
+      bots: string[] | null;
+      /** Format: int64 */
+      current_version: number;
+      description: string;
+      id: string;
+      name: string;
+      /** @enum {string} */
+      source: "local" | "skael";
+    };
     Smoke: {
       checks: components["schemas"]["CheckResult"][] | null;
       model: string;
@@ -1587,6 +1747,12 @@ export interface components {
       name: string;
       role: string;
       time_zone: string;
+    };
+    SyncResult: {
+      /** Format: int64 */
+      skills: number;
+      /** Format: int64 */
+      updated: number;
     };
     Target: {
       /** Format: int64 */
@@ -1723,6 +1889,7 @@ export type SchemaAddConnectorAccountRequest = components["schemas"]["Add-connec
 export type SchemaAddPolicyRuleRequest = components["schemas"]["Add-policy-ruleRequest"];
 export type SchemaAddZoneGrantRequest = components["schemas"]["Add-zone-grantRequest"];
 export type SchemaAnswerCardRequest = components["schemas"]["Answer-cardRequest"];
+export type SchemaAssignSkillRequest = components["schemas"]["Assign-skillRequest"];
 export type SchemaAttachment = components["schemas"]["Attachment"];
 export type SchemaAuditView = components["schemas"]["AuditView"];
 export type SchemaAuthorizeConnectorRequest = components["schemas"]["Authorize-connectorRequest"];
@@ -1742,11 +1909,13 @@ export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
+export type SchemaDraftSkillResponse = components["schemas"]["Draft-skillResponse"];
 export type SchemaEntry = components["schemas"]["Entry"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
 export type SchemaEventView = components["schemas"]["EventView"];
 export type SchemaGetInstanceResponse = components["schemas"]["Get-instanceResponse"];
+export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
@@ -1759,6 +1928,7 @@ export type SchemaListSettingsResponse = components["schemas"]["List-settingsRes
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
 export type SchemaListOutBody1 = components["schemas"]["ListOutBody1"];
+export type SchemaListOutBody2 = components["schemas"]["ListOutBody2"];
 export type SchemaLocalAuthInBody = components["schemas"]["LocalAuthInBody"];
 export type SchemaLocalAuthOutBody = components["schemas"]["LocalAuthOutBody"];
 export type SchemaMeView = components["schemas"]["MeView"];
@@ -1789,6 +1959,7 @@ export type SchemaRunRoutineResponse = components["schemas"]["Run-routineRespons
 export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
 export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
+export type SchemaSaveSkillMdRequest = components["schemas"]["Save-skill-mdRequest"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
@@ -1797,9 +1968,12 @@ export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequ
 export type SchemaSettingHistoryResponse = components["schemas"]["Setting-historyResponse"];
 export type SchemaSettingView = components["schemas"]["SettingView"];
 export type SchemaSetupState = components["schemas"]["SetupState"];
+export type SchemaSkillVersionView = components["schemas"]["SkillVersionView"];
+export type SchemaSkillView = components["schemas"]["SkillView"];
 export type SchemaSmoke = components["schemas"]["Smoke"];
 export type SchemaSpaceInBody = components["schemas"]["SpaceInBody"];
 export type SchemaSpaceView = components["schemas"]["SpaceView"];
+export type SchemaSyncResult = components["schemas"]["SyncResult"];
 export type SchemaTarget = components["schemas"]["Target"];
 export type SchemaTelemetryCounts = components["schemas"]["TelemetryCounts"];
 export type SchemaTelemetryView = components["schemas"]["TelemetryView"];
@@ -3868,6 +4042,39 @@ export interface operations {
       };
     };
   };
+  "draft-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        run: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Draft-skillResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "stop-run": {
     parameters: {
       query?: never;
@@ -3988,6 +4195,277 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Setting-historyResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-skills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ListOutBody2"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "save-skill-md": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Save-skill-mdRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SkillView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "import-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/zip": string;
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SkillView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "sync-skael": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SyncResult"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        skill: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Get-skillResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "delete-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        skill: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "assign-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        skill: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Assign-skillRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "export-skill": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        skill: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          "Content-Disposition"?: string;
+          "Content-Type"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": string;
         };
       };
       /** @description Error */

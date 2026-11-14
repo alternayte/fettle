@@ -162,6 +162,7 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 	if _, err := w.a.Agent.ExpireCards(ctx); err != nil {
 		w.a.Log.Warn("card expiry failed", "error", err)
 	}
+	w.a.SyncSkael(ctx)
 	if err := w.a.WakeOpenWork(ctx); err != nil {
 		w.a.Log.Warn("open work wake failed", "error", err)
 	}

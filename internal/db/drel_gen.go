@@ -19,6 +19,7 @@ import (
 	routines "github.com/alternayte/fettle/internal/routines"
 	runs "github.com/alternayte/fettle/internal/runs"
 	settings "github.com/alternayte/fettle/internal/settings"
+	skills "github.com/alternayte/fettle/internal/skills"
 	spaces "github.com/alternayte/fettle/internal/spaces"
 	usage "github.com/alternayte/fettle/internal/usage"
 	vault "github.com/alternayte/fettle/internal/vault"
@@ -54,6 +55,9 @@ type DB struct {
 	RunEvents           *runs.RunEventRepository
 	Settings            *settings.SettingRepository
 	SettingHistories    *settings.SettingHistoryRepository
+	BotSkills           *skills.BotSkillRepository
+	Skills              *skills.SkillRepository
+	SkillVersions       *skills.SkillVersionRepository
 	Spaces              *spaces.SpaceRepository
 	SpaceMembers        *spaces.SpaceMemberRepository
 	UsageEvents         *usage.UsageEventRepository
@@ -99,6 +103,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		RunEvents:           &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
 		Settings:            &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
 		SettingHistories:    &settings.SettingHistoryRepository{Repository: drel.NewRepository(engine, settings.SettingHistoryMeta)},
+		BotSkills:           &skills.BotSkillRepository{Repository: drel.NewRepository(engine, skills.BotSkillMeta)},
+		Skills:              &skills.SkillRepository{Repository: drel.NewRepository(engine, skills.SkillMeta)},
+		SkillVersions:       &skills.SkillVersionRepository{Repository: drel.NewRepository(engine, skills.SkillVersionMeta)},
 		Spaces:              &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
@@ -161,6 +168,11 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Settings:         &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
 				SettingHistories: &settings.SettingHistoryRepository{Repository: drel.NewRepository(engine, settings.SettingHistoryMeta)},
 			},
+			Skills: SkillsRepos{
+				BotSkills:     &skills.BotSkillRepository{Repository: drel.NewRepository(engine, skills.BotSkillMeta)},
+				Skills:        &skills.SkillRepository{Repository: drel.NewRepository(engine, skills.SkillMeta)},
+				SkillVersions: &skills.SkillVersionRepository{Repository: drel.NewRepository(engine, skills.SkillVersionMeta)},
+			},
 			Spaces: SpacesRepos{
 				Spaces:       &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 				SpaceMembers: &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
@@ -211,6 +223,9 @@ type TxRepos struct {
 	RunEvents           *runs.TxRunEventRepository
 	Settings            *settings.TxSettingRepository
 	SettingHistories    *settings.TxSettingHistoryRepository
+	BotSkills           *skills.TxBotSkillRepository
+	Skills              *skills.TxSkillRepository
+	SkillVersions       *skills.TxSkillVersionRepository
 	Spaces              *spaces.TxSpaceRepository
 	SpaceMembers        *spaces.TxSpaceMemberRepository
 	UsageEvents         *usage.TxUsageEventRepository
@@ -254,6 +269,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		RunEvents:           &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
 		Settings:            &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
 		SettingHistories:    &settings.TxSettingHistoryRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingHistoryMeta)},
+		BotSkills:           &skills.TxBotSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.BotSkillMeta)},
+		Skills:              &skills.TxSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillMeta)},
+		SkillVersions:       &skills.TxSkillVersionRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillVersionMeta)},
 		Spaces:              &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
@@ -315,6 +333,11 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 			Settings: SettingsTxRepos{
 				Settings:         &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
 				SettingHistories: &settings.TxSettingHistoryRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingHistoryMeta)},
+			},
+			Skills: SkillsTxRepos{
+				BotSkills:     &skills.TxBotSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.BotSkillMeta)},
+				Skills:        &skills.TxSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillMeta)},
+				SkillVersions: &skills.TxSkillVersionRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillVersionMeta)},
 			},
 			Spaces: SpacesTxRepos{
 				Spaces:       &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
@@ -494,6 +517,20 @@ type SettingsTxRepos struct {
 	SettingHistories *settings.TxSettingHistoryRepository
 }
 
+// SkillsRepos holds the untracked repositories of the "skills" module.
+type SkillsRepos struct {
+	BotSkills     *skills.BotSkillRepository
+	Skills        *skills.SkillRepository
+	SkillVersions *skills.SkillVersionRepository
+}
+
+// SkillsTxRepos holds the tracked repositories of the "skills" module.
+type SkillsTxRepos struct {
+	BotSkills     *skills.TxBotSkillRepository
+	Skills        *skills.TxSkillRepository
+	SkillVersions *skills.TxSkillVersionRepository
+}
+
 // SpacesRepos holds the untracked repositories of the "spaces" module.
 type SpacesRepos struct {
 	Spaces       *spaces.SpaceRepository
@@ -558,6 +595,7 @@ type Modules struct {
 	Routines   RoutinesRepos
 	Runs       RunsRepos
 	Settings   SettingsRepos
+	Skills     SkillsRepos
 	Spaces     SpacesRepos
 	Usage      UsageRepos
 	Vault      VaultRepos
@@ -580,6 +618,7 @@ type TxModules struct {
 	Routines   RoutinesTxRepos
 	Runs       RunsTxRepos
 	Settings   SettingsTxRepos
+	Skills     SkillsTxRepos
 	Spaces     SpacesTxRepos
 	Usage      UsageTxRepos
 	Vault      VaultTxRepos

@@ -1,0 +1,196 @@
+{
+  "tables": [
+    {
+      "name": "bot_skills",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "skill_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "skills",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_skills",
+          "columns": [
+            "bot_id",
+            "skill_id"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "skills",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "notNull": true,
+          "check": "source IN ('local','skael')"
+        },
+        {
+          "name": "current_version",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_skills_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "skill_versions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "skill_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "skills",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "sha256",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "object_key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "skill_md",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "files",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "has_evals",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "upstream",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_skill_versions",
+          "columns": [
+            "skill_id",
+            "version"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

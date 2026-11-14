@@ -134,4 +134,21 @@ func (a *Agent) registerMemoryTools() {
 			return ToolOutput{Text: "Done: " + it.Text}, nil
 		},
 	})
+	a.Tools.Add(Tool{
+		Name:        "load_skill",
+		Description: "Load the full instructions of one of your skills by its name from the skill index. Its files go into .skills/<name>/ in your home.",
+		Class:       envelopes.ClassRead,
+		Schema:      schema(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"],"additionalProperties":false}`),
+		Run: func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error) {
+			in, err := decode[struct{ Name string }](args)
+			if err != nil {
+				return ToolOutput{}, err
+			}
+			if a.LoadSkill == nil {
+				return ToolOutput{}, fmt.Errorf("skills are not available")
+			}
+			text, err := a.LoadSkill(ctx, env, in.Name)
+			return ToolOutput{Text: text}, err
+		},
+	})
 }

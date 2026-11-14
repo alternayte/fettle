@@ -51,6 +51,11 @@ type Agent struct {
 	// Dynamic returns the tools that a bot has beyond the built-in ones: the tools of the
 	// connector accounts that its zone holds (§12).
 	Dynamic func(ctx context.Context, spaceID, botID uuid.UUID) ([]Tool, error)
+	// SkillIndex returns the name and description of each skill of a bot (§13.1).
+	SkillIndex func(ctx context.Context, spaceID, botID uuid.UUID) []Skill
+	// LoadSkill returns the full text of a bot's skill for its run, and copies the skill's
+	// files into the bot home when it has files.
+	LoadSkill func(ctx context.Context, env *ToolEnv, name string) (string, error)
 	// Notify sends a push notification to the members of a space (§15.2). url is the
 	// path of the card or the run in the app.
 	Notify func(ctx context.Context, spaceID uuid.UUID, kind, title, body, url string)

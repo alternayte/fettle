@@ -92,6 +92,14 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 			return nil
 		}
 		env := &envelopes.Envelope{SpaceID: spaceID, Kind: "message", Origin: "user", Requester: envelopes.Requester{Type: "user", ID: user.ID}, OwnerBotID: &owner, ChatID: ptr(chat.ID()), MessageID: ptr(msg.ID()), Goal: body, Capabilities: UserCapabilities, Budget: a.defaultBudget(ctx, spaceID)}
+		// "/name ..." starts the work with that skill loaded (§13.1).
+		if name := slashSkill(body); name != "" && a.SkillIndex != nil {
+			for _, sk := range a.SkillIndex(ctx, spaceID, owner) {
+				if sk.Name == name {
+					env.Decision = map[string]any{"skill": name}
+				}
+			}
+		}
 		if env.Goal == "" {
 			env.Goal = "Look at the attached files."
 		}
@@ -330,4 +338,13 @@ func (a *Agent) Submit(ctx context.Context, env *envelopes.Envelope) (*runs.Run,
 	}
 	a.publishRun(ctx, r.ID())
 	return r, nil
+}
+
+// slashSkill returns the skill name of a message that starts with /name.
+func slashSkill(body string) string {
+	if !strings.HasPrefix(body, "/") {
+		return ""
+	}
+	name := strings.TrimPrefix(strings.Fields(body)[0], "/")
+	return strings.ToLower(name)
 }

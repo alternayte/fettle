@@ -53,3 +53,6 @@ modules:
   - name: connectors
     packages: [./internal/connectors]
     migrations: ./internal/connectors/migrations/sqlite
+  - name: skills
+    packages: [./internal/skills]
+    migrations: ./internal/skills/migrations/sqlite

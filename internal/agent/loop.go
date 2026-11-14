@@ -319,8 +319,19 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 	if x.env.Origin != "user" {
 		origin = map[string]string{"routine": OriginRoutine, "webhook": OriginRoutine, "bot": OriginBot}[x.env.Origin]
 	}
+	var skills []Skill
+	if a.SkillIndex != nil {
+		skills = a.SkillIndex(ctx, x.run.SpaceID, x.bot.ID())
+	}
+	loaded := ""
+	if name, ok := x.env.Decision["skill"].(string); ok && name != "" && a.LoadSkill != nil {
+		env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), Seq: st.lastSeq}
+		if text, err := a.LoadSkill(ctx, env, name); err == nil {
+			loaded = text
+		}
+	}
 	in := Input{
-		BotName: x.bot.Name, BotJob: x.bot.Job, Instructions: x.bot.Instructions,
+		BotName: x.bot.Name, BotJob: x.bot.Job, Instructions: x.bot.Instructions, Skills: skills, LoadedSkill: loaded,
 		SharedMemory: shared.Content, BotMemory: mem.Content, OpenWork: ow,
 		Now: a.now(), TimeZone: sp.TimeZone,
 		Goal: x.env.Goal, GoalOrigin: origin, Acceptance: accept, BudgetLeftUSD: x.env.Budget.USD - spent, Capabilities: x.env.Capabilities,

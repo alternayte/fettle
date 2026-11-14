@@ -583,7 +583,6 @@ func (s *Server) browserDownloads(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-
 // sameSite reports whether a page host may receive the values of a login for site: the
 // same host or a subdomain of it (§11.4, SI-03).
 func sameSite(pageURL, site string) bool {

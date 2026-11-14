@@ -1,0 +1,196 @@
+{
+  "tables": [
+    {
+      "name": "bot_skills",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "skill_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "skills",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_skills",
+          "columns": [
+            "bot_id",
+            "skill_id"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "skills",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "source",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "source IN ('local','skael')"
+        },
+        {
+          "name": "current_version",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_skills_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "skill_versions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "skill_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "skills",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "sha256",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "object_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "skill_md",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "files",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "has_evals",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "upstream",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "created_by",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_skill_versions",
+          "columns": [
+            "skill_id",
+            "version"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

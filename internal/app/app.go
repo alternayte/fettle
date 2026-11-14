@@ -34,6 +34,7 @@ import (
 	"github.com/alternayte/fettle/internal/routines"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/settings"
+	"github.com/alternayte/fettle/internal/skills"
 	"github.com/alternayte/fettle/internal/spaces"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
@@ -55,6 +56,8 @@ type App struct {
 	Users    *auth.UserStore
 	Routines *routines.Service
 	Push     *push.Service
+	Skills   *skills.Service
+	Skael    *skills.Skael
 	// Connectors holds the MCP connectors (§12).
 	Connectors *connectors.Service
 	// SignIn is the server-mode sign-in; nil in local mode.
@@ -152,6 +155,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupRoutines()
 	a.setupPush()
 	a.setupConnectors()
+	a.setupSkills()
 	a.registerChanges()
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})

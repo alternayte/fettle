@@ -143,6 +143,18 @@
         ],
         "type": "object"
       },
+      "Assign-skillRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "type": "object"
+      },
       "Attachment": {
         "additionalProperties": false,
         "properties": {
@@ -762,6 +774,18 @@
         ],
         "type": "object"
       },
+      "Draft-skillResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_md": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_md"
+        ],
+        "type": "object"
+      },
       "Entry": {
         "additionalProperties": false,
         "properties": {
@@ -911,6 +935,28 @@
         "required": [
           "mode",
           "version"
+        ],
+        "type": "object"
+      },
+      "Get-skillResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "skill": {
+            "$ref": "#/components/schemas/SkillView"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/SkillVersionView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "skill",
+          "versions"
         ],
         "type": "object"
       },
@@ -1141,6 +1187,24 @@
         },
         "required": [
           "connectors"
+        ],
+        "type": "object"
+      },
+      "ListOutBody2": {
+        "additionalProperties": false,
+        "properties": {
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "skills"
         ],
         "type": "object"
       },
@@ -2113,6 +2177,20 @@
         ],
         "type": "object"
       },
+      "Save-skill-mdRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_md": {
+            "maxLength": 200000,
+            "minLength": 10,
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_md"
+        ],
+        "type": "object"
+      },
       "Set-approval-modeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2256,6 +2334,94 @@
         ],
         "type": "object"
       },
+      "SkillVersionView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "has_evals": {
+            "type": "boolean"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "skill_md": {
+            "type": "string"
+          },
+          "upstream": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "sha256",
+          "files",
+          "has_evals",
+          "created_at",
+          "skill_md"
+        ],
+        "type": "object"
+      },
+      "SkillView": {
+        "additionalProperties": false,
+        "properties": {
+          "bots": {
+            "description": "IDs of the bots that have this skill.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "current_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "local",
+              "skael"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "source",
+          "current_version",
+          "bots"
+        ],
+        "type": "object"
+      },
       "Smoke": {
         "additionalProperties": false,
         "properties": {
@@ -2321,6 +2487,24 @@
           "name",
           "time_zone",
           "role"
+        ],
+        "type": "object"
+      },
+      "SyncResult": {
+        "additionalProperties": false,
+        "properties": {
+          "skills": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updated": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "skills",
+          "updated"
         ],
         "type": "object"
       },
@@ -5887,6 +6071,57 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/runs/{run}/draft-skill": {
+      "post": {
+        "operationId": "draft-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft-skillResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Draft a SKILL.md from a finished run (Save as skill)",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/runs/{run}/stop": {
       "post": {
         "operationId": "stop-run",
@@ -6083,6 +6318,417 @@
         "summary": "The change history of a setting",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills": {
+      "get": {
+        "operationId": "list-skills",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOutBody2"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the skill library of a space",
+        "tags": [
+          "skills"
+        ]
+      },
+      "post": {
+        "operationId": "save-skill-md",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Save-skill-mdRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save a skill from its SKILL.md text (Save as skill). The same name makes a new version.",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills/import": {
+      "post": {
+        "operationId": "import-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/zip": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Import a skill from a zip of its folder. The same name makes a new version.",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills/sync": {
+      "post": {
+        "operationId": "sync-skael",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Pull the Skael set now",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills/{skill}": {
+      "delete": {
+        "operationId": "delete-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a skill and its versions",
+        "tags": [
+          "skills"
+        ]
+      },
+      "get": {
+        "operationId": "get-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get-skillResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A skill with its version history",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills/{skill}/bots/{bot}": {
+      "put": {
+        "operationId": "assign-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Assign-skillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Give a bot a skill, or take it away",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/skills/{skill}/export": {
+      "get": {
+        "operationId": "export-skill",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Type": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Export the current version of a skill as a zip",
+        "tags": [
+          "skills"
         ]
       }
     },
