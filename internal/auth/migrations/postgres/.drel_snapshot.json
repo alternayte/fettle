@@ -1,0 +1,57 @@
+{
+  "tables": [
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "check": "status IN ('active','disabled')"
+        },
+        {
+          "name": "is_admin",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_users_email",
+          "columns": [
+            "email"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

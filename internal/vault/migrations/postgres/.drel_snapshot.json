@@ -1,0 +1,142 @@
+{
+  "tables": [
+    {
+      "name": "data_keys",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "wrapped_key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "key_version",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_data_keys_space_version",
+          "columns": [
+            "space_id",
+            "key_version"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "vault_items",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('login','secret','totp')"
+        },
+        {
+          "name": "site",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "username",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "ciphertext",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "nonce",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "key_version",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "last4",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "updated_by",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_vault_items_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

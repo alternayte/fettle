@@ -1,0 +1,204 @@
+{
+  "tables": [
+    {
+      "name": "runs",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "envelope_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "envelopes",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "parent_run_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('owner','subagent','verifier')"
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "status IN ('queued','running','waiting','verifying','done','failed','escalated','cancelled')"
+        },
+        {
+          "name": "wait_reason",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "job_id",
+          "type": "INTEGER",
+          "notNull": false
+        },
+        {
+          "name": "fence",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "last_seq",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "wake_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "tokens_in",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "tokens_out",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "REAL",
+          "notNull": true
+        },
+        {
+          "name": "started_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "finished_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_runs_bot_id",
+          "columns": [
+            "bot_id"
+          ]
+        },
+        {
+          "name": "idx_runs_envelope_id",
+          "columns": [
+            "envelope_id"
+          ]
+        },
+        {
+          "name": "idx_runs_parent_run_id",
+          "columns": [
+            "parent_run_id"
+          ]
+        },
+        {
+          "name": "idx_runs_status",
+          "columns": [
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "run_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "run_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "runs",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "seq",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
+          "name": "type",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "data",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "payload_key",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_run_events_seq",
+          "columns": [
+            "run_id",
+            "seq"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

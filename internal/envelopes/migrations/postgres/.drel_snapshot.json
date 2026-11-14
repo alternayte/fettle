@@ -1,0 +1,149 @@
+{
+  "tables": [
+    {
+      "name": "envelopes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "parent_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "root_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('message','routine','webhook','handoff','part','verify')"
+        },
+        {
+          "name": "origin",
+          "type": "text",
+          "notNull": true,
+          "check": "origin IN ('user','routine','webhook','bot')"
+        },
+        {
+          "name": "requester",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "owner_bot_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "chat_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "goal",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "acceptance",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "context_refs",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "capabilities",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "budget",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "step",
+          "type": "text",
+          "notNull": false
+        },
+        {
+          "name": "idempotency_key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "deadline",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "check": "status IN ('created','routed','running','verifying','done','failed','escalated','cancelled')"
+        },
+        {
+          "name": "decision",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_envelopes_root_id",
+          "columns": [
+            "root_id"
+          ]
+        },
+        {
+          "name": "uq_envelopes_idem",
+          "columns": [
+            "space_id",
+            "idempotency_key"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+dialect: postgres
+output:
+  db: ./internal/db/drel_gen.go
+modules:
+  - name: auth
+    packages: [./internal/auth]
+    migrations: ./internal/auth/migrations/postgres
+  - name: spaces
+    packages: [./internal/spaces]
+    migrations: ./internal/spaces/migrations/postgres
+  - name: settings
+    packages: [./internal/settings]
+    migrations: ./internal/settings/migrations/postgres
+  - name: audit
+    packages: [./internal/audit]
+    migrations: ./internal/audit/migrations/postgres
+  - name: vault
+    packages: [./internal/vault]
+    migrations: ./internal/vault/migrations/postgres
+  - name: models
+    packages: [./internal/models]
+    migrations: ./internal/models/migrations/postgres
+  - name: bots
+    packages: [./internal/bots]
+    migrations: ./internal/bots/migrations/postgres
+  - name: chats
+    packages: [./internal/chats]
+    migrations: ./internal/chats/migrations/postgres
+  - name: envelopes
+    packages: [./internal/envelopes]
+    migrations: ./internal/envelopes/migrations/postgres
+  - name: runs
+    packages: [./internal/runs]
+    migrations: ./internal/runs/migrations/postgres
+  - name: usage
+    packages: [./internal/usage]
+    migrations: ./internal/usage/migrations/postgres

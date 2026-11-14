@@ -1,0 +1,132 @@
+{
+  "tables": [
+    {
+      "name": "usage_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('model','computer')"
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "zone_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "run_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "step",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "tokens_in",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "tokens_out",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "cache_read",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "quantity",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "notNull": true,
+          "check": "unit IN ('tokens','seconds')"
+        },
+        {
+          "name": "size",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "double precision",
+          "notNull": true
+        },
+        {
+          "name": "reported",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "at",
+          "type": "timestamptz",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_usage_events_run_id",
+          "columns": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "idx_usage_space_time",
+          "columns": [
+            "space_id",
+            "at"
+          ]
+        }
+      ]
+    }
+  ]
+}

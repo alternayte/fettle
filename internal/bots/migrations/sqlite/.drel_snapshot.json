@@ -1,0 +1,295 @@
+{
+  "tables": [
+    {
+      "name": "bots",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "job",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "instructions",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "instructions_rev",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "zone_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "avatar",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "is_primary",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "public_desc",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "status IN ('active','archived')"
+        },
+        {
+          "name": "created_by_kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "created_by_kind IN ('user','bot','system')"
+        },
+        {
+          "name": "created_by",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_bots_space",
+          "columns": [
+            "space_id",
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bot_instructions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "rev",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "instructions",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "author_kind",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "author_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_instructions",
+          "columns": [
+            "bot_id",
+            "rev"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "bot_memory",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": false,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "content",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "rev",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "updated_by_kind",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "updated_by",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "origin",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_memory",
+          "columns": [
+            "space_id",
+            "bot_key"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "open_work",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "text",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "due_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "done_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_open_work_due",
+          "columns": [
+            "due_at"
+          ]
+        }
+      ]
+    }
+  ]
+}

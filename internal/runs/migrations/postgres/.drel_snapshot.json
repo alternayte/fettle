@@ -1,0 +1,204 @@
+{
+  "tables": [
+    {
+      "name": "runs",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "envelope_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "envelopes",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "parent_run_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('owner','subagent','verifier')"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "check": "status IN ('queued','running','waiting','verifying','done','failed','escalated','cancelled')"
+        },
+        {
+          "name": "wait_reason",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "job_id",
+          "type": "bigint",
+          "notNull": false
+        },
+        {
+          "name": "fence",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "last_seq",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "wake_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "tokens_in",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "tokens_out",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "double precision",
+          "notNull": true
+        },
+        {
+          "name": "started_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_runs_bot_id",
+          "columns": [
+            "bot_id"
+          ]
+        },
+        {
+          "name": "idx_runs_envelope_id",
+          "columns": [
+            "envelope_id"
+          ]
+        },
+        {
+          "name": "idx_runs_parent_run_id",
+          "columns": [
+            "parent_run_id"
+          ]
+        },
+        {
+          "name": "idx_runs_status",
+          "columns": [
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "run_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "run_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "runs",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "seq",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "name": "at",
+          "type": "timestamptz",
+          "notNull": true
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "data",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "payload_key",
+          "type": "text",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_run_events_seq",
+          "columns": [
+            "run_id",
+            "seq"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

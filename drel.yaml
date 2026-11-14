@@ -1,0 +1,37 @@
+dialect: sqlite
+output:
+  db: ./internal/db/drel_gen.go
+modules:
+  - name: auth
+    packages: [./internal/auth]
+    migrations: ./internal/auth/migrations/sqlite
+  - name: spaces
+    packages: [./internal/spaces]
+    migrations: ./internal/spaces/migrations/sqlite
+  - name: settings
+    packages: [./internal/settings]
+    migrations: ./internal/settings/migrations/sqlite
+  - name: audit
+    packages: [./internal/audit]
+    migrations: ./internal/audit/migrations/sqlite
+  - name: vault
+    packages: [./internal/vault]
+    migrations: ./internal/vault/migrations/sqlite
+  - name: models
+    packages: [./internal/models]
+    migrations: ./internal/models/migrations/sqlite
+  - name: bots
+    packages: [./internal/bots]
+    migrations: ./internal/bots/migrations/sqlite
+  - name: chats
+    packages: [./internal/chats]
+    migrations: ./internal/chats/migrations/sqlite
+  - name: envelopes
+    packages: [./internal/envelopes]
+    migrations: ./internal/envelopes/migrations/sqlite
+  - name: runs
+    packages: [./internal/runs]
+    migrations: ./internal/runs/migrations/sqlite
+  - name: usage
+    packages: [./internal/usage]
+    migrations: ./internal/usage/migrations/sqlite

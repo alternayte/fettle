@@ -1,0 +1,137 @@
+{
+  "tables": [
+    {
+      "name": "settings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "notNull": true,
+          "check": "scope IN ('instance','space')"
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": false,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "space_key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "updated_by",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_settings_scope_key",
+          "columns": [
+            "scope",
+            "space_key",
+            "key"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "settings_history",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "setting_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "settings",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "notNull": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "updated_by",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_settings_history_setting",
+          "columns": [
+            "setting_id",
+            "revision"
+          ]
+        }
+      ]
+    }
+  ]
+}

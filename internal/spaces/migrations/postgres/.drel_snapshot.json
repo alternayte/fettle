@@ -1,0 +1,98 @@
+{
+  "tables": [
+    {
+      "name": "spaces",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "time_zone",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ]
+    },
+    {
+      "name": "space_members",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "users",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "role",
+          "type": "text",
+          "notNull": true,
+          "check": "role IN ('owner','member')"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_space_members_user_id",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "uq_space_members",
+          "columns": [
+            "space_id",
+            "user_id"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

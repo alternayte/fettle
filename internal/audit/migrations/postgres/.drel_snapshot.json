@@ -1,0 +1,73 @@
+{
+  "tables": [
+    {
+      "name": "audit_log",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "actor_kind",
+          "type": "text",
+          "notNull": true,
+          "check": "actor_kind IN ('user','bot','system')"
+        },
+        {
+          "name": "actor_id",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "target",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "details",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_audit_log_action",
+          "columns": [
+            "action"
+          ]
+        },
+        {
+          "name": "idx_audit_space_time",
+          "columns": [
+            "space_id",
+            "created_at"
+          ]
+        }
+      ]
+    }
+  ]
+}

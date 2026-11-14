@@ -1,0 +1,295 @@
+{
+  "tables": [
+    {
+      "name": "bots",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "job",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "instructions",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "instructions_rev",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "zone_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "avatar",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "is_primary",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "public_desc",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "check": "status IN ('active','archived')"
+        },
+        {
+          "name": "created_by_kind",
+          "type": "text",
+          "notNull": true,
+          "check": "created_by_kind IN ('user','bot','system')"
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_bots_space",
+          "columns": [
+            "space_id",
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bot_instructions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "rev",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "instructions",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "author_kind",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "author_id",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_instructions",
+          "columns": [
+            "bot_id",
+            "rev"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "bot_memory",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": false,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_key",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "rev",
+          "type": "integer",
+          "notNull": true
+        },
+        {
+          "name": "updated_by_kind",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "updated_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "origin",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_bot_memory",
+          "columns": [
+            "space_id",
+            "bot_key"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "open_work",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "text",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "due_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "done_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_open_work_due",
+          "columns": [
+            "due_at"
+          ]
+        }
+      ]
+    }
+  ]
+}

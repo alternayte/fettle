@@ -1,0 +1,149 @@
+{
+  "tables": [
+    {
+      "name": "envelopes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "parent_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "root_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('message','routine','webhook','handoff','part','verify')"
+        },
+        {
+          "name": "origin",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "origin IN ('user','routine','webhook','bot')"
+        },
+        {
+          "name": "requester",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "owner_bot_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "chat_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "message_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "goal",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "acceptance",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "context_refs",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "capabilities",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "budget",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "step",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "idempotency_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "deadline",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "status IN ('created','routed','running','verifying','done','failed','escalated','cancelled')"
+        },
+        {
+          "name": "decision",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "result",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_envelopes_root_id",
+          "columns": [
+            "root_id"
+          ]
+        },
+        {
+          "name": "uq_envelopes_idem",
+          "columns": [
+            "space_id",
+            "idempotency_key"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

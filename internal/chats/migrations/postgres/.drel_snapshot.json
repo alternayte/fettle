@@ -1,0 +1,201 @@
+{
+  "tables": [
+    {
+      "name": "chats",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "notNull": true,
+          "check": "kind IN ('direct','group')"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_chats_space",
+          "columns": [
+            "space_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chat_members",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "chat_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "chats",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_chat_members_bot_id",
+          "columns": [
+            "bot_id"
+          ]
+        },
+        {
+          "name": "uq_chat_members",
+          "columns": [
+            "chat_id",
+            "bot_id"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "messages",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "chat_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "chats",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "author_kind",
+          "type": "text",
+          "notNull": true,
+          "check": "author_kind IN ('user','bot','system')"
+        },
+        {
+          "name": "author_id",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "attachments",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "envelope_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "card",
+          "type": "jsonb",
+          "notNull": false
+        },
+        {
+          "name": "reply_to",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "reactions",
+          "type": "jsonb",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_messages_chat_time",
+          "columns": [
+            "chat_id",
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_messages_envelope_id",
+          "columns": [
+            "envelope_id"
+          ]
+        }
+      ]
+    }
+  ]
+}

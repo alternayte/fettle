@@ -1,0 +1,168 @@
+{
+  "tables": [
+    {
+      "name": "model_providers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "preset",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "api_type",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "api_type IN ('openai-chat','openai-responses','anthropic-messages')"
+        },
+        {
+          "name": "base_url",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "auth_style",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "auth_style IN ('bearer','x_api_key','header','none')"
+        },
+        {
+          "name": "auth_header",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "secret_item_id",
+          "type": "TEXT",
+          "notNull": false,
+          "ref": "vault_items",
+          "refColumn": "id",
+          "onDelete": "SET NULL"
+        },
+        {
+          "name": "headers",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "models",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "smoke",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "smoke_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_model_providers_space_name",
+          "columns": [
+            "space_id",
+            "name"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "model_roles",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "bot_key",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "role IN ('router','owner','verifier','computer_use','summarizer')"
+        },
+        {
+          "name": "targets",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_model_roles",
+          "columns": [
+            "space_id",
+            "bot_key",
+            "role"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}
