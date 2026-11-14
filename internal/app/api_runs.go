@@ -37,9 +37,9 @@ type RunView struct {
 	Events      []EventView   `json:"events"`
 }
 
-type runPath struct {
-	SpacePath
-	Run uuid.UUID `path:"run"`
+type RunPath struct {
+	Space uuid.UUID `path:"space" doc:"Space ID"`
+	Run   uuid.UUID `path:"run"`
 }
 
 func (a *App) runView(ctx context.Context, r *runs.Run) RunView {
@@ -95,7 +95,7 @@ func (a *App) registerRuns(api huma.API) {
 	})
 
 	huma.Register(api, op("get-run", http.MethodGet, "/spaces/{space}/runs/{run}", "A run with its timeline events", "runs"), func(ctx context.Context, in *struct {
-		runPath
+		RunPath
 		After int64 `query:"after" doc:"Return events after this sequence number."`
 	}) (*struct{ Body RunView }, error) {
 		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
@@ -123,7 +123,7 @@ func (a *App) registerRuns(api huma.API) {
 		return &struct{ Body RunView }{Body: v}, nil
 	})
 
-	huma.Register(api, op("stop-run", http.MethodPost, "/spaces/{space}/runs/{run}/stop", "Stop a run and its sub-agent runs", "runs"), func(ctx context.Context, in *runPath) (*struct{}, error) {
+	huma.Register(api, op("stop-run", http.MethodPost, "/spaces/{space}/runs/{run}/stop", "Stop a run and its sub-agent runs", "runs"), func(ctx context.Context, in *RunPath) (*struct{}, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, false)
 		if err != nil {
 			return nil, err

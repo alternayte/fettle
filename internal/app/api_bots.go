@@ -46,9 +46,9 @@ func (a *App) botView(ctx context.Context, b *bots.Bot) BotView {
 	return v
 }
 
-type botPath struct {
-	SpacePath
-	Bot uuid.UUID `path:"bot"`
+type BotPath struct {
+	Space uuid.UUID `path:"space" doc:"Space ID"`
+	Bot   uuid.UUID `path:"bot"`
 }
 
 type botBody struct {
@@ -87,7 +87,7 @@ type MemoryView struct {
 
 type memoryOut struct{ Body MemoryView }
 
-type memoryIn struct {
+type MemoryIn struct {
 	Body struct {
 		Content string `json:"content" maxLength:"8192"`
 	}
@@ -141,7 +141,7 @@ func (a *App) registerBots(api huma.API) {
 		return &botOut{Body: a.botView(ctx, b)}, nil
 	})
 
-	huma.Register(api, op("get-bot", http.MethodGet, "/spaces/{space}/bots/{bot}", "A bot", "bots"), func(ctx context.Context, in *botPath) (*botOut, error) {
+	huma.Register(api, op("get-bot", http.MethodGet, "/spaces/{space}/bots/{bot}", "A bot", "bots"), func(ctx context.Context, in *BotPath) (*botOut, error) {
 		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
 			return nil, err
 		}
@@ -153,7 +153,7 @@ func (a *App) registerBots(api huma.API) {
 	})
 
 	huma.Register(api, op("update-bot", http.MethodPatch, "/spaces/{space}/bots/{bot}", "Change a bot. Changed instructions become a new version.", "bots"), func(ctx context.Context, in *struct {
-		botPath
+		BotPath
 		Body botBody
 	}) (*botOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
@@ -167,7 +167,7 @@ func (a *App) registerBots(api huma.API) {
 		return &botOut{Body: a.botView(ctx, b)}, nil
 	})
 
-	huma.Register(api, op("list-instruction-versions", http.MethodGet, "/spaces/{space}/bots/{bot}/instructions", "The instructions history of a bot", "bots"), func(ctx context.Context, in *botPath) (*struct {
+	huma.Register(api, op("list-instruction-versions", http.MethodGet, "/spaces/{space}/bots/{bot}/instructions", "The instructions history of a bot", "bots"), func(ctx context.Context, in *BotPath) (*struct {
 		Body struct {
 			Versions []VersionView `json:"versions"`
 		}
@@ -196,7 +196,7 @@ func (a *App) registerBots(api huma.API) {
 	})
 
 	huma.Register(api, op("restore-instructions", http.MethodPost, "/spaces/{space}/bots/{bot}/instructions/{rev}/restore", "Make an old instructions version current", "bots"), func(ctx context.Context, in *struct {
-		botPath
+		BotPath
 		Rev int `path:"rev" minimum:"1"`
 	}) (*botOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
@@ -210,7 +210,7 @@ func (a *App) registerBots(api huma.API) {
 		return &botOut{Body: a.botView(ctx, b)}, nil
 	})
 
-	huma.Register(api, op("get-bot-memory", http.MethodGet, "/spaces/{space}/bots/{bot}/memory", "The MEMORY.md of a bot", "memory"), func(ctx context.Context, in *botPath) (*memoryOut, error) {
+	huma.Register(api, op("get-bot-memory", http.MethodGet, "/spaces/{space}/bots/{bot}/memory", "The MEMORY.md of a bot", "memory"), func(ctx context.Context, in *BotPath) (*memoryOut, error) {
 		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
 			return nil, err
 		}
@@ -225,8 +225,8 @@ func (a *App) registerBots(api huma.API) {
 	})
 
 	huma.Register(api, op("put-bot-memory", http.MethodPut, "/spaces/{space}/bots/{bot}/memory", "Replace the MEMORY.md of a bot (at most 4 KB)", "memory"), func(ctx context.Context, in *struct {
-		botPath
-		memoryIn
+		BotPath
+		MemoryIn
 	}) (*memoryOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
 		if err != nil {
@@ -255,7 +255,7 @@ func (a *App) registerBots(api huma.API) {
 
 	huma.Register(api, op("put-shared-memory", http.MethodPut, "/spaces/{space}/memory", "Replace the shared memory (at most 4 KB)", "memory"), func(ctx context.Context, in *struct {
 		SpacePath
-		memoryIn
+		MemoryIn
 	}) (*memoryOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
 		if err != nil {

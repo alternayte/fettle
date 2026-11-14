@@ -45,6 +45,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
 	a := w.A
 	run, err := a.Runs.Claim(ctx, job.Args.RunID, job.ID)
 	if err != nil {
+		a.Log.Error("run claim failed; River retries it", "run", job.Args.RunID, "error", err)
 		return err
 	}
 	if run == nil {
@@ -69,6 +70,9 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
 		return river.JobSnooze(0)
 	}
 	a.publishRun(context.WithoutCancel(ctx), run.ID())
+	if err != nil && ctx.Err() == nil {
+		a.Log.Error("run attempt failed; River retries it", "run", run.ID(), "error", err)
+	}
 	return err
 }
 
@@ -218,8 +222,14 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 			return Context{}, err
 		}
 		names := map[string]string{}
+		envSent := x.env.CreatedAt()
 		for _, m := range msgs {
-			if m.CreatedAt().After(x.env.CreatedAt().Add(time.Second)) && m.AuthorKind == "user" {
+			if x.env.MessageID != nil && m.ID() == *x.env.MessageID {
+				envSent = m.SentAt
+			}
+		}
+		for _, m := range msgs {
+			if x.env.MessageID != nil && m.AuthorKind == "user" && m.ID() != *x.env.MessageID && m.SentAt.After(envSent) {
 				continue // later user messages arrive as steer events
 			}
 			if m.EnvelopeID != nil && *m.EnvelopeID == x.env.ID() && m.AuthorKind == "bot" {
@@ -228,7 +238,7 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 			if m.Card != nil && m.Body == "" {
 				continue
 			}
-			cl := ChatLine{AuthorKind: m.AuthorKind, Text: m.Body, At: m.CreatedAt()}
+			cl := ChatLine{AuthorKind: m.AuthorKind, Text: m.Body, At: m.SentAt}
 			if m.AuthorKind == "bot" {
 				cl.Self = m.AuthorID == botID.String()
 				if n, ok := names[m.AuthorID]; ok {

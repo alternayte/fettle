@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 // Package spaces keeps spaces and their members.
 package spaces
 

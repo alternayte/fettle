@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 package runs
 
 import (
@@ -125,33 +127,26 @@ func (s *Service) Children(ctx context.Context, parent uuid.UUID) ([]*Run, error
 // Claim starts a job attempt: it increments the fence and marks the run running.
 // It returns the run with the new fence, or nil when the run already ended.
 func (s *Service) Claim(ctx context.Context, id uuid.UUID, jobID int64) (*Run, error) {
-	var out *Run
+	now := s.now()
+	var fence int64
 	err := s.e.WithTx(ctx, func(ctx context.Context) error {
-		tx := drel.MustFromContext(ctx)
-		r, err := drel.Repo(tx, RunMeta).Where(Runs.ID.Eq(id)).FirstOrNil(ctx)
-		if err != nil {
-			return err
-		}
-		if r == nil || Terminal(r.Status) || r.Status == StatusEscalated {
-			return nil
-		}
-		now := s.now()
-		start := r.StartedAt
-		if start == nil {
-			start = &now
-		}
-		if _, err := tx.Exec(ctx, "UPDATE runs SET fence = fence + 1, status = $1, job_id = $2, started_at = $3, wait_reason = $4, updated_at = $5 WHERE id = $6",
-			StatusRunning, jobID, *start, "", now, id); err != nil {
-			return err
-		}
-		r2, err := drel.NewTxRepository(tx, RunMeta).Unscoped().Where(Runs.ID.Eq(id)).First(ctx)
-		if err != nil {
-			return err
-		}
-		out = r2
-		return nil
+		return drel.MustFromContext(ctx).QueryRow(ctx, `UPDATE runs SET fence = fence + 1, status = $1, job_id = $2,
+			started_at = COALESCE(started_at, $3), wait_reason = '', updated_at = $4
+			WHERE id = $5 AND status NOT IN ('done', 'failed', 'cancelled', 'escalated') RETURNING fence`,
+			StatusRunning, jobID, now, now, id).Scan(&fence)
 	})
-	return out, err
+	if isNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r, err := s.Find(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	r.Fence = fence
+	return r, nil
 }
 
 // Wake moves a waiting or escalated run back to queued and inserts its job in the

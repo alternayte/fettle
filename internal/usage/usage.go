@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 // Package usage records model tokens, cost and computer seconds, and reports cost views (§8.4).
 package usage
 

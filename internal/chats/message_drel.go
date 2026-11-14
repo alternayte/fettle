@@ -6,6 +6,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/alternayte/drel"
 	uuid "github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 
 var Messages = struct {
 	ID          drel.ComparableColumn[uuid.UUID]
+	SentAt      drel.TimeColumn
 	SpaceID     drel.ComparableColumn[uuid.UUID]
 	ChatID      drel.ComparableColumn[uuid.UUID]
 	AuthorKind  drel.StringColumn
@@ -27,6 +29,7 @@ var Messages = struct {
 	UpdatedAt   drel.TimeColumn
 }{
 	ID:          drel.NewComparableCol[uuid.UUID]("id"),
+	SentAt:      drel.NewTimeCol("sent_at"),
 	SpaceID:     drel.NewComparableCol[uuid.UUID]("space_id"),
 	ChatID:      drel.NewComparableCol[uuid.UUID]("chat_id"),
 	AuthorKind:  drel.NewStringCol("author_kind"),
@@ -44,7 +47,7 @@ var Messages = struct {
 func scanMessage(row drel.Row) (*Message, error) {
 	p := &Message{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.SpaceID, &p.ChatID, &p.AuthorKind, &p.AuthorID, &p.Body, drel.JSON[[]Attachment]{V: &p.Attachments}, &p.EnvelopeID, drel.JSON[*Card]{V: &p.Card}, &p.ReplyTo, drel.JSON[map[string]string]{V: &p.Reactions}, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.SentAt, &p.SpaceID, &p.ChatID, &p.AuthorKind, &p.AuthorID, &p.Body, drel.JSON[[]Attachment]{V: &p.Attachments}, &p.EnvelopeID, drel.JSON[*Card]{V: &p.Card}, &p.ReplyTo, drel.JSON[map[string]string]{V: &p.Reactions}, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +55,7 @@ func scanMessage(row drel.Row) (*Message, error) {
 }
 
 type messageSnapshot struct {
+	SentAt      time.Time
 	SpaceID     uuid.UUID
 	ChatID      uuid.UUID
 	AuthorKind  string
@@ -65,12 +69,15 @@ type messageSnapshot struct {
 }
 
 func snapshotMessage(p *Message) any {
-	return messageSnapshot{SpaceID: p.SpaceID, ChatID: p.ChatID, AuthorKind: p.AuthorKind, AuthorID: p.AuthorID, Body: p.Body, Attachments: p.Attachments, EnvelopeID: p.EnvelopeID, Card: p.Card, ReplyTo: p.ReplyTo, Reactions: p.Reactions}
+	return messageSnapshot{SentAt: p.SentAt, SpaceID: p.SpaceID, ChatID: p.ChatID, AuthorKind: p.AuthorKind, AuthorID: p.AuthorID, Body: p.Body, Attachments: p.Attachments, EnvelopeID: p.EnvelopeID, Card: p.Card, ReplyTo: p.ReplyTo, Reactions: p.Reactions}
 }
 
 func diffMessage(p *Message, snap any) []drel.FieldChange {
 	s := snap.(messageSnapshot)
 	var changes []drel.FieldChange
+	if p.SentAt != s.SentAt {
+		changes = append(changes, drel.FieldChange{Column: "sent_at", Value: p.SentAt})
+	}
 	if p.SpaceID != s.SpaceID {
 		changes = append(changes, drel.FieldChange{Column: "space_id", Value: p.SpaceID})
 	}
@@ -113,35 +120,37 @@ func messageColumnValue(p *Message, idx int) any {
 	case 0:
 		return p.ID()
 	case 1:
-		return p.SpaceID
+		return p.SentAt
 	case 2:
-		return p.ChatID
+		return p.SpaceID
 	case 3:
-		return p.AuthorKind
+		return p.ChatID
 	case 4:
-		return p.AuthorID
+		return p.AuthorKind
 	case 5:
-		return p.Body
+		return p.AuthorID
 	case 6:
-		return drel.JSON[[]Attachment]{V: &p.Attachments}
+		return p.Body
 	case 7:
-		return p.EnvelopeID
+		return drel.JSON[[]Attachment]{V: &p.Attachments}
 	case 8:
-		return drel.JSON[*Card]{V: &p.Card}
+		return p.EnvelopeID
 	case 9:
-		return p.ReplyTo
+		return drel.JSON[*Card]{V: &p.Card}
 	case 10:
-		return drel.JSON[map[string]string]{V: &p.Reactions}
+		return p.ReplyTo
 	case 11:
-		return p.CreatedAt()
+		return drel.JSON[map[string]string]{V: &p.Reactions}
 	case 12:
+		return p.CreatedAt()
+	case 13:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func messageInsertColumns(p *Message) ([]string, []any) {
-	return []string{"space_id", "chat_id", "author_kind", "author_id", "body", "attachments", "envelope_id", "card", "reply_to", "reactions"}, []any{p.SpaceID, p.ChatID, p.AuthorKind, p.AuthorID, p.Body, drel.JSON[[]Attachment]{V: &p.Attachments}, p.EnvelopeID, drel.JSON[*Card]{V: &p.Card}, p.ReplyTo, drel.JSON[map[string]string]{V: &p.Reactions}}
+	return []string{"sent_at", "space_id", "chat_id", "author_kind", "author_id", "body", "attachments", "envelope_id", "card", "reply_to", "reactions"}, []any{p.SentAt, p.SpaceID, p.ChatID, p.AuthorKind, p.AuthorID, p.Body, drel.JSON[[]Attachment]{V: &p.Attachments}, p.EnvelopeID, drel.JSON[*Card]{V: &p.Card}, p.ReplyTo, drel.JSON[map[string]string]{V: &p.Reactions}}
 }
 
 func messageScanReturning(p *Message, row drel.Row) error {
@@ -165,7 +174,7 @@ func messageScanGenerated(p *Message, row drel.Row) error {
 
 var MessageMeta = drel.ModelMeta[Message]{
 	Table:         "messages",
-	Columns:       []string{"id", "space_id", "chat_id", "author_kind", "author_id", "body", "attachments", "envelope_id", "card", "reply_to", "reactions", "created_at", "updated_at"},
+	Columns:       []string{"id", "sent_at", "space_id", "chat_id", "author_kind", "author_id", "body", "attachments", "envelope_id", "card", "reply_to", "reactions", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanMessage,
 	Snapshot:      snapshotMessage,

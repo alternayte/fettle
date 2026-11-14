@@ -21,9 +21,9 @@ type ChatView struct {
 	BotIDs []string `json:"bot_ids"`
 }
 
-type chatPath struct {
-	SpacePath
-	Chat uuid.UUID `path:"chat"`
+type ChatPath struct {
+	Space uuid.UUID `path:"space" doc:"Space ID"`
+	Chat  uuid.UUID `path:"chat"`
 }
 
 // MessagePage is one page of chat messages with the run lines of their envelopes.
@@ -124,7 +124,7 @@ func (a *App) registerChats(api huma.API) {
 	})
 
 	huma.Register(api, op("list-messages", http.MethodGet, "/spaces/{space}/chats/{chat}/messages", "One page of messages, oldest first", "chats"), func(ctx context.Context, in *struct {
-		chatPath
+		ChatPath
 		Before string `query:"before" doc:"Message ID cursor"`
 		Limit  int    `query:"limit" minimum:"1" maximum:"200" default:"50"`
 	}) (*struct{ Body MessagePage }, error) {
@@ -163,7 +163,7 @@ func (a *App) registerChats(api huma.API) {
 	})
 
 	huma.Register(api, op("post-message", http.MethodPost, "/spaces/{space}/chats/{chat}/messages", "Send a message. It starts a run, or steers the running one.", "chats"), func(ctx context.Context, in *struct {
-		chatPath
+		ChatPath
 		Body struct {
 			Body    string `json:"body" maxLength:"32000"`
 			ReplyTo string `json:"reply_to,omitempty"`
@@ -214,7 +214,7 @@ func (a *App) registerChats(api huma.API) {
 		return out, nil
 	})
 
-	sse.Register(api, op("chat-stream", http.MethodGet, "/spaces/{space}/chats/{chat}/stream", "Server-sent events of a chat: messages, token deltas and run lines", "chats"), types, func(ctx context.Context, in *chatPath, send sse.Sender) {
+	sse.Register(api, op("chat-stream", http.MethodGet, "/spaces/{space}/chats/{chat}/stream", "Server-sent events of a chat: messages, token deltas and run lines", "chats"), types, func(ctx context.Context, in *ChatPath, send sse.Sender) {
 		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
 			return
 		}

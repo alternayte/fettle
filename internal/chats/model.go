@@ -1,6 +1,8 @@
 package chats
 
 import (
+	"time"
+
 	"github.com/alternayte/drel"
 	"github.com/google/uuid"
 )
@@ -48,14 +50,16 @@ type Card struct {
 // Message is one chat message.
 type Message struct {
 	drel.Model[uuid.UUID] `db:"index=idx_messages_chat_time[chat_id,created_at]"`
-	SpaceID               uuid.UUID         `db:"space_id"`
-	ChatID                uuid.UUID         `db:"chat_id,references=chats,on_delete=cascade"`
-	AuthorKind            string            `db:"author_kind,check=author_kind IN ('user','bot','system')"`
-	AuthorID              string            `db:"author_id"`
-	Body                  string            `db:"body"`
-	Attachments           []Attachment      `db:"attachments"`
-	EnvelopeID            *uuid.UUID        `db:"envelope_id,index"`
-	Card                  *Card             `db:"card"`
-	ReplyTo               *uuid.UUID        `db:"reply_to"`
-	Reactions             map[string]string `db:"reactions"`
+	// SentAt orders messages; it has sub-second precision on both dialects.
+	SentAt      time.Time         `db:"sent_at,index=idx_messages_chat_sent"`
+	SpaceID     uuid.UUID         `db:"space_id"`
+	ChatID      uuid.UUID         `db:"chat_id,references=chats,on_delete=cascade"`
+	AuthorKind  string            `db:"author_kind,check=author_kind IN ('user','bot','system')"`
+	AuthorID    string            `db:"author_id"`
+	Body        string            `db:"body"`
+	Attachments []Attachment      `db:"attachments"`
+	EnvelopeID  *uuid.UUID        `db:"envelope_id,index"`
+	Card        *Card             `db:"card"`
+	ReplyTo     *uuid.UUID        `db:"reply_to"`
+	Reactions   map[string]string `db:"reactions"`
 }

@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -132,7 +131,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	if cfg.Workers > 0 {
 		interactive = cfg.Workers
 	}
-	jc := jobs.Config{Interactive: interactive, Background: background, Maintenance: 1, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), FetchPoll: 100 * time.Millisecond}
+	jc := jobs.Config{Interactive: interactive, Background: background, Maintenance: 1, Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})), FetchPoll: 100 * time.Millisecond}
 	if cfg.RescueAfterSeconds > 0 {
 		jc.RescueAfter = time.Duration(cfg.RescueAfterSeconds) * time.Second
 	}

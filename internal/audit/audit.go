@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 // Package audit keeps the append-only audit log. The application only inserts rows (SI-18).
 package audit
 

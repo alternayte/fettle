@@ -115,6 +115,11 @@
           "pk": true
         },
         {
+          "name": "sent_at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
           "name": "space_id",
           "type": "TEXT",
           "notNull": true
@@ -182,6 +187,12 @@
         }
       ],
       "indexes": [
+        {
+          "name": "idx_messages_chat_sent",
+          "columns": [
+            "sent_at"
+          ]
+        },
         {
           "name": "idx_messages_chat_time",
           "columns": [

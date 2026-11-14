@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 // Package envelopes holds the envelope model, its validation and its lifecycle (Appendix C).
 package envelopes
 

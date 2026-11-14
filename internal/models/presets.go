@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 package models
 
 // Preset fills the provider form (§8.3).

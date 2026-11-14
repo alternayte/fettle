@@ -43,7 +43,7 @@ type RunLine struct {
 
 // MessageView converts a message.
 func (a *Agent) MessageView(_ context.Context, m *chats.Message) MessageView {
-	v := MessageView{ID: m.ID().String(), ChatID: m.ChatID.String(), AuthorKind: m.AuthorKind, AuthorID: m.AuthorID, Body: m.Body, CreatedAt: m.CreatedAt(), Card: m.Card, Attachments: m.Attachments, Reactions: m.Reactions}
+	v := MessageView{ID: m.ID().String(), ChatID: m.ChatID.String(), AuthorKind: m.AuthorKind, AuthorID: m.AuthorID, Body: m.Body, CreatedAt: m.SentAt, Card: m.Card, Attachments: m.Attachments, Reactions: m.Reactions}
 	if v.CreatedAt.IsZero() {
 		v.CreatedAt = a.now()
 	}

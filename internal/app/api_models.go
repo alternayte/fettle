@@ -62,8 +62,8 @@ func (b providerBody) input() models.ProviderInput {
 	return models.ProviderInput{Name: b.Name, Preset: b.Preset, APIType: b.APIType, BaseURL: b.BaseURL, AuthStyle: b.AuthStyle, AuthHeader: b.AuthHeader, Key: b.Key, Headers: b.Headers}
 }
 
-type providerPath struct {
-	SpacePath
+type ProviderPath struct {
+	Space    uuid.UUID `path:"space" doc:"Space ID"`
 	Provider uuid.UUID `path:"provider"`
 }
 
@@ -131,7 +131,7 @@ func (a *App) registerModels(api huma.API) {
 	})
 
 	huma.Register(api, op("update-model-provider", http.MethodPatch, "/spaces/{space}/model-providers/{provider}", "Change a model provider", "models"), func(ctx context.Context, in *struct {
-		providerPath
+		ProviderPath
 		Body providerBody
 	}) (*providerOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
@@ -148,7 +148,7 @@ func (a *App) registerModels(api huma.API) {
 		return &providerOut{Body: a.providerView(ctx, pr)}, nil
 	})
 
-	huma.Register(api, op("delete-model-provider", http.MethodDelete, "/spaces/{space}/model-providers/{provider}", "Delete a model provider and its key", "models"), func(ctx context.Context, in *providerPath) (*struct{}, error) {
+	huma.Register(api, op("delete-model-provider", http.MethodDelete, "/spaces/{space}/model-providers/{provider}", "Delete a model provider and its key", "models"), func(ctx context.Context, in *ProviderPath) (*struct{}, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
 		if err != nil {
 			return nil, err
@@ -157,7 +157,7 @@ func (a *App) registerModels(api huma.API) {
 	})
 
 	huma.Register(api, op("test-model-provider", http.MethodPost, "/spaces/{space}/model-providers/{provider}/test", "Run the four provider checks", "models"), func(ctx context.Context, in *struct {
-		providerPath
+		ProviderPath
 		Body struct {
 			Model string `json:"model,omitempty" maxLength:"200"`
 		}

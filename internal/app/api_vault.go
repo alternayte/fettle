@@ -34,9 +34,9 @@ type vaultBody struct {
 	Value    string `json:"value,omitempty" maxLength:"20000" doc:"Write only. The API never returns it."`
 }
 
-type itemPath struct {
-	SpacePath
-	Item uuid.UUID `path:"item"`
+type ItemPath struct {
+	Space uuid.UUID `path:"space" doc:"Space ID"`
+	Item  uuid.UUID `path:"item"`
 }
 
 func (a *App) registerVault(api huma.API) {
@@ -80,7 +80,7 @@ func (a *App) registerVault(api huma.API) {
 	})
 
 	huma.Register(api, op("update-vault-item", http.MethodPatch, "/spaces/{space}/vault/{item}", "Change a vault item. An empty value keeps the stored value.", "vault"), func(ctx context.Context, in *struct {
-		itemPath
+		ItemPath
 		Body vaultBody
 	}) (*struct{ Body VaultItemView }, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
@@ -94,7 +94,7 @@ func (a *App) registerVault(api huma.API) {
 		return &struct{ Body VaultItemView }{Body: itemView(it)}, nil
 	})
 
-	huma.Register(api, op("delete-vault-item", http.MethodDelete, "/spaces/{space}/vault/{item}", "Delete a vault item", "vault"), func(ctx context.Context, in *itemPath) (*struct{}, error) {
+	huma.Register(api, op("delete-vault-item", http.MethodDelete, "/spaces/{space}/vault/{item}", "Delete a vault item", "vault"), func(ctx context.Context, in *ItemPath) (*struct{}, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
 		if err != nil {
 			return nil, err

@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 package chats
 
 import (

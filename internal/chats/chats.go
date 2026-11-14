@@ -1,3 +1,5 @@
+//go:build !drelgen
+
 // Package chats keeps chats, messages, cards and the realtime hub.
 package chats
 
@@ -104,29 +106,60 @@ func (s *Service) List(ctx context.Context, spaceID uuid.UUID) ([]View, error) {
 	return out, nil
 }
 
-// Page returns up to limit messages before the cursor message, oldest first.
-// next is the cursor of the following older page, or empty.
+// Page returns up to limit messages before the cursor message, oldest first, ordered by
+// send time and then ID. next is the cursor of the following older page, or empty.
 func (s *Service) Page(ctx context.Context, chatID uuid.UUID, before *uuid.UUID, limit int) ([]*Message, string, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	q := drel.NewRepository(s.e, MessageMeta).Where(Messages.ChatID.Eq(chatID))
+	q := `SELECT id FROM messages WHERE chat_id = $1 ORDER BY sent_at DESC, id DESC LIMIT $2`
+	args := []any{chatID, limit + 1}
 	if before != nil {
-		q = q.Where(Messages.ID.LT(*before))
+		cur, err := s.GetMessage(ctx, chatID, *before)
+		if err != nil {
+			return nil, "", err
+		}
+		q = `SELECT id FROM messages WHERE chat_id = $1 AND (sent_at < $2 OR (sent_at = $3 AND id < $4))
+			ORDER BY sent_at DESC, id DESC LIMIT $5`
+		args = []any{chatID, cur.SentAt, cur.SentAt, cur.ID(), limit + 1}
 	}
-	ms, err := q.OrderBy(Messages.ID.Desc()).Limit(limit + 1).All(ctx)
+	rows, err := s.e.Query(ctx, q, args...)
 	if err != nil {
 		return nil, "", err
 	}
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, "", err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
 	next := ""
-	if len(ms) > limit {
-		ms = ms[:limit]
-		next = ms[len(ms)-1].ID().String()
+	if len(ids) > limit {
+		ids = ids[:limit]
+		next = ids[len(ids)-1].String()
 	}
-	for i, j := 0, len(ms)-1; i < j; i, j = i+1, j-1 {
-		ms[i], ms[j] = ms[j], ms[i]
+	if len(ids) == 0 {
+		return []*Message{}, "", nil
 	}
-	return ms, next, nil
+	ms, err := drel.NewRepository(s.e, MessageMeta).Where(Messages.ID.In(ids...)).All(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	byID := map[uuid.UUID]*Message{}
+	for _, m := range ms {
+		byID[m.ID()] = m
+	}
+	out := make([]*Message, 0, len(ids))
+	for i := len(ids) - 1; i >= 0; i-- {
+		if m := byID[ids[i]]; m != nil {
+			out = append(out, m)
+		}
+	}
+	return out, next, nil
 }
 
 // Recent returns the last n messages of a chat, oldest first.
@@ -158,6 +191,9 @@ func (s *Service) Insert(ctx context.Context, m *Message, botID *uuid.UUID) erro
 	}
 	if m.Reactions == nil {
 		m.Reactions = map[string]string{}
+	}
+	if m.SentAt.IsZero() {
+		m.SentAt = time.Now().UTC()
 	}
 	return s.e.WithTx(ctx, func(ctx context.Context) error {
 		tx := drel.MustFromContext(ctx)
