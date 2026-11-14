@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
@@ -22,6 +23,7 @@ type S3Config struct {
 // S3 stores objects in an S3-compatible bucket.
 type S3 struct {
 	c      *s3.Client
+	up     *manager.Uploader
 	bucket string
 }
 
@@ -42,16 +44,14 @@ func NewS3(_ context.Context, cfg S3Config) (*S3, error) {
 	if cfg.Endpoint != "" {
 		opts.BaseEndpoint = aws.String(cfg.Endpoint)
 	}
-	return &S3{c: s3.New(opts), bucket: cfg.Bucket}, nil
+	c := s3.New(opts)
+	return &S3{c: c, up: manager.NewUploader(c, func(u *manager.Uploader) { u.PartSize = 16 << 20 }), bucket: cfg.Bucket}, nil
 }
 
+// Put streams an object. Large or unknown-size bodies go up in 16 MiB parts, so a
+// workspace archive never sits in memory whole.
 func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64) error {
-	// The SDK needs a seekable body for signing; payloads and archives are buffered.
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	_, err = s.c.PutObject(ctx, &s3.PutObjectInput{Bucket: &s.bucket, Key: &key, Body: bytes.NewReader(b), ContentLength: aws.Int64(int64(len(b)))})
+	_, err := s.up.Upload(ctx, &s3.PutObjectInput{Bucket: &s.bucket, Key: &key, Body: r})
 	return err
 }
 
