@@ -1,0 +1,197 @@
+{
+  "app": { "name": "Fettle" },
+  "units": {
+    "seconds": "{n} s",
+    "minutes": "{n} min",
+    "hours": "{h} h {m} min",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "shell": {
+    "nav": "Main menu",
+    "openMenu": "Open the menu",
+    "panel": "Side panel",
+    "togglePanel": "Show or hide the side panel",
+    "search": "Search or go to",
+    "bots": "Bots",
+    "groups": "Groups",
+    "workspace": "Space",
+    "runs": "Runs",
+    "files": "Files",
+    "routines": "Routines",
+    "settings": "Settings",
+    "unread": "unread",
+    "theme": "Theme: {theme}. Select to change it.",
+    "themes": { "system": "System", "light": "Light", "dark": "Dark" }
+  },
+  "palette": {
+    "title": "Command menu",
+    "description": "Type to find a bot, a page or an action.",
+    "placeholder": "Type a bot, a page or an action",
+    "empty": "No match.",
+    "go": "Go to",
+    "appearance": "Appearance",
+    "light": "Use the light theme",
+    "dark": "Use the dark theme"
+  },
+  "bots": {
+    "primary": "Primary",
+    "status": { "working": "Working", "waiting": "Waiting for you", "idle": "Idle", "archived": "Archived" }
+  },
+  "chat": {
+    "you": "You",
+    "youMark": "You",
+    "unknownBot": "Removed bot",
+    "messageFrom": "Message from {name}",
+    "zone": "Zone {zone}",
+    "memory": "Open the memory of this bot",
+    "composer": {
+      "label": "Message to {name}",
+      "placeholder": "Write to {name}",
+      "steer": "Add a note for {name} while it works",
+      "hint": "Enter sends · Shift+Enter adds a line · / runs a skill",
+      "attach": "Attach a file",
+      "send": "Send",
+      "stop": "Stop"
+    }
+  },
+  "card": {
+    "waits": "This card waits for you",
+    "kind": {
+      "approval": "Approval",
+      "question": "Question",
+      "budget": "Budget",
+      "uncertain": "Check needed",
+      "takeover": "Takeover",
+      "turn_limit": "Turn limit"
+    },
+    "approval": {
+      "tool": "Tool",
+      "allowOnce": "Allow once",
+      "always": "Always allow",
+      "deny": "Deny",
+      "hardAsk": "This action always needs your approval."
+    },
+    "budget": { "add": "Add {usd} and continue", "stop": "Stop" },
+    "uncertain": { "happened": "It happened", "didNot": "It did not happen", "stop": "Stop the run" },
+    "turnLimit": { "continue": "Continue for more turns", "stop": "Stop" },
+    "takeover": { "open": "Open the screen" },
+    "resolved": {
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "expired": "Expired",
+      "answered": "Answer: {answer}"
+    }
+  },
+  "run": {
+    "open": "Open the timeline of {label}",
+    "helpers": { "one": "{n} helper", "other": "{n} helpers" },
+    "step": {
+      "direct": "Reply",
+      "single": "Work",
+      "fanout": "Research",
+      "forked": "Parallel edits",
+      "handoff": "Handoff",
+      "hire": "Hire"
+    },
+    "state": {
+      "queued": "Queued",
+      "running": "Working",
+      "waiting": "Waiting",
+      "verifying": "Checking",
+      "done": "Done",
+      "verified": "Verified",
+      "failed": "Failed",
+      "escalated": "Needs you",
+      "cancelled": "Stopped"
+    }
+  },
+  "timeline": {
+    "title": "Run timeline",
+    "close": "Close the timeline",
+    "events": "Run events",
+    "tokens": "{n} tokens",
+    "stat": { "state": "State", "time": "Time", "cost": "Cost", "tokens": "Tokens" },
+    "type": {
+      "run_started": "Start",
+      "route_decision": "Route",
+      "context_built": "Context",
+      "model_turn": "Model",
+      "model_switch": "Model switch",
+      "tool_call": "Read",
+      "tool_intent": "Intent",
+      "tool_result": "Result",
+      "tool_uncertain": "Uncertain",
+      "approval_requested": "Approval",
+      "approval_decided": "Decision",
+      "card_posted": "Card",
+      "card_answered": "Answer",
+      "steer": "Note",
+      "subagents_started": "Helpers",
+      "subagent_result": "Helper result",
+      "merge_result": "Merge",
+      "handoff_sent": "Handoff",
+      "handoff_result": "Handoff result",
+      "verify_started": "Check",
+      "verify_result": "Check result",
+      "computer_wait": "Computer wait",
+      "computer_acquired": "Computer",
+      "computer_released": "Computer free",
+      "takeover_requested": "Takeover",
+      "takeover_done": "Takeover done",
+      "memory_write": "Memory",
+      "summary": "Summary",
+      "budget_reached": "Budget",
+      "sleep_until": "Sleep",
+      "cancel": "Stop",
+      "run_finished": "Finish"
+    }
+  },
+  "vault": { "show": "Show the value", "hide": "Hide the value" },
+  "models": {
+    "check": {
+      "plain": "Plain answer",
+      "tools": "Tool call round trip",
+      "schema": "Structured output",
+      "vision": "Image input"
+    }
+  },
+  "setup": {
+    "tagline": "Your AI team, on your computer or a server.",
+    "stepOf": "Step {n} of {total}",
+    "back": "Back",
+    "continue": "Continue",
+    "finish": "Open the chat",
+    "steps": { "where": "Place", "computer": "Computer", "model": "Model", "you": "You" },
+    "check": { "pass": "Passed", "fail": "Failed", "running": "Running", "idle": "Not started" },
+    "where": {
+      "title": "Where does Fettle run?",
+      "body": "You can change this later.",
+      "local": "This computer",
+      "localBody": "Bots work on this computer. Routines run while the app is open.",
+      "server": "Connect to a server",
+      "serverBody": "Bots keep working on a server when this computer sleeps."
+    },
+    "computer": {
+      "title": "Prepare a computer for your bots",
+      "body": "Bots work in their own computers with a browser, a terminal and files.",
+      "detected": "Found",
+      "background": "This continues in the background. You can chat now."
+    },
+    "model": {
+      "title": "Add a model key",
+      "body": "Bots use your own model key. Fettle keeps it encrypted.",
+      "keyLabel": "OpenRouter key",
+      "keyHint": "Fettle tests the key at once.",
+      "checks": "Model checks",
+      "otherProvider": "Use a different provider"
+    },
+    "you": {
+      "title": "Tell your bots about you",
+      "body": "Bots use your name and your time zone.",
+      "name": "Your name",
+      "timeZone": "Time zone",
+      "timeZoneHint": "Fettle found this time zone on this computer."
+    }
+  }
+}

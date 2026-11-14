@@ -1,0 +1,168 @@
+import { motion, useReducedMotion } from "motion/react";
+import { Check, CircleHelp, Coins, Hand, ShieldQuestion, TriangleAlert, X } from "lucide-react";
+import { t } from "@/lib/copy";
+import { cn } from "@/lib/utils";
+import type { Card } from "./types";
+
+export type CardAnswer = { action: string; value?: string };
+
+const icons = {
+  approval: ShieldQuestion,
+  question: CircleHelp,
+  budget: Coins,
+  uncertain: TriangleAlert,
+  takeover: Hand,
+  turn_limit: TriangleAlert,
+} as const;
+
+function ActionButton({
+  children,
+  kind = "plain",
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  kind?: "act" | "plain" | "quiet";
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-7 items-center gap-1.5 rounded-sm px-2.5 text-sm font-[var(--weight-medium)] transition-colors duration-[var(--dur-1)]",
+        "disabled:pointer-events-none disabled:opacity-50",
+        kind === "act" && "bg-glaze text-glaze-ink hover:brightness-105",
+        kind === "plain" && "border border-rule-strong bg-surface-raised text-ink hover:bg-surface-sunk",
+        kind === "quiet" && "text-ink-soft hover:bg-surface-sunk hover:text-ink",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Resolved({ card }: { card: Card }) {
+  const denied = card.status === "denied" || card.status === "expired";
+  const Icon = denied ? X : Check;
+  const label =
+    card.status === "allowed"
+      ? t("card.resolved.allowed")
+      : card.status === "denied"
+        ? t("card.resolved.denied")
+        : card.status === "expired"
+          ? t("card.resolved.expired")
+          : t("card.resolved.answered", { answer: card.answer ?? "" });
+  return (
+    <div className="mt-2 flex max-w-[var(--measure)] items-center gap-2 border-l-2 border-rule-strong py-0.5 pl-3 text-sm text-ink-soft">
+      <Icon aria-hidden className={cn("size-3.5", denied ? "text-danger" : "text-ok")} />
+      <span className="font-[var(--weight-medium)] text-ink">{card.title}</span>
+      <span>· {label}</span>
+    </div>
+  );
+}
+
+export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAnswer) => void }) {
+  const reduce = useReducedMotion();
+  if (card.status !== "pending") return <Resolved card={card} />;
+  const Icon = icons[card.kind];
+  return (
+    <motion.section
+      initial={reduce ? false : { opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      aria-label={card.title}
+      className="relative mt-2 max-w-[var(--measure)] overflow-hidden rounded-sm border border-rule-strong bg-surface-raised shadow-[var(--shadow-1)]"
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-glaze" />
+      <header className="flex items-center gap-2 border-b border-rule px-3 py-2 pl-4">
+        <Icon aria-hidden className="size-4 text-glaze" />
+        <h3 className="text-sm font-[var(--weight-strong)] text-ink">{card.title}</h3>
+        <span className="label-caps ml-auto">{t(`card.kind.${card.kind}`)}</span>
+      </header>
+      <div className="space-y-2 px-3 py-2.5 pl-4">
+        {card.detail && <p className="text-sm text-ink-soft">{card.detail}</p>}
+        {card.tool && (
+          <p className="text-sm text-ink-soft">
+            {t("card.approval.tool")} <code className="font-mono text-xs text-ink">{card.tool}</code>
+          </p>
+        )}
+        {card.preview && (
+          <dl className="grid grid-cols-[minmax(4.5rem,auto)_1fr] gap-x-3 gap-y-1 border-t border-dashed border-rule pt-2 text-sm">
+            {Object.entries(card.preview).map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="figures pt-0.5 text-ink-faint">{k}</dt>
+                <dd className="min-w-0 break-words text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {card.hard_ask && <p className="text-xs text-ink-faint">{t("card.approval.hardAsk")}</p>}
+      </div>
+      <footer className="flex flex-wrap items-center gap-1.5 border-t border-rule bg-surface px-3 py-2 pl-4">
+        {card.kind === "approval" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "allow" })}>
+              {t("card.approval.allowOnce")}
+            </ActionButton>
+            {!card.hard_ask && (
+              <ActionButton onClick={() => onAnswer({ action: "always" })}>{t("card.approval.always")}</ActionButton>
+            )}
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "deny" })}>
+              {t("card.approval.deny")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "question" &&
+          (card.options ?? []).map((o, i) => (
+            <ActionButton
+              key={o}
+              kind={i === 0 ? "act" : "plain"}
+              onClick={() => onAnswer({ action: "answer", value: o })}
+            >
+              {o}
+            </ActionButton>
+          ))}
+        {card.kind === "budget" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "add_budget", value: "1" })}>
+              {t("card.budget.add", { usd: "$1" })}
+            </ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
+              {t("card.budget.stop")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "uncertain" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "done" })}>
+              {t("card.uncertain.happened")}
+            </ActionButton>
+            <ActionButton onClick={() => onAnswer({ action: "not_done" })}>{t("card.uncertain.didNot")}</ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
+              {t("card.uncertain.stop")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "turn_limit" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "continue" })}>
+              {t("card.turnLimit.continue")}
+            </ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
+              {t("card.turnLimit.stop")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "takeover" && (
+          <ActionButton kind="act" onClick={() => onAnswer({ action: "open" })}>
+            {t("card.takeover.open")}
+          </ActionButton>
+        )}
+        <span className="figures ml-auto hidden text-ink-faint sm:inline">{t("card.waits")}</span>
+      </footer>
+    </motion.section>
+  );
+}

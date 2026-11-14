@@ -1,1 +1,15 @@
 .build/
+/tmp/
+/bin/
+/dist/
+ui/node_modules/
+ui/dist/*
+!ui/dist/.gitkeep
+ui/*.tsbuildinfo
+ui/node_modules/.tmp/
+tests/e2e/node_modules/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+*.test
+coverage.out
+.DS_Store

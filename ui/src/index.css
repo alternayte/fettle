@@ -1,0 +1,369 @@
+/* Direction: a studio potter's kiln log book — bisque-clay paper, iron-oxide ink, ruled lines, tabular figures in the margin, and one celadon glaze accent used only where a person must act. */
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------- tokens */
+:root {
+  /* Type: system faces so the desktop app stays offline and fast. Ratio 1.125 (major second), base 14px. */
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "Inter", "Helvetica Neue",
+    Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --text-2xs: 0.6875rem; /* 11px: margin figures */
+  --text-xs: 0.75rem; /* 12px: meta */
+  --text-sm: 0.8125rem; /* 13px: dense lists */
+  --text-base: 0.875rem; /* 14px: body */
+  --text-md: 0.984rem; /* 15.75px */
+  --text-lg: 1.107rem; /* 17.7px */
+  --text-xl: 1.246rem; /* 19.9px */
+  --text-2xl: 1.4rem; /* 22.4px: page titles, serif */
+  --text-3xl: 1.75rem; /* 28px: wizard titles, serif */
+  --leading-tight: 1.25;
+  --leading-body: 1.55;
+  --tracking-label: 0.06em;
+  --weight-regular: 400;
+  --weight-medium: 520;
+  --weight-strong: 640;
+
+  /* Space: 4px base, dense rhythm; a ruled line every 28px in long lists. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --row: 1.75rem;
+  --sidebar-w: 15.5rem;
+  --panel-w: 26rem;
+  --measure: 46rem;
+
+  /* Shape: kiln shelves are square; radii stay small. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 9px;
+
+  /* Motion: short and settling, like a lid placed on a jar. */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-1: 90ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+
+  /* Colour (light: bisque). */
+  --ground: oklch(0.962 0.012 78);
+  --surface: oklch(0.982 0.008 80);
+  --surface-sunk: oklch(0.938 0.014 76);
+  --surface-raised: oklch(0.995 0.004 80);
+  --ink: oklch(0.255 0.026 42);
+  --ink-soft: oklch(0.42 0.024 46);
+  --ink-faint: oklch(0.56 0.02 52);
+  --rule: oklch(0.875 0.016 72);
+  --rule-strong: oklch(0.79 0.02 66);
+  --accent: oklch(0.52 0.075 168);
+  --accent-ink: oklch(0.985 0.01 160);
+  --accent-wash: oklch(0.93 0.03 165);
+  --ok: oklch(0.5 0.1 148);
+  --ok-wash: oklch(0.93 0.04 148);
+  --warn: oklch(0.58 0.12 72);
+  --warn-wash: oklch(0.94 0.05 80);
+  --danger: oklch(0.52 0.16 33);
+  --danger-wash: oklch(0.93 0.04 33);
+  --info: oklch(0.5 0.1 255);
+  --info-wash: oklch(0.93 0.03 255);
+  --focus: oklch(0.55 0.11 168);
+  --shadow-1: 0 1px 0 oklch(0.255 0.026 42 / 0.05), 0 1px 2px oklch(0.255 0.026 42 / 0.06);
+  --shadow-2: 0 1px 0 oklch(0.255 0.026 42 / 0.04), 0 8px 24px -8px oklch(0.255 0.026 42 / 0.18);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  /* Colour (dark: the kiln room at night, reduction-fired stoneware). */
+  --ground: oklch(0.185 0.01 52);
+  --surface: oklch(0.212 0.011 52);
+  --surface-sunk: oklch(0.165 0.009 52);
+  --surface-raised: oklch(0.245 0.012 54);
+  --ink: oklch(0.925 0.014 78);
+  --ink-soft: oklch(0.79 0.016 74);
+  --ink-faint: oklch(0.64 0.016 70);
+  --rule: oklch(0.31 0.012 56);
+  --rule-strong: oklch(0.39 0.014 60);
+  --accent: oklch(0.76 0.08 168);
+  --accent-ink: oklch(0.2 0.03 168);
+  --accent-wash: oklch(0.3 0.04 168);
+  --ok: oklch(0.76 0.11 148);
+  --ok-wash: oklch(0.29 0.04 148);
+  --warn: oklch(0.8 0.12 80);
+  --warn-wash: oklch(0.3 0.05 76);
+  --danger: oklch(0.73 0.14 35);
+  --danger-wash: oklch(0.3 0.06 33);
+  --info: oklch(0.75 0.09 255);
+  --info-wash: oklch(0.29 0.04 255);
+  --focus: oklch(0.78 0.09 168);
+  --shadow-1: 0 1px 0 oklch(0 0 0 / 0.3);
+  --shadow-2: 0 10px 30px -10px oklch(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+/* shadcn variables are mapped onto the Fettle tokens; no component reads a raw value. */
+:root,
+[data-theme="dark"] {
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--surface);
+  --secondary: var(--surface-sunk);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-sunk);
+  --muted-foreground: var(--ink-faint);
+  --accent-shadcn: var(--surface-sunk);
+  --destructive: var(--danger);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--focus);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+  --text-2xs: var(--text-2xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --shadow-xs: var(--shadow-1);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-2);
+  --ease-settle: var(--ease-settle);
+  --ease-out: var(--ease-out);
+
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-glaze: var(--accent);
+  --color-glaze-ink: var(--accent-ink);
+  --color-glaze-wash: var(--accent-wash);
+  --color-ok: var(--ok);
+  --color-ok-wash: var(--ok-wash);
+  --color-warn: var(--warn);
+  --color-warn-wash: var(--warn-wash);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-info: var(--info);
+  --color-info-wash: var(--info-wash);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-shadcn);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* ---------------------------------------------------------------- base */
+@layer base {
+  * {
+    border-color: var(--rule);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--accent-wash);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .figures {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-2xs);
+    letter-spacing: 0.01em;
+  }
+  .label-caps {
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    font-weight: var(--weight-strong);
+    color: var(--ink-faint);
+  }
+  .serif-title {
+    font-family: var(--font-serif);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.005em;
+    line-height: var(--leading-tight);
+  }
+}
+
+/* Prose in bot replies. */
+.prose-log {
+  max-width: var(--measure);
+  overflow-wrap: anywhere;
+}
+.prose-log p {
+  margin: 0 0 var(--space-2);
+}
+.prose-log p:last-child {
+  margin-bottom: 0;
+}
+.prose-log a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-log a[data-inactive] {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.prose-log code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-sunk);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-xs);
+}
+.prose-log pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--surface-sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  overflow-x: auto;
+  margin: 0 0 var(--space-2);
+}
+.prose-log pre code {
+  background: none;
+  padding: 0;
+}
+.prose-log ul,
+.prose-log ol {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-5);
+}
+.prose-log ul {
+  list-style: disc;
+}
+.prose-log ol {
+  list-style: decimal;
+}
+.prose-log table {
+  border-collapse: collapse;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  display: block;
+  overflow-x: auto;
+}
+.prose-log th,
+.prose-log td {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--space-1) var(--space-3) var(--space-1) 0;
+  text-align: left;
+}
+.prose-log th {
+  font-weight: var(--weight-strong);
+  border-bottom-color: var(--rule-strong);
+}
+.prose-log h1,
+.prose-log h2,
+.prose-log h3 {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-medium);
+  margin: var(--space-3) 0 var(--space-2);
+  line-height: var(--leading-tight);
+}
+.prose-log h1 {
+  font-size: var(--text-xl);
+}
+.prose-log h2 {
+  font-size: var(--text-lg);
+}
+.prose-log h3 {
+  font-size: var(--text-md);
+}
+.prose-log blockquote {
+  border-left: 2px solid var(--rule-strong);
+  padding-left: var(--space-3);
+  color: var(--ink-soft);
+  margin: 0 0 var(--space-2);
+}
+
+/* Streaming caret. */
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--accent);
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
