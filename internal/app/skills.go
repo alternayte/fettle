@@ -92,7 +92,7 @@ func (a *App) loadSkill(ctx context.Context, env *agent.ToolEnv, name string) (s
 		go func() {
 			ctx := context.WithoutCancel(ctx)
 			if c, err := a.skaelConfig(ctx, env.SpaceID); err == nil {
-				if err := a.Skael.Activation(ctx, c, l.Skill.Name, l.Version.Upstream); err != nil {
+				if err := a.Skael.Activation(ctx, c, l.Skill.Name, l.Version.Upstream, env.SpaceID, env.BotID); err != nil {
 					a.Log.Warn("skael activation", "skill", l.Skill.Name, "error", err)
 				}
 			}

@@ -3,6 +3,8 @@ package skills
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -112,9 +114,20 @@ func (s *Service) Sync(ctx context.Context, k *Skael, actor audit.Actor, spaceID
 	return out, nil
 }
 
-// Activation reports to Skael that a run loaded a skill.
-func (k *Skael) Activation(ctx context.Context, c SkaelConfig, name string, upstream int) error {
+// Activation reports to Skael that a run loaded a skill. Skael groups activations by a
+// project hash and a developer hash; Fettle sends hashes of the space and the bot, so
+// Skael never gets their IDs.
+func (k *Skael) Activation(ctx context.Context, c SkaelConfig, name string, upstream int, spaceID, botID uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	return k.do(ctx, c, http.MethodPost, "/api/events", map[string]any{"skill_name": name, "agent": "fettle", "event_source": "tool_invocation", "version": upstream}, nil)
+	return k.do(ctx, c, http.MethodPost, "/api/events", map[string]any{
+		"skill_name": name, "agent": "fettle", "event_source": "tool_invocation", "trigger_type": "auto",
+		"project_hash": shortHash("space:" + spaceID.String()), "developer_hash": shortHash("bot:" + botID.String()),
+		"version": upstream,
+	}, nil)
+}
+
+func shortHash(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])[:16]
 }
