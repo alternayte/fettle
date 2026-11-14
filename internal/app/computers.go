@@ -159,6 +159,9 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 	if _, err := w.a.Routines.Tick(ctx); err != nil {
 		w.a.Log.Warn("routine tick failed", "error", err)
 	}
+	if _, err := w.a.Agent.ExpireCards(ctx); err != nil {
+		w.a.Log.Warn("card expiry failed", "error", err)
+	}
 	if err := w.a.WakeOpenWork(ctx); err != nil {
 		w.a.Log.Warn("open work wake failed", "error", err)
 	}

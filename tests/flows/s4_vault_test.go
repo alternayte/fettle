@@ -47,11 +47,18 @@ func (s *server) zoneIDOf(name string) string {
 // botRun runs scripted steps for one bot and returns the run.
 func (s *server) botRun(b apptest.Bot, steps ...fakemodel.Step) apptest.Run {
 	s.T.Helper()
+	_, r := s.botRunID(b, steps...)
+	return r
+}
+
+// botRunID is botRun that also returns the run ID.
+func (s *server) botRunID(b apptest.Bot, steps ...fakemodel.Step) (string, apptest.Run) {
+	s.T.Helper()
 	marker := "b" + strings.ReplaceAll(b.ID, "-", "")[:12] + "-" + strings.ReplaceAll(time.Now().Format("150405.000000"), ".", "")
 	s.script(marker, append(steps, fakemodel.Step{Text: "Done."})...)
 	s.instruct(b.ID, marker)
 	run, _ := s.Post(b.ChatID, "Please do the steps.")
-	return s.WaitRun(run, "done", "failed", "escalated", "waiting")
+	return run, s.WaitRun(run, "done", "failed", "escalated", "waiting")
 }
 
 func TestSCN_VLT_003_BrokerFillsOnlyGrantedLoginsOnTheirSite(t *testing.T) {

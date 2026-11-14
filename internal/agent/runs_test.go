@@ -367,3 +367,45 @@ func TestSCN_RUN_002_OneWorkerPerRunAcrossProcesses(t *testing.T) {
 		t.Fatalf("an append with a stale fence gave %v", err)
 	}
 }
+
+func TestSCN_POL_005_CardsOfRoutineRunsExpire(t *testing.T) {
+	testenv.Each(t, func(t *testing.T, dialect string) {
+		e := apptest.Start(t, dialect)
+		e.SetupModel("openai-chat", "", 128000)
+		ctx := context.Background()
+		e.App.Agent.Tools.Add(agent.Tool{
+			Name: "notify_team", Description: "Send a note to the team.", Class: envelopes.ClassSend, Schema: json.RawMessage(`{"type":"object","properties":{"text":{"type":"string"}}}`),
+			Run: func(context.Context, *agent.ToolEnv, json.RawMessage) (agent.ToolOutput, error) {
+				return agent.ToolOutput{Text: "sent"}, nil
+			},
+		})
+		e.Fake.AddScript(fakemodel.Script{Name: "notify", Match: fakemodel.Match{User: "[[notify]]"}, Steps: []fakemodel.Step{{ToolCalls: calls("notify_team", map[string]any{"text": "hi"})}, {Text: "Sent."}}})
+		chief := e.Chief()
+		var nightly apptest.Bot
+		e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Nightly", "job": "Night work"}, &nightly)
+		bot, sp, chat := uuid.MustParse(nightly.ID), uuid.MustParse(e.Space), uuid.MustParse(nightly.ChatID)
+		routine, err := e.App.Agent.Submit(ctx, &envelopes.Envelope{SpaceID: sp, Kind: "routine", Origin: "routine", Requester: envelopes.Requester{Type: "routine", ID: "nightly"}, OwnerBotID: &bot, ChatID: &chat, Goal: "[[notify]] tell the team", Capabilities: agent.UserCapabilities})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.WaitRun(routine.ID().String(), "waiting")
+		user, _ := e.Post(chief.ChatID, "[[notify]] tell the team hello")
+		e.WaitRun(user, "waiting")
+
+		start := time.Now()
+		e.App.Agent.SetClock(func() time.Time { return start.Add(29 * time.Minute) })
+		if n, err := e.App.Agent.ExpireCards(ctx); err != nil || n != 0 {
+			t.Fatalf("cards expired before 30 minutes: %d %v", n, err)
+		}
+		e.App.Agent.SetClock(func() time.Time { return start.Add(31 * time.Minute) })
+		if n, err := e.App.Agent.ExpireCards(ctx); err != nil || n != 1 {
+			t.Fatalf("expired %d cards, want the routine's one: %v", n, err)
+		}
+		if st := e.GetRun(routine.ID().String()).Line.State; st != "escalated" {
+			t.Fatalf("the routine run is %s, want escalated", st)
+		}
+		if st := e.GetRun(user).Line.State; st != "waiting" {
+			t.Fatalf("the card in the user's chat stopped waiting: %s", st)
+		}
+	})
+}
