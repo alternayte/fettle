@@ -4,6 +4,7 @@ package flows
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -201,6 +202,81 @@ func TestSCN_VLT_004_SecretsAreRedactedEverywhere(t *testing.T) {
 			if !strings.Contains(text, n) {
 				t.Fatalf("the %s do not show %s", where, n)
 			}
+		}
+	}
+}
+
+// containerOf returns the container of a zone's computer.
+func containerOf(t *testing.T, zoneID string) string {
+	t.Helper()
+	ids := strings.Fields(docker(t, "ps", "-q", "--filter", "label=fettle.zone="+zoneID))
+	if len(ids) == 0 {
+		t.Fatalf("zone %s has no running computer", zoneID)
+	}
+	return ids[0]
+}
+
+func agentdToken(t *testing.T, container string) string {
+	t.Helper()
+	for _, kv := range strings.Split(docker(t, "inspect", "-f", "{{range .Config.Env}}{{println .}}{{end}}", container), "\n") {
+		if v, ok := strings.CutPrefix(kv, "FETTLE_AGENTD_TOKEN="); ok {
+			return v
+		}
+	}
+	t.Fatal("no computer token")
+	return ""
+}
+
+func TestSCN_CMP_002_ZonesAreIsolated(t *testing.T) {
+	s := startComputers(t, "sqlite")
+	s.neverMode()
+	var item struct {
+		ID string `json:"id"`
+	}
+	s.MustDo("POST", s.SP("/vault"), map[string]any{"name": "deploy key", "kind": "secret", "value": "acme-deploy-secret-4471"}, &item)
+	var r cardReply
+	s.MustDo("POST", s.SP("/zones/%s/grants", s.zoneIDOf("personal")), map[string]any{"kind": "vault_item", "target_id": item.ID}, &r)
+	s.MustDo("POST", s.SP("/cards/%s/answer", r.CardID), map[string]any{"action": "allow"}, nil)
+	var inbox, research apptest.Bot
+	s.MustDo("POST", s.SP("/bots"), map[string]any{"name": "Inbox", "job": "Triage mail", "zone_id": s.zoneIDOf("personal")}, &inbox)
+	s.MustDo("POST", s.SP("/bots"), map[string]any{"name": "Research", "job": "Finds sources", "zone_id": s.zoneIDOf("browsing")}, &research)
+	s.botRun(inbox, fakemodel.Step{ToolCalls: call("write_file", map[string]any{"path": "notes.md", "content": "inbox only"})})
+
+	home := "/home/fettle/bots/" + inbox.ID + "/notes.md"
+	run := s.botRun(research,
+		fakemodel.Step{ToolCalls: call("exec", map[string]any{"command": "cat " + home + " 2>&1 || echo not-here"})},
+		fakemodel.Step{ToolCalls: call("read_file", map[string]any{"path": "bots/" + inbox.ID + "/notes.md"})},
+		fakemodel.Step{ToolCalls: call("use_secret", map[string]any{"item": "deploy key", "env_name": "KEY", "command": "echo $KEY"})},
+	)
+	if out := strings.Join(toolResults(run, "exec"), ""); strings.Contains(out, "inbox only") || !strings.Contains(out, "not-here") {
+		t.Fatalf("Research's computer has Inbox's home: %s", out)
+	}
+	if out := strings.Join(toolResults(run, "read_file"), ""); !strings.Contains(out, "home of another bot") {
+		t.Fatalf("read_file reached another bot's home: %s", out)
+	}
+	if out := strings.Join(toolResults(run, "use_secret"), ""); !strings.Contains(out, "no access to this vault item") {
+		t.Fatalf("Research used a personal grant: %s", out)
+	}
+	// agentd of browsing refuses the computer token of personal.
+	personal := containerOf(t, s.zoneIDOf("personal"))
+	browsing := containerOf(t, s.zoneIDOf("browsing"))
+	port := strings.TrimSpace(strings.Split(docker(t, "port", browsing, "7421"), "\n")[0])
+	port = port[strings.LastIndex(port, ":")+1:]
+	cl := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec // the check is the token, not TLS
+	for name, tok := range map[string]string{"personal": agentdToken(t, personal), "browsing": agentdToken(t, browsing)} {
+		req, _ := http.NewRequest("GET", "https://127.0.0.1:"+port+"/v1/health", nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		resp, err := cl.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		want := 200
+		if name == "personal" {
+			want = 401
+		}
+		if resp.StatusCode != want {
+			t.Fatalf("browsing agentd with the %s token: %d, want %d", name, resp.StatusCode, want)
 		}
 	}
 }
