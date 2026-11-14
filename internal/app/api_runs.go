@@ -30,6 +30,7 @@ type RunView struct {
 	Kind        string        `json:"kind"`
 	ParentRunID string        `json:"parent_run_id,omitempty"`
 	Goal        string        `json:"goal"`
+	ChatID      string        `json:"chat_id,omitempty"`
 	TokensIn    int64         `json:"tokens_in"`
 	TokensOut   int64         `json:"tokens_out"`
 	StartedAt   *time.Time    `json:"started_at"`
@@ -54,6 +55,9 @@ func (a *App) runView(ctx context.Context, r *runs.Run) RunView {
 	}
 	if e, err := a.Envs.Get(ctx, r.SpaceID, r.EnvelopeID); err == nil {
 		v.Goal = e.Goal
+		if e.ChatID != nil {
+			v.ChatID = e.ChatID.String()
+		}
 	}
 	return v
 }

@@ -24,6 +24,7 @@ type BotView struct {
 	IsPrimary       bool    `json:"is_primary"`
 	Status          string  `json:"status"`
 	ZoneID          *string `json:"zone_id"`
+	ZoneName        string  `json:"zone_name"`
 	ChatID          string  `json:"chat_id"`
 	Activity        string  `json:"activity" enum:"idle,working,waiting" doc:"What the bot does now."`
 }
@@ -33,6 +34,9 @@ func (a *App) botView(ctx context.Context, b *bots.Bot) BotView {
 	if b.ZoneID != nil {
 		s := b.ZoneID.String()
 		v.ZoneID = &s
+		if z, err := a.Zones.Get(ctx, b.SpaceID, *b.ZoneID); err == nil {
+			v.ZoneName = z.Name
+		}
 	}
 	if c, err := a.Chats.DirectFor(ctx, b.SpaceID, b.ID()); err == nil {
 		v.ChatID = c.ID().String()

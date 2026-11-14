@@ -613,6 +613,7 @@ export interface components {
       public_desc: string;
       status: string;
       zone_id: string | null;
+      zone_name: string;
     };
     BotsOutBody: {
       bots: components["schemas"]["BotView"][] | null;
@@ -895,6 +896,7 @@ export interface components {
     };
     RunView: {
       bot_name: string;
+      chat_id?: string;
       children: string[] | null;
       events: components["schemas"]["EventView"][] | null;
       /** Format: date-time */

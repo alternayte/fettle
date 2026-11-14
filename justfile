@@ -87,7 +87,7 @@ test:
 contract:
     #!/usr/bin/env bash
     set -euo pipefail
-    files=$(grep -rl --include='*_test.go' '^//go:build contract' internal tests cmd 2>/dev/null || true)
+    files=$(grep -rl --include='*_test.go' '^//go:build contract' internal tests cmd agentd 2>/dev/null || true)
     names=$(grep -h '^func Test' $files | sed -E 's/^func (Test[A-Za-z0-9_]+).*/\1/' | paste -sd'|' -)
     go test -race -count=1 -tags contract -run "^(${names})$" ./...
 

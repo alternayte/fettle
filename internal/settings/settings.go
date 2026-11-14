@@ -44,13 +44,13 @@ func Defs() []Def {
 }
 
 func init() {
-	Register(Def{Key: "agent.max_turns", Scope: "space", Default: 200, Doc: "Model turns before a run stops and asks."})
+	Register(Def{Key: "agent.max_turns", Scope: "space", Default: 200, Doc: "Model turns before a bot stops and asks you."})
 	Register(Def{Key: "bots.max_per_space", Scope: "space", Default: 50, Doc: "Bots in one space."})
-	Register(Def{Key: "budget.envelope_usd", Scope: "space", Default: 2.0, Doc: "Default USD budget of one envelope."})
-	Register(Def{Key: "budget.envelope_tokens", Scope: "space", Default: 2000000, Doc: "Default token budget of one envelope."})
-	Register(Def{Key: "budget.envelope_wall_ms", Scope: "space", Default: 3600000, Doc: "Default wall time of one envelope."})
-	Register(Def{Key: "budget.hops", Scope: "space", Default: 4, Doc: "Default handoff hops."})
-	Register(Def{Key: "budget.max_subagents", Scope: "space", Default: 5, Doc: "Default sub-agents per envelope."})
+	Register(Def{Key: "budget.envelope_usd", Scope: "space", Default: 2.0, Doc: "Default budget in USD for one piece of work."})
+	Register(Def{Key: "budget.envelope_tokens", Scope: "space", Default: 2000000, Doc: "Default token budget for one piece of work."})
+	Register(Def{Key: "budget.envelope_wall_ms", Scope: "space", Default: 3600000, Doc: "Default time limit in milliseconds for one piece of work."})
+	Register(Def{Key: "budget.hops", Scope: "space", Default: 4, Doc: "How many times work can pass from bot to bot."})
+	Register(Def{Key: "budget.max_subagents", Scope: "space", Default: 5, Doc: "Helpers that one piece of work can start."})
 	Register(Def{Key: "budget.bot_day_usd", Scope: "space", Default: 10.0, Doc: "USD per bot per day."})
 	Register(Def{Key: "budget.space_month_usd", Scope: "space", Default: 100.0, Doc: "USD per space per month."})
 	Register(Def{Key: "chat.attachment_max_mb", Scope: "space", Default: 50, Doc: "Largest attachment."})

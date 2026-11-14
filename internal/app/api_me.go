@@ -7,6 +7,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/auth"
 )
 
@@ -74,39 +76,9 @@ func (a *App) registerMe(api huma.API) {
 	})
 
 	huma.Register(api, op("get-me", http.MethodGet, "/me", "The caller, the spaces and the first-run state", "auth"), func(ctx context.Context, _ *struct{}) (*meOut, error) {
-		p := auth.From(ctx)
-		u, err := a.Users.Get(ctx, p.UserID)
-		if err != nil || u == nil {
-			return nil, huma.Error401Unauthorized("Sign in first.")
-		}
-		ms, err := a.Spaces.ForUser(ctx, u.ID())
+		v, err := a.meView(ctx, auth.From(ctx).UserID)
 		if err != nil {
 			return nil, err
-		}
-		v := MeView{ID: u.ID().String(), Email: u.Email, Name: u.Name, IsAdmin: u.IsAdmin, Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Spaces: []SpaceView{}}
-		for _, m := range ms {
-			v.Spaces = append(v.Spaces, SpaceView{ID: m.Space.ID().String(), Name: m.Space.Name, TimeZone: m.Space.TimeZone, Role: m.Role})
-		}
-		v.Setup.NeedsName = u.Name == ""
-		if len(ms) > 0 {
-			ps, err := a.Models.List(ctx, ms[0].Space.ID())
-			if err != nil {
-				return nil, err
-			}
-			ready := false
-			for _, pr := range ps {
-				if pr.Smoke.Tools {
-					ready = true
-				}
-			}
-			roles, _ := a.Models.Roles(ctx, ms[0].Space.ID(), nil)
-			hasOwner := false
-			for _, r := range roles {
-				if r.Role == "owner" && len(r.Targets) > 0 {
-					hasOwner = true
-				}
-			}
-			v.Setup.NeedsModel = !ready || !hasOwner
 		}
 		return &meOut{Body: v}, nil
 	})
@@ -120,8 +92,11 @@ func (a *App) registerMe(api huma.API) {
 		if err := a.Users.SetName(ctx, p.UserID, in.Body.Name); err != nil {
 			return nil, err
 		}
-		u, _ := a.Users.Get(ctx, p.UserID)
-		return &meOut{Body: MeView{ID: u.ID().String(), Email: u.Email, Name: u.Name, IsAdmin: u.IsAdmin, Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Spaces: []SpaceView{}}}, nil
+		v, err := a.meView(ctx, p.UserID)
+		if err != nil {
+			return nil, err
+		}
+		return &meOut{Body: v}, nil
 	})
 
 	huma.Register(api, op("get-space", http.MethodGet, "/spaces/{space}", "A space", "spaces"), func(ctx context.Context, in *SpacePath) (*spaceOut, error) {
@@ -147,4 +122,42 @@ func (a *App) registerMe(api huma.API) {
 		}
 		return &spaceOut{Body: SpaceView{ID: sp.ID().String(), Name: sp.Name, TimeZone: sp.TimeZone, Role: role}}, nil
 	})
+}
+
+// meView builds the caller view with spaces and the first-run state.
+func (a *App) meView(ctx context.Context, userID uuid.UUID) (MeView, error) {
+	u, err := a.Users.Get(ctx, userID)
+	if err != nil || u == nil {
+		return MeView{}, huma.Error401Unauthorized("Sign in first.")
+	}
+	ms, err := a.Spaces.ForUser(ctx, u.ID())
+	if err != nil {
+		return MeView{}, err
+	}
+	v := MeView{ID: u.ID().String(), Email: u.Email, Name: u.Name, IsAdmin: u.IsAdmin, Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Spaces: []SpaceView{}}
+	for _, m := range ms {
+		v.Spaces = append(v.Spaces, SpaceView{ID: m.Space.ID().String(), Name: m.Space.Name, TimeZone: m.Space.TimeZone, Role: m.Role})
+	}
+	v.Setup.NeedsName = u.Name == ""
+	if len(ms) > 0 {
+		ps, err := a.Models.List(ctx, ms[0].Space.ID())
+		if err != nil {
+			return MeView{}, err
+		}
+		ready := false
+		for _, pr := range ps {
+			if pr.Smoke.Tools {
+				ready = true
+			}
+		}
+		roles, _ := a.Models.Roles(ctx, ms[0].Space.ID(), nil)
+		hasOwner := false
+		for _, r := range roles {
+			if r.Role == "owner" && len(r.Targets) > 0 {
+				hasOwner = true
+			}
+		}
+		v.Setup.NeedsModel = !ready || !hasOwner
+	}
+	return v, nil
 }
