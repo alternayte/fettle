@@ -10,11 +10,13 @@ One Go binary, fettle, is the server, the CLI and the desktop backend. A second 
 - `just dev` runs the server with a scratch data folder and the Vite dev server with hot reload.
 - `bin/fettle up` starts a local server in the background and prints the URL with the local token; `bin/fettle down` stops it.
 - `just gen` regenerates drel code, the migration list, the OpenAPI document and the TypeScript client. Run it after a model or API change.
+- `just image` builds the computer image fettle-computer:dev in the local Docker. Computers run it by default.
 
 ## Test
 - `just ci` is the gate; `just check` runs the same recipes.
-- `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run.
-- `just contract` runs tests tagged contract; `just e2e` builds the binaries and runs tests/flows and the Playwright suite in tests/e2e.
+- `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run. The load and overhead scenarios run in a second step without the race detector.
+- `just contract` runs tests tagged contract; `just e2e` builds the binaries and the computer image, runs the fixture sites in Docker, and runs tests/flows and the Playwright suite in tests/e2e.
+- `just providers` runs the provider conformance suite on this host and writes its results to the reports folder.
 - Storage tests use `internal/testenv/testenv.go`; app-level tests use `internal/apptest/apptest.go` with the fake model in `internal/fakes/model`.
 - `checks/agents-md.sh` checks this file.
 
