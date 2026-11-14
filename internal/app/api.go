@@ -72,6 +72,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerVault(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
+	a.registerDiagnostics(api)
 }
 
 func op(id, method, path, summary string, tags ...string) huma.Operation {

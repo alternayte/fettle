@@ -85,7 +85,11 @@ test:
 # recipe: contract
 # Contract tests against the fakes (layer C).
 contract:
-    go test -race -count=1 -tags contract ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    files=$(grep -rl --include='*_test.go' '^//go:build contract' internal tests cmd 2>/dev/null || true)
+    names=$(grep -h '^func Test' $files | sed -E 's/^func (Test[A-Za-z0-9_]+).*/\1/' | paste -sd'|' -)
+    go test -race -count=1 -tags contract -run "^(${names})$" ./...
 
 # recipe: e2e
 # Build the binary and run the end-to-end flows and Playwright (layer E).
