@@ -186,7 +186,9 @@ func (m *machine) Sleep(context.Context) error { return m.stop() }
 func (m *machine) Resume(context.Context) error { return m.start() }
 
 // Fork is a copy fork, which the computer manager does.
-func (m *machine) Fork(context.Context) (computers.Machine, error) { return nil, computers.ErrUnsupported }
+func (m *machine) Fork(context.Context) (computers.Machine, error) {
+	return nil, computers.ErrUnsupported
+}
 
 // Destroy stops agentd and removes its home.
 func (m *machine) Destroy(context.Context) error {

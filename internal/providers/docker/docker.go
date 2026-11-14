@@ -241,7 +241,9 @@ func (m *machine) Resume(ctx context.Context) error {
 }
 
 // Fork is a copy fork, which the computer manager does (§10.4).
-func (m *machine) Fork(context.Context) (computers.Machine, error) { return nil, computers.ErrUnsupported }
+func (m *machine) Fork(context.Context) (computers.Machine, error) {
+	return nil, computers.ErrUnsupported
+}
 
 // Destroy removes the container.
 func (m *machine) Destroy(ctx context.Context) error {
