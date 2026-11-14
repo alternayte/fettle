@@ -138,4 +138,3 @@ func TestSCN_VLT_005_RekeyRewrapsDataKeys(t *testing.T) {
 		}
 	})
 }
-

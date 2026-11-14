@@ -1,0 +1,11 @@
+# The bot stores a fact that the user states with "Remember that".
+name: remember
+match:
+  user: "Remember that"
+steps:
+  - text: "I will remember that."
+    tool_calls:
+      - name: remember
+        args:
+          fact: "{{user}}"
+  - text: "Noted. I will keep that in mind."

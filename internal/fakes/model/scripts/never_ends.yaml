@@ -1,0 +1,10 @@
+# A script that never finishes: it calls a read tool on every turn.
+name: never_ends
+match:
+  user: "[[never-ends]]"
+steps:
+  - tool_calls:
+      - name: search_history
+        args:
+          query: "loop"
+    repeat: true
