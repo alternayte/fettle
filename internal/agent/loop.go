@@ -67,7 +67,7 @@ func (w *Worker) Work(ctx context.Context, job *river.Job[runs.Args]) error {
 		return nil
 	}
 	if errors.Is(err, errWaitRace) {
-		return river.JobSnooze(0)
+		return nil // a wake inserted the next job
 	}
 	a.publishRun(context.WithoutCancel(ctx), run.ID())
 	if err != nil && ctx.Err() == nil {
@@ -152,9 +152,15 @@ func (x *exec) loop(ctx context.Context) error {
 
 // wait ends the job and leaves the run waiting. A wake that came in between makes the job snooze.
 func (x *exec) wait(ctx context.Context, reason string) error {
+	return x.park(ctx, runs.StatusWaiting, reason)
+}
+
+// park moves a running run to waiting or escalated. When a wake came in between, the
+// status is no longer running, and the job snoozes to pick up the event (§7.2).
+func (x *exec) park(ctx context.Context, status, reason string) error {
 	return x.a.E.WithTx(ctx, func(ctx context.Context) error {
 		n, err := drel.MustFromContext(ctx).Exec(ctx, "UPDATE runs SET status = $1, wait_reason = $2 WHERE id = $3 AND fence = $4 AND status = $5",
-			runs.StatusWaiting, reason, x.run.ID(), x.fence, runs.StatusRunning)
+			status, reason, x.run.ID(), x.fence, runs.StatusRunning)
 		if err != nil {
 			return err
 		}
@@ -490,8 +496,7 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 		if msg != nil {
 			mid = msg.ID().String()
 		}
-		up := &runs.Update{Status: strp(status), WaitReason: strp("card")}
-		if _, err := x.append(ctx, up, runs.New{Type: runs.EvCardPosted, Data: evCard{CardID: card.ID, Kind: card.Kind, MessageID: mid}}); err != nil {
+		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvCardPosted, Data: evCard{CardID: card.ID, Kind: card.Kind, MessageID: mid}}); err != nil {
 			return err
 		}
 		if status == runs.StatusEscalated {
@@ -508,7 +513,7 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 	if msg != nil {
 		a.Chats.Publish(*x.env.ChatID, "message", a.MessageView(ctx, msg))
 	}
-	return nil
+	return x.park(ctx, status, "card")
 }
 
 // checkBudget stops a call that would pass a budget (§8.4). It reports true when the run halted.

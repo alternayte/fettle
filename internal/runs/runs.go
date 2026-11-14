@@ -11,7 +11,6 @@ import (
 	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 )
 
 // Run states (§7.1).
@@ -42,9 +41,6 @@ type Args struct {
 // Kind is the River job kind.
 func (Args) Kind() string { return "run" }
 
-// activeStates are the job states in which a second job for the same run is refused.
-var activeStates = []rivertype.JobState{rivertype.JobStateAvailable, rivertype.JobStatePending, rivertype.JobStateRunning, rivertype.JobStateRetryable, rivertype.JobStateScheduled}
-
 // Service creates, claims and wakes runs.
 type Service struct {
 	e     *drel.Engine
@@ -61,8 +57,10 @@ func NewService(e *drel.Engine) *Service {
 func (s *Service) SetClock(now func() time.Time) { s.now = now }
 
 // InsertOpts returns the job options of a run on a queue, scheduled at at (nil for now).
+// Jobs are not unique in River: the run status gates inserts (a wake inserts only when it
+// moves the run to queued), and the fence lets only the newest attempt append (§7.2).
 func InsertOpts(queue string, at *time.Time) *river.InsertOpts {
-	o := &river.InsertOpts{Queue: queue, MaxAttempts: 25, UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeStates}}
+	o := &river.InsertOpts{Queue: queue, MaxAttempts: 25}
 	if at != nil {
 		o.ScheduledAt = *at
 	}
@@ -161,10 +159,12 @@ func (s *Service) Wake(ctx context.Context, id uuid.UUID, queue string) error {
 		if Terminal(status) {
 			return nil
 		}
-		if status == StatusWaiting || status == StatusEscalated {
-			if _, err := tx.Exec(ctx, "UPDATE runs SET status = $1, wait_reason = '', wake_at = NULL, updated_at = $2 WHERE id = $3", StatusQueued, s.now(), id); err != nil {
-				return err
-			}
+		// A running attempt sees queued when it ends and stops; the new job continues.
+		if status != StatusWaiting && status != StatusEscalated && status != StatusRunning {
+			return nil // already queued: its job is pending
+		}
+		if _, err := tx.Exec(ctx, "UPDATE runs SET status = $1, wait_reason = '', wake_at = NULL, updated_at = $2 WHERE id = $3", StatusQueued, s.now(), id); err != nil {
+			return err
 		}
 		_, err := s.Queue.InsertTx(ctx, tx, Args{RunID: id}, InsertOpts(queue, nil))
 		return err

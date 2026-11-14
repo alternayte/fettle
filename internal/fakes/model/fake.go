@@ -27,11 +27,14 @@ var builtinScripts embed.FS
 // Script is one scripted conversation.
 type Script struct {
 	Name  string `yaml:"name"`
-	Match struct {
-		System string `yaml:"system"`
-		User   string `yaml:"user"`
-	} `yaml:"match"`
+	Match Match  `yaml:"match"`
 	Steps []Step `yaml:"steps"`
+}
+
+// Match chooses a script by substrings of the system prompt and the last user message.
+type Match struct {
+	System string `yaml:"system"`
+	User   string `yaml:"user"`
 }
 
 // Step is one model reply. The step index is the number of assistant turns after the last user message.

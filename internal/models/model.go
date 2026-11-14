@@ -53,9 +53,9 @@ type Target struct {
 	ProviderID    uuid.UUID `json:"provider_id"`
 	Model         string    `json:"model"`
 	Params        string    `json:"params,omitempty"`
-	PriceIn       float64   `json:"price_in"`
-	PriceOut      float64   `json:"price_out"`
-	ContextWindow int       `json:"context_window"`
+	PriceIn       float64   `json:"price_in,omitempty"`
+	PriceOut      float64   `json:"price_out,omitempty"`
+	ContextWindow int       `json:"context_window,omitempty"`
 }
 
 // ModelRole holds ordered targets for one role, at space level (BotID nil) or bot level.

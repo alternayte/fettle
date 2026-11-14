@@ -4,9 +4,9 @@ package testenv
 
 import (
 	"context"
+	"fmt"
 	"io"
 	stdlog "log"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"

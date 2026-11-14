@@ -31,10 +31,7 @@ var apiTypes = []string{models.APIOpenAIChat, models.APIOpenAIResponses, models.
 
 func TestSCN_MOD_003_AdaptersParseStreamsToolsSchemaImagesUsage(t *testing.T) {
 	f, base := fake(t)
-	f.AddScript(fakemodel.Script{Name: "tools", Match: struct {
-		System string `yaml:"system"`
-		User   string `yaml:"user"`
-	}{User: "[[tool-test]]"}, Steps: []fakemodel.Step{{Text: "Let me look.", ToolCalls: []fakemodel.ScriptCall{{Name: "lookup", Args: map[string]any{"q": "fettle", "n": 2}}}}}})
+	f.AddScript(fakemodel.Script{Name: "tools", Match: fakemodel.Match{User: "[[tool-test]]"}, Steps: []fakemodel.Step{{Text: "Let me look.", ToolCalls: []fakemodel.ScriptCall{{Name: "lookup", Args: map[string]any{"q": "fettle", "n": 2}}}}}})
 	for _, api := range apiTypes {
 		t.Run(api, func(t *testing.T) {
 			ad, _ := models.AdapterFor(api)
