@@ -442,11 +442,33 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
 	}
-	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1}
+	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}}
+	// The computer comes first: a full host makes the run wait before any card, and
+	// ClassOf may need the computer to see what the call touches.
+	if tool.NeedsComputer && a.Computer != nil {
+		if err := a.Computer(ctx, x.run.SpaceID, x.run.BotID); err != nil {
+			if errors.Is(err, ErrNoComputer) {
+				return x.waitForComputer(ctx, st)
+			}
+			_, aerr := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: tool.Class, Error: "The computer could not start: " + a.Vault.Redactor.String(ctx, x.run.SpaceID, err.Error())}})
+			return aerr
+		}
+		if !st.computer {
+			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerAcquired, Data: map[string]string{"tool": call.Name}}); err != nil {
+				return err
+			}
+		}
+	}
 	class := tool.classOf(ctx, env, call.Args)
 	side := class != envelopes.ClassRead
+	decision := st.approvals[call.ID]
+	// A decision covers the class that it saw. When the call now has another class (the
+	// page changed), it needs a new decision.
+	if decision == "allowed" && st.approvedAs[call.ID] != "" && st.approvedAs[call.ID] != class && class != envelopes.ClassRead {
+		decision = ""
+	}
 	if side || tool.MemoryWrite {
-		switch st.approvals[call.ID] {
+		switch decision {
 		case "allowed":
 		case "denied":
 			_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Error: "The user denied this action. Do not try it again in another way. Ask the user what to do instead."}})
@@ -454,22 +476,8 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		case "requested":
 			return x.wait(ctx, "card")
 		default:
-			proceed, err := x.authorize(ctx, st, tool, class, call)
+			proceed, err := x.authorize(ctx, st, tool, env, class, call)
 			if err != nil || !proceed {
-				return err
-			}
-		}
-	}
-	if tool.NeedsComputer && a.Computer != nil {
-		if err := a.Computer(ctx, x.run.SpaceID, x.run.BotID); err != nil {
-			if errors.Is(err, ErrNoComputer) {
-				return x.waitForComputer(ctx, st)
-			}
-			_, aerr := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Error: "The computer could not start: " + a.Vault.Redactor.String(ctx, x.run.SpaceID, err.Error())}})
-			return aerr
-		}
-		if !st.computer {
-			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerAcquired, Data: map[string]string{"tool": call.Name}}); err != nil {
 				return err
 			}
 		}
@@ -485,7 +493,7 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	res := evTool{CallID: call.ID, Tool: call.Name, Class: class, Result: truncate(out.Text, 64*1024), Origin: out.Origin, MS: time.Since(start).Milliseconds()}
+	res := evTool{CallID: call.ID, Tool: call.Name, Class: class, Result: truncate(out.Text, 64*1024), Origin: out.Origin, MS: time.Since(start).Milliseconds(), Images: out.Images}
 	if res.Origin == "" {
 		res.Origin = OriginTool
 	}

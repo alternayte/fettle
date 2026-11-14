@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sort"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 
 	"github.com/alternayte/fettle/agentd"
 	"github.com/alternayte/fettle/agentd/client"
+	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/objects"
 	"github.com/alternayte/fettle/internal/vault"
 	"github.com/alternayte/fettle/internal/zones"
@@ -45,6 +47,7 @@ type Manager struct {
 	Vault   *vault.Vault
 	Objects objects.Store
 	Log     *slog.Logger
+	Audit   *audit.Log
 	// Providers by kind; Default names the provider of zones without one.
 	Providers map[string]Provider
 	Default   string
@@ -131,7 +134,7 @@ func newToken() string {
 
 // current returns the computer row of a zone, if any.
 func (m *Manager) current(ctx context.Context, zoneID uuid.UUID) (*Computer, error) {
-	return drel.NewRepository(m.E, ComputerMeta).Where(Computers.ZoneID.Eq(zoneID)).OrderBy(Computers.CreatedAt.Desc()).FirstOrNil(ctx)
+	return drel.NewRepository(m.E, ComputerMeta).Where(Computers.ZoneID.Eq(zoneID)).OrderBy(Computers.CreatedAt.Desc(), Computers.ID.Desc()).FirstOrNil(ctx)
 }
 
 // Current returns the computer of a zone, or nil.
@@ -152,6 +155,9 @@ func (m *Manager) providerFor(ctx context.Context, z *zones.Zone) (Provider, *Pr
 		if !ok {
 			return nil, nil, fmt.Errorf("the %s provider is not available on this server", row.Kind)
 		}
+		if !row.Enabled {
+			return nil, row, fmt.Errorf("the %s provider is off; turn it on in Settings, Computers", row.Kind)
+		}
 		return p, row, nil
 	}
 	p, ok := m.Providers[m.Default]
@@ -159,6 +165,9 @@ func (m *Manager) providerFor(ctx context.Context, z *zones.Zone) (Provider, *Pr
 		return nil, nil, errors.New("no computer provider is set up; set one up in Settings, Computers")
 	}
 	row, err := m.ensureProviderRow(ctx, m.Default)
+	if err == nil && !row.Enabled {
+		return nil, row, fmt.Errorf("the %s provider is off; turn it on in Settings, Computers", row.Kind)
+	}
 	return p, row, err
 }
 
@@ -168,7 +177,8 @@ func (m *Manager) ensureProviderRow(ctx context.Context, kind string) (*Provider
 		return row, err
 	}
 	p := m.Providers[kind]
-	row = &ProviderRow{Kind: kind, Name: kind, Config: map[string]string{}, Caps: p.Caps(), Enabled: true}
+	// host runs bots without isolation, so it starts off; a hard-ask card turns it on.
+	row = &ProviderRow{Kind: kind, Name: kind, Config: map[string]string{}, Caps: p.Caps(), Enabled: kind != "host"}
 	err = m.E.WithTx(ctx, func(ctx context.Context) error {
 		drel.Repo(drel.MustFromContext(ctx), ProviderRowMeta).Add(row)
 		return nil
@@ -738,4 +748,106 @@ func (m *Manager) Fork(ctx context.Context, zoneID uuid.UUID, botIDs []uuid.UUID
 		}
 	}
 	return &Fork{m: m, machine: mach, Client: lv.client, ZoneID: zoneID}, nil
+}
+
+// ProviderOf returns the provider row that a zone uses.
+func (m *Manager) ProviderOf(ctx context.Context, z *zones.Zone) (*ProviderRow, error) {
+	_, row, err := m.providerFor(ctx, z)
+	return row, err
+}
+
+// ProviderRows returns the instance providers, with a row for each provider of this server.
+func (m *Manager) ProviderRows(ctx context.Context) ([]*ProviderRow, error) {
+	kinds := make([]string, 0, len(m.Providers))
+	for k := range m.Providers {
+		kinds = append(kinds, k)
+	}
+	sort.Strings(kinds)
+	for _, k := range kinds {
+		if _, err := m.ensureProviderRow(ctx, k); err != nil {
+			return nil, err
+		}
+	}
+	return drel.NewRepository(m.E, ProviderRowMeta).Where(ProviderRows.SpaceID.IsNull()).OrderBy(ProviderRows.Kind.Asc()).All(ctx)
+}
+
+// SetEnabled turns an instance provider on or off. Turning on host is a hard ask; the caller
+// runs it after the card (§11.2).
+func (m *Manager) SetEnabled(ctx context.Context, actor audit.Actor, spaceID *uuid.UUID, kind string, on bool) error {
+	if _, ok := m.Providers[kind]; !ok {
+		return fmt.Errorf("the %s provider is not available on this server", kind)
+	}
+	if _, err := m.ensureProviderRow(ctx, kind); err != nil {
+		return err
+	}
+	return m.E.WithTx(ctx, func(ctx context.Context) error {
+		if _, err := drel.MustFromContext(ctx).Exec(ctx, "UPDATE providers SET enabled = $1, updated_at = $2 WHERE kind = $3 AND space_id IS NULL", on, m.now(), kind); err != nil {
+			return err
+		}
+		return m.Audit.Record(ctx, actor, spaceID, "provider.enable", "provider:"+kind, map[string]string{"enabled": fmt.Sprint(on)})
+	})
+}
+
+// CheckProvider tells whether a zone may use a provider: it must be on, and it must enforce
+// allowlists when the zone has one (REQ-CMP-012). A nil providerID means the default.
+func (m *Manager) CheckProvider(ctx context.Context, providerID *uuid.UUID, allowlist bool) error {
+	var row *ProviderRow
+	var err error
+	if providerID == nil {
+		if _, ok := m.Providers[m.Default]; !ok {
+			return nil // no default provider here; a lease explains it when a run starts
+		}
+		row, err = m.ensureProviderRow(ctx, m.Default)
+	} else {
+		row, err = drel.NewRepository(m.E, ProviderRowMeta).Where(ProviderRows.ID.Eq(*providerID)).FirstOrNil(ctx)
+	}
+	if err != nil {
+		return err
+	}
+	if row == nil {
+		return errors.New("this provider does not exist")
+	}
+	if !row.Enabled {
+		return zones.ErrProviderOff
+	}
+	if allowlist && !row.Caps.NetworkAllowlist {
+		return zones.ErrNoAllowlist
+	}
+	return nil
+}
+
+// Replace stops the machine of a zone after a checkpoint, so the next lease creates a new
+// machine with the zone's current provider and network rules.
+func (m *Manager) Replace(ctx context.Context, zoneID uuid.UUID) error {
+	c, err := m.current(ctx, zoneID)
+	if err != nil || c == nil || c.State == StateNone {
+		return err
+	}
+	m.mu.Lock()
+	lv := m.live[c.ID()]
+	m.mu.Unlock()
+	if lv != nil {
+		if c.State == StateRunning {
+			if err := m.Checkpoint(ctx, c.ID()); err != nil {
+				return err
+			}
+		}
+		m.mu.Lock()
+		delete(m.live, c.ID())
+		m.mu.Unlock()
+		_ = lv.machine.Destroy(ctx)
+	} else if c.ProviderRef != "" {
+		if p, ok := m.Providers[m.kindOf(ctx, c.ProviderID)]; ok {
+			if mach, err := p.Attach(ctx, c.ProviderRef); err == nil {
+				_ = mach.Destroy(ctx)
+			}
+		}
+	}
+	return m.setState(ctx, c.ID(), StateNone, "replaced")
+}
+
+func (m *Manager) kindOf(ctx context.Context, providerID uuid.UUID) string {
+	var kind string
+	_ = m.E.QueryRow(ctx, "SELECT kind FROM providers WHERE id = $1", providerID).Scan(&kind)
+	return kind
 }

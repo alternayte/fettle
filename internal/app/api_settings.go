@@ -72,6 +72,9 @@ func (a *App) registerSettings(api huma.API) {
 		if err != nil {
 			return nil, err
 		}
+		if in.Key == "approval.mode" {
+			return nil, huma.Error422UnprocessableEntity("The approval mode changes only through its card. Use PUT /spaces/{space}/approval-mode.")
+		}
 		v, err := a.Settings.Set(ctx, actorOf(p), &in.Space, in.Key, in.Body.Value)
 		if err != nil {
 			return nil, huma.Error422UnprocessableEntity(err.Error())

@@ -138,6 +138,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"approval":   {"allow", "always", "deny"},
 		"question":   {"answer"},
 		"takeover":   {"done"},
+		"change":     {"allow", "deny"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -171,6 +172,11 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		if err := a.Audit.Record(ctx, user, &spaceID, "card.decide", "card:"+cardID, map[string]string{"kind": card.Kind, "action": action, "value": value}); err != nil {
 			return err
 		}
+		if card.Kind == "change" && action == "allow" {
+			if err := a.applyChange(ctx, user, spaceID, card); err != nil {
+				return err
+			}
+		}
 		if runID == uuid.Nil {
 			return nil
 		}
@@ -190,7 +196,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 			if action == "deny" {
 				decision = "denied"
 			}
-			evs = append(evs, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: card.Data["call_id"], CardID: cardID, Tool: card.Tool, Decision: decision}})
+			evs = append(evs, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: card.Data["call_id"], CardID: cardID, Tool: card.Tool, Decision: decision, Class: card.Data["class"]}})
 			tx := drel.MustFromContext(ctx)
 			if _, err := tx.Exec(ctx, "UPDATE approvals SET status = $1, decided_by = $2 WHERE card_id = $3", decision, user.ID, cardID); err != nil {
 				return err

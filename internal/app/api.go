@@ -71,6 +71,8 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerRuns(api)
 	a.registerModels(api)
 	a.registerVault(api)
+	a.registerZones(api)
+	a.registerPolicy(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)

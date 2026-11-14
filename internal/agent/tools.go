@@ -13,6 +13,7 @@ import (
 
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/envelopes"
+	"github.com/alternayte/fettle/internal/models"
 )
 
 // Tool is one tool that a bot can call.
@@ -47,6 +48,8 @@ func (t Tool) classOf(ctx context.Context, env *ToolEnv, args json.RawMessage) s
 type ToolOutput struct {
 	Text   string
 	Origin string // tool, web, email, connector, memory
+	// Images go to the owner model after the tool result, when the model has vision.
+	Images []models.Part
 }
 
 // ToolEnv is the context of one tool call.
@@ -59,6 +62,9 @@ type ToolEnv struct {
 	Origin   string // origin of the run's envelope
 	ReadData bool   // the run already read web, email or connector content
 	Seq      int64  // the journal sequence of this call, for output file names
+	// Checked holds what ClassOf saw (for example the element of a browser action), so that
+	// Run acts only on the same thing and the card shows it.
+	Checked map[string]string
 }
 
 // Registry holds the built-in tools.

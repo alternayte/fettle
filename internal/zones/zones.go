@@ -25,14 +25,17 @@ var (
 	ErrNoAllowlist  = errors.New("this provider cannot enforce a network allowlist")
 	ErrBadZone      = errors.New("a zone needs a name, a size and a network policy")
 	ErrGrantMissing = errors.New("this zone has no grant for that item")
+	ErrProviderOff  = errors.New("this provider is off")
+	ErrNameTaken    = errors.New("a zone with this name exists")
 )
 
 // Service manages zones.
 type Service struct {
 	e     *drel.Engine
 	audit *audit.Log
-	// ProviderCaps tells whether a provider supports allowlists (for the zone form rule, REQ-CMP-012).
-	ProviderAllowlist func(ctx context.Context, providerID uuid.UUID) (bool, error)
+	// CheckProvider refuses a provider that is off, or that cannot enforce the zone's
+	// allowlist (REQ-CMP-012). A nil provider ID means the default provider.
+	CheckProvider func(ctx context.Context, providerID *uuid.UUID, allowlist bool) error
 }
 
 // New returns the zones service.
@@ -113,21 +116,28 @@ func (s *Service) validate(ctx context.Context, in Input) error {
 	if strings.TrimSpace(in.Name) == "" || !slices.Contains([]string{"small", "browser", "desktop"}, in.Size) || !slices.Contains([]string{"open", "allowlist"}, in.Network) {
 		return ErrBadZone
 	}
-	if in.Network == "allowlist" && in.ProviderID != nil && s.ProviderAllowlist != nil {
-		ok, err := s.ProviderAllowlist(ctx, *in.ProviderID)
-		if err != nil {
+	if s.CheckProvider != nil {
+		if err := s.CheckProvider(ctx, in.ProviderID, in.Network == "allowlist"); err != nil {
 			return err
 		}
-		if !ok {
-			return ErrNoAllowlist
-		}
+	}
+	return nil
+}
+
+// Check validates a new zone without storing it.
+func (s *Service) Check(ctx context.Context, spaceID uuid.UUID, in Input) error {
+	if err := s.validate(ctx, in); err != nil {
+		return err
+	}
+	if _, err := s.ByName(ctx, spaceID, strings.TrimSpace(in.Name)); err == nil {
+		return ErrNameTaken
 	}
 	return nil
 }
 
 // Create adds a zone. Bots ask for it through a hard-ask card; the API caller is an owner.
 func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UUID, in Input) (*Zone, error) {
-	if err := s.validate(ctx, in); err != nil {
+	if err := s.Check(ctx, spaceID, in); err != nil {
 		return nil, err
 	}
 	if in.IdleMinutes <= 0 {

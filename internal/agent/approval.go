@@ -14,7 +14,6 @@ import (
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/policy"
 	"github.com/alternayte/fettle/internal/runs"
-	"github.com/alternayte/fettle/internal/usage"
 )
 
 // argsPreview flattens the top-level arguments for a card, redacted and shortened.
@@ -52,7 +51,7 @@ func (x *exec) argsPreview(ctx context.Context, args json.RawMessage) map[string
 
 // authorize applies the policy to one call. It returns true when the call may run now;
 // otherwise it records a block or posts an approval card and parks the run.
-func (x *exec) authorize(ctx context.Context, st *state, tool Tool, class string, call models.ToolCall) (bool, error) {
+func (x *exec) authorize(ctx context.Context, st *state, tool Tool, env *ToolEnv, class string, call models.ToolCall) (bool, error) {
 	a := x.a
 	mode := a.Settings.String(ctx, &x.run.SpaceID, "approval.mode")
 	rules, err := a.Policy.Rules(ctx, x.run.SpaceID)
@@ -62,6 +61,9 @@ func (x *exec) authorize(ctx context.Context, st *state, tool Tool, class string
 	req := policy.Request{Tool: call.Name, Class: class, HardAsk: tool.HardAsk, ReducedIntent: x.env.Origin != "user", ReadData: st.readData, MemoryWrite: tool.MemoryWrite}
 	if tool.Target != nil {
 		req.Site, req.Recipient = tool.Target(call.Args)
+	}
+	if req.Site == "" {
+		req.Site = env.Checked["site"]
 	}
 	d := policy.Decide(mode, rules, req)
 	switch d.Effect {
@@ -74,19 +76,23 @@ func (x *exec) authorize(ctx context.Context, st *state, tool Tool, class string
 	if d.NeedsIntentCheck {
 		ok, reason := x.intentMatches(ctx, st, call)
 		if ok {
-			_, err := x.append(ctx, nil, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: call.ID, Tool: call.Name, Decision: "allowed", Reason: reason, Auto: true}})
+			_, err := x.append(ctx, nil, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: call.ID, Tool: call.Name, Decision: "allowed", Reason: reason, Auto: true, Class: class}})
 			return err == nil, err
 		}
 		d.Reason = "This action does not clearly match what you asked: " + reason
 	}
-	return false, x.postApproval(ctx, call, class, tool.HardAsk || !d.AlwaysAllowed, d.Reason)
+	return false, x.postApproval(ctx, call, env, class, tool.HardAsk || !d.AlwaysAllowed, d.Reason)
 }
 
 // postApproval posts an approval card, records it and makes the run wait.
-func (x *exec) postApproval(ctx context.Context, call models.ToolCall, class string, hard bool, reason string) error {
+func (x *exec) postApproval(ctx context.Context, call models.ToolCall, env *ToolEnv, class string, hard bool, reason string) error {
 	a := x.a
 	cardID := uuid.NewString()
-	card := chats.Card{ID: cardID, Kind: "approval", Status: "pending", Title: approvalTitle(call.Name, class), Tool: call.Name, Preview: x.argsPreview(ctx, call.Args), Detail: reason, HardAsk: hard, RunID: x.run.ID().String(), Data: map[string]string{"call_id": call.ID, "class": class}}
+	preview := x.argsPreview(ctx, call.Args)
+	for k, v := range env.Checked {
+		preview[k] = x.a.Vault.Redactor.String(ctx, x.run.SpaceID, v)
+	}
+	card := chats.Card{ID: cardID, Kind: "approval", Status: "pending", Title: approvalTitle(call.Name, class), Tool: call.Name, Preview: preview, Detail: reason, HardAsk: hard, RunID: x.run.ID().String(), Data: map[string]string{"call_id": call.ID, "class": class}}
 	var msg *chats.Message
 	err := a.E.WithTx(ctx, func(ctx context.Context) error {
 		if x.env.ChatID != nil {
@@ -155,18 +161,10 @@ func (x *exec) intentMatches(ctx context.Context, st *state, call models.ToolCal
 		Output:    &models.Schema{Name: "intent_check", Schema: schema},
 		MaxTokens: 300,
 	}
-	resp, idx, err := models.CallWithFallback(ctx, a.HTTP, targets, req, nil, nil)
+	resp, err := a.callTargets(ctx, x.run.SpaceID, x.bot.ID(), x.run.ID(), st.step, models.RoleVerifier, targets, req)
 	if err != nil {
 		return false, "the check failed"
 	}
-	cost, reported := models.Cost(resp.Usage, targets[idx].Target)
-	botID, runID := x.bot.ID(), x.run.ID()
-	_ = a.E.WithTx(ctx, func(ctx context.Context) error {
-		if _, err := drel.MustFromContext(ctx).Exec(ctx, "UPDATE runs SET tokens_in = tokens_in + $1, tokens_out = tokens_out + $2, cost_usd = cost_usd + $3 WHERE id = $4", resp.Usage.In, resp.Usage.Out, cost, runID); err != nil {
-			return err
-		}
-		return a.Usage.Record(ctx, &usage.UsageEvent{SpaceID: x.run.SpaceID, Kind: "model", BotID: &botID, RunID: &runID, Step: st.step, Role: models.RoleVerifier, ModelName: resp.Model, TokensIn: resp.Usage.In, TokensOut: resp.Usage.Out, Quantity: resp.Usage.In + resp.Usage.Out, Unit: "tokens", CostUSD: cost, Reported: reported})
-	})
 	var out struct {
 		Matches bool   `json:"matches"`
 		Reason  string `json:"reason"`

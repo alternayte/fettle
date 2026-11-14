@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
+	"github.com/alternayte/fettle/internal/fakes/web"
 )
 
 func init() {
@@ -24,6 +25,7 @@ func runFakeServe(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("fake serve", flag.ContinueOnError)
 	addr := fs.String("model-addr", "127.0.0.1:0", "listen address of the fake model")
 	scripts := fs.String("scripts", "", "folder with extra YAML scripts")
+	webAddr := fs.String("web-addr", "", "listen address of the fixture web server (docs.test, shop.test, evil.test, slow.test)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -41,6 +43,16 @@ func runFakeServe(ctx context.Context, args []string) error {
 	fmt.Printf("FAKE_MODEL_URL=http://%s/v1\n", ln.Addr())
 	srv := &http.Server{Handler: f}
 	go func() { _ = srv.Serve(ln) }()
+	if *webAddr != "" {
+		wl, err := net.Listen("tcp", *webAddr)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("FAKE_WEB_ADDR=%s\n", wl.Addr())
+		ws := &http.Server{Handler: web.New()}
+		go func() { _ = ws.Serve(wl) }()
+		defer func() { _ = ws.Close() }()
+	}
 	sig, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	<-sig.Done()

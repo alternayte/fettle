@@ -13,3 +13,4 @@ tests/e2e/playwright-report/
 *.test
 coverage.out
 .DS_Store
+/fettle

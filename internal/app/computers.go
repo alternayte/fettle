@@ -88,7 +88,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		def = "docker"
 	}
 	a.Computers = computers.NewManager(&computers.Manager{
-		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log,
+		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log, Audit: a.Audit,
 		Providers: provs, Default: def, Image: image, ExtraHosts: extraHosts(),
 		MaxRunning: func(ctx context.Context) int {
 			if n := a.Settings.Int(ctx, nil, "computers.max_running"); n > 0 {
@@ -102,6 +102,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		Redact:  func(name, v string) { a.Vault.Redactor.RegisterGlobal(name, v) },
 		OnSleep: a.wakeComputerWaiters,
 	})
+	a.Zones.CheckProvider = a.Computers.CheckProvider
 	a.Agent.Computer = func(ctx context.Context, spaceID, botID uuid.UUID) error {
 		b, err := a.Bots.Get(ctx, spaceID, botID)
 		if err != nil {
@@ -120,7 +121,9 @@ func (a *App) setupComputers(ctx context.Context) {
 		l.Release()
 		return nil
 	}
-	(&tools.Computer{Bots: a.Bots, Computers: a.Computers}).Register(a.Agent.Tools)
+	c := &tools.Computer{Bots: a.Bots, Computers: a.Computers}
+	c.Register(a.Agent.Tools)
+	(&tools.Browser{Computer: c, Agent: a.Agent, Models: a.Models}).RegisterBrowser(a.Agent.Tools)
 }
 
 // wakeComputerWaiters wakes the oldest run that waits for a computer.

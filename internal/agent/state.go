@@ -36,6 +36,7 @@ type (
 		Error  string          `json:"error,omitempty"`
 		Idem   string          `json:"idempotency_key,omitempty"`
 		MS     int64           `json:"duration_ms,omitempty"`
+		Images []models.Part   `json:"images,omitempty"`
 	}
 	evSteer struct {
 		Text      string `json:"text"`
@@ -78,6 +79,7 @@ type (
 		Decision string `json:"decision,omitempty"` // allowed or denied
 		Reason   string `json:"reason,omitempty"`
 		Auto     bool   `json:"auto,omitempty"` // decided by the verifier in Auto mode
+		Class    string `json:"class,omitempty"`
 	}
 )
 
@@ -104,6 +106,7 @@ type state struct {
 	lastMsgID    string
 	budgetHalts  int
 	approvals    map[string]string // call ID -> requested, allowed, denied
+	approvedAs   map[string]string // call ID -> the class that the decision saw
 	intent       []string          // user items of this run: the goal and steer texts
 	sleepUntil   *time.Time        // the last sleep_until time
 	computer     bool              // a computer_acquired event exists
@@ -111,7 +114,7 @@ type state struct {
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs, approvals: map[string]string{}}
+	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -151,7 +154,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			if ev.Type == runs.EvToolUncertain {
 				text = "Outcome unknown. Check the current state before you continue."
 			}
-			st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "tool", Text: text, ToolCallID: d.CallID, ToolName: d.Tool, Origin: d.Origin})
+			st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "tool", Text: text, ToolCallID: d.CallID, ToolName: d.Tool, Origin: d.Origin, Images: d.Images})
 			if d.Origin == OriginWeb || d.Origin == OriginEmail || d.Origin == OriginConnector {
 				st.readData = true
 			}
@@ -191,6 +194,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evApproval
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.approvals[d.CallID] = d.Decision
+			st.approvedAs[d.CallID] = d.Class
 		case runs.EvSleepUntil:
 			var d evSleep
 			_ = json.Unmarshal([]byte(ev.Data), &d)

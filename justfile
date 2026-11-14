@@ -91,10 +91,16 @@ contract:
     names=$(grep -h '^func Test' $files | sed -E 's/^func (Test[A-Za-z0-9_]+).*/\1/' | paste -sd'|' -)
     go test -race -count=1 -tags contract -run "^(${names})$" ./...
 
+# recipe: image
+# Build the computer image fettle-computer:dev for this host's Docker.
+image:
+    docker build -q -t fettle-computer:dev --build-arg VERSION={{version}} -f image/Dockerfile . >/dev/null
+
 # recipe: e2e
-# Build the binary and run the end-to-end flows and Playwright (layer E).
-e2e: build
+# Build the binary and the computer image and run the end-to-end flows and Playwright (layer E).
+e2e: build image
     go build -tags fakes -o bin/fettle-fakes ./cmd/fettle
+    GOOS=linux GOARCH=$(docker version -f '{{{{.Server.Arch}}') CGO_ENABLED=0 go build -tags fakes -o bin/linux/fettle-fakes ./cmd/fettle
     go test -count=1 -tags e2e ./tests/flows/...
     cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 

@@ -109,6 +109,23 @@ export interface paths {
     patch: operations["update-space"];
     trace?: never;
   };
+  "/api/v1/spaces/{space}/approval-mode": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Ask to change the approval mode. It changes after a person allows the card. */
+    put: operations["set-approval-mode"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/audit": {
     parameters: {
       query?: never;
@@ -283,6 +300,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/computer-providers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the computer providers of this server */
+    get: operations["list-computer-providers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/computer-providers/host/enable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ask to turn on the host provider. It is on after a person allows the card. */
+    post: operations["enable-host-provider"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/memory": {
     parameters: {
       query?: never;
@@ -383,6 +434,57 @@ export interface paths {
     put: operations["set-model-role"];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/policy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The approval mode and the rules */
+    get: operations["list-policy"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/policy/rules": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add an allow, ask or block rule */
+    post: operations["add-policy-rule"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/policy/rules/{rule}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a rule */
+    delete: operations["delete-policy-rule"];
     options?: never;
     head?: never;
     patch?: never;
@@ -560,10 +662,76 @@ export interface paths {
     patch: operations["update-vault-item"];
     trace?: never;
   };
+  "/api/v1/spaces/{space}/zones": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List zones with their computers */
+    get: operations["list-zones"];
+    put?: never;
+    /** Ask to create a zone. The zone exists after a person allows the card. */
+    post: operations["create-zone"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/zones/{zone}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Change a zone. A change of the provider or the network replaces its computer. */
+    patch: operations["update-zone"];
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/zones/{zone}/grants": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ask to give a zone a vault item or a connector account. The grant exists after a person allows the card. */
+    post: operations["add-zone-grant"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    "Add-policy-ruleRequest": {
+      connector?: string;
+      /** @enum {string} */
+      effect: "allow" | "ask" | "block";
+      recipient_pattern?: string;
+      site_pattern?: string;
+      /** @description A tool name, or * for every tool. */
+      tool?: string;
+    };
+    "Add-zone-grantRequest": {
+      /** @enum {string} */
+      kind: "vault_item" | "connector_account";
+      target_id: string;
+    };
     "Answer-cardRequest": {
       /** @enum {string} */
       action: "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done";
@@ -618,6 +786,17 @@ export interface components {
     BotsOutBody: {
       bots: components["schemas"]["BotView"][] | null;
     };
+    Caps: {
+      /** Format: int64 */
+      max_mem_mib: number;
+      /** Format: int64 */
+      max_vcpu: number;
+      native_fork: boolean;
+      network_allowlist: boolean;
+      persistent: boolean;
+      screen: boolean;
+      snapshot: boolean;
+    };
     Card: {
       answer?: string;
       data?: {
@@ -635,6 +814,11 @@ export interface components {
       status: string;
       title: string;
       tool?: string;
+    };
+    CardReply: {
+      card_id: string;
+      chat_id: string;
+      message_id: string;
     };
     ChatView: {
       bot_ids: string[] | null;
@@ -654,6 +838,16 @@ export interface components {
       /** Format: int64 */
       ms: number;
       pass: boolean;
+    };
+    ComputerProviderView: {
+      /** @description The provider works on this server. */
+      available: boolean;
+      caps: components["schemas"]["Caps"];
+      default: boolean;
+      enabled: boolean;
+      id: string;
+      kind: string;
+      name: string;
     };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
@@ -820,6 +1014,9 @@ export interface components {
       name: string;
       needs_key: boolean;
     };
+    ProvOutBody: {
+      providers: components["schemas"]["ComputerProviderView"][] | null;
+    };
     ProviderBody: {
       /** @enum {string} */
       api_type?: "openai-chat" | "openai-responses" | "anthropic-messages";
@@ -877,6 +1074,21 @@ export interface components {
       /** Format: int64 */
       tokens_out: number;
     };
+    RuleView: {
+      connector: string;
+      /** Format: date-time */
+      created_at: string;
+      effect: string;
+      from_card: boolean;
+      id: string;
+      recipient_pattern: string;
+      site_pattern: string;
+      tool: string;
+    };
+    RulesOutBody: {
+      mode: string;
+      rules: components["schemas"]["RuleView"][] | null;
+    };
     RunLine: {
       bot_id: string;
       /** Format: double */
@@ -911,6 +1123,10 @@ export interface components {
       tokens_in: number;
       /** Format: int64 */
       tokens_out: number;
+    };
+    "Set-approval-modeRequest": {
+      /** @enum {string} */
+      mode: "ask" | "auto" | "never";
     };
     "Set-model-roleRequest": {
       bot_id?: string;
@@ -1025,6 +1241,35 @@ export interface components {
       /** Format: int64 */
       rev: number;
     };
+    ZoneBody: {
+      allow_hosts?: string[] | null;
+      /** Format: int64 */
+      idle_minutes?: number;
+      name: string;
+      /** @enum {string} */
+      network: "open" | "allowlist";
+      /** @description Empty uses the default provider. */
+      provider_id?: string;
+      /** @enum {string} */
+      size: "small" | "browser" | "desktop";
+    };
+    ZoneView: {
+      allow_hosts: string[] | null;
+      bots: string[] | null;
+      computer_error?: string;
+      computer_state: string;
+      id: string;
+      /** Format: int64 */
+      idle_minutes: number;
+      name: string;
+      network: string;
+      provider_id?: string;
+      provider_kind: string;
+      size: string;
+    };
+    ZonesOutBody: {
+      zones: components["schemas"]["ZoneView"][] | null;
+    };
   };
   responses: never;
   parameters: never;
@@ -1032,16 +1277,21 @@ export interface components {
   headers: never;
   pathItems: never;
 }
+export type SchemaAddPolicyRuleRequest = components["schemas"]["Add-policy-ruleRequest"];
+export type SchemaAddZoneGrantRequest = components["schemas"]["Add-zone-grantRequest"];
 export type SchemaAnswerCardRequest = components["schemas"]["Answer-cardRequest"];
 export type SchemaAttachment = components["schemas"]["Attachment"];
 export type SchemaAuditView = components["schemas"]["AuditView"];
 export type SchemaBotBody = components["schemas"]["BotBody"];
 export type SchemaBotView = components["schemas"]["BotView"];
 export type SchemaBotsOutBody = components["schemas"]["BotsOutBody"];
+export type SchemaCaps = components["schemas"]["Caps"];
 export type SchemaCard = components["schemas"]["Card"];
+export type SchemaCardReply = components["schemas"]["CardReply"];
 export type SchemaChatView = components["schemas"]["ChatView"];
 export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
+export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
@@ -1066,14 +1316,18 @@ export type SchemaModelInfo = components["schemas"]["ModelInfo"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
 export type SchemaPostMessageResponse = components["schemas"]["Post-messageResponse"];
 export type SchemaPreset = components["schemas"]["Preset"];
+export type SchemaProvOutBody = components["schemas"]["ProvOutBody"];
 export type SchemaProviderBody = components["schemas"]["ProviderBody"];
 export type SchemaProviderView = components["schemas"]["ProviderView"];
 export type SchemaPutBotMemoryRequest = components["schemas"]["Put-bot-memoryRequest"];
 export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-memoryRequest"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
 export type SchemaRow = components["schemas"]["Row"];
+export type SchemaRuleView = components["schemas"]["RuleView"];
+export type SchemaRulesOutBody = components["schemas"]["RulesOutBody"];
 export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
+export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
 export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequest"];
@@ -1092,6 +1346,9 @@ export type SchemaUsageViewResponse = components["schemas"]["Usage-viewResponse"
 export type SchemaVaultBody = components["schemas"]["VaultBody"];
 export type SchemaVaultItemView = components["schemas"]["VaultItemView"];
 export type SchemaVersionView = components["schemas"]["VersionView"];
+export type SchemaZoneBody = components["schemas"]["ZoneBody"];
+export type SchemaZoneView = components["schemas"]["ZoneView"];
+export type SchemaZonesOutBody = components["schemas"]["ZonesOutBody"];
 export type $defs = Record<string, never>;
 export interface operations {
   diagnostics: {
@@ -1365,6 +1622,42 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SpaceView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "set-approval-mode": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Set-approval-modeRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CardReply"];
         };
       };
       /** @description Error */
@@ -1927,6 +2220,70 @@ export interface operations {
       };
     };
   };
+  "list-computer-providers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProvOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "enable-host-provider": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CardReply"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-shared-memory": {
     parameters: {
       query?: never;
@@ -2218,6 +2575,105 @@ export interface operations {
         "application/json": components["schemas"]["Set-model-roleRequest"];
       };
     };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-policy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RulesOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-policy-rule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Add-policy-ruleRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RuleView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "delete-policy-rule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        rule: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description No Content */
       204: {
@@ -2692,6 +3148,148 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["VaultItemView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-zones": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZonesOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-zone": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneBody"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CardReply"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "update-zone": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        zone: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ZoneBody"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-zone-grant": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        zone: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Add-zone-grantRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CardReply"];
         };
       };
       /** @description Error */

@@ -15,7 +15,7 @@ import (
 type lookupFunc func(ctx context.Context, host string) ([]netip.Addr, error)
 
 // buildRuleset returns the nftables ruleset for an allowlist policy. The
-// ruleset drops outbound traffic except loopback, established traffic, DNS,
+// ruleset refuses outbound traffic except loopback, established traffic, DNS,
 // and TCP 80 and 443 to the addresses of the allowed hosts at boot. A
 // wildcard host such as *.example.com allows the addresses of example.com,
 // because static rules cannot follow names that are not known at boot. A
@@ -66,6 +66,9 @@ func buildRuleset(ctx context.Context, policy NetworkPolicy, lookup lookupFunc, 
 	if len(v6) > 0 {
 		fmt.Fprintf(&b, "\t\tip6 daddr { %s } tcp dport { 80, 443 } accept\n", joinAddrs(v6))
 	}
+	// Refuse the rest at once, so a blocked site fails fast instead of timing out.
+	b.WriteString("\t\tmeta l4proto tcp reject with tcp reset\n")
+	b.WriteString("\t\treject with icmpx type admin-prohibited\n")
 	b.WriteString("\t}\n")
 	b.WriteString("}\n")
 	return b.String(), nil

@@ -1,6 +1,60 @@
 {
   "components": {
     "schemas": {
+      "Add-policy-ruleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "connector": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "effect": {
+            "enum": [
+              "allow",
+              "ask",
+              "block"
+            ],
+            "type": "string"
+          },
+          "recipient_pattern": {
+            "maxLength": 300,
+            "type": "string"
+          },
+          "site_pattern": {
+            "maxLength": 300,
+            "type": "string"
+          },
+          "tool": {
+            "description": "A tool name, or * for every tool.",
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "effect"
+        ],
+        "type": "object"
+      },
+      "Add-zone-grantRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "vault_item",
+              "connector_account"
+            ],
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "target_id"
+        ],
+        "type": "object"
+      },
       "Answer-cardRequest": {
         "additionalProperties": false,
         "properties": {
@@ -211,6 +265,44 @@
         ],
         "type": "object"
       },
+      "Caps": {
+        "additionalProperties": false,
+        "properties": {
+          "max_mem_mib": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_vcpu": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "native_fork": {
+            "type": "boolean"
+          },
+          "network_allowlist": {
+            "type": "boolean"
+          },
+          "persistent": {
+            "type": "boolean"
+          },
+          "screen": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "snapshot",
+          "native_fork",
+          "network_allowlist",
+          "screen",
+          "persistent",
+          "max_vcpu",
+          "max_mem_mib"
+        ],
+        "type": "object"
+      },
       "Card": {
         "additionalProperties": false,
         "properties": {
@@ -268,6 +360,26 @@
           "kind",
           "status",
           "title"
+        ],
+        "type": "object"
+      },
+      "CardReply": {
+        "additionalProperties": false,
+        "properties": {
+          "card_id": {
+            "type": "string"
+          },
+          "chat_id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "card_id",
+          "chat_id",
+          "message_id"
         ],
         "type": "object"
       },
@@ -346,6 +458,43 @@
           "key",
           "pass",
           "ms"
+        ],
+        "type": "object"
+      },
+      "ComputerProviderView": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "description": "The provider works on this server.",
+            "type": "boolean"
+          },
+          "caps": {
+            "$ref": "#/components/schemas/Caps"
+          },
+          "default": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "enabled",
+          "available",
+          "default",
+          "caps"
         ],
         "type": "object"
       },
@@ -954,6 +1103,24 @@
         ],
         "type": "object"
       },
+      "ProvOutBody": {
+        "additionalProperties": false,
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ComputerProviderView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "providers"
+        ],
+        "type": "object"
+      },
       "ProviderBody": {
         "additionalProperties": false,
         "properties": {
@@ -1164,6 +1331,69 @@
         ],
         "type": "object"
       },
+      "RuleView": {
+        "additionalProperties": false,
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "effect": {
+            "type": "string"
+          },
+          "from_card": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "recipient_pattern": {
+            "type": "string"
+          },
+          "site_pattern": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tool",
+          "connector",
+          "site_pattern",
+          "recipient_pattern",
+          "effect",
+          "from_card",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "RulesOutBody": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "mode",
+          "rules"
+        ],
+        "type": "object"
+      },
       "RunLine": {
         "additionalProperties": false,
         "properties": {
@@ -1296,6 +1526,23 @@
           "finished_at",
           "children",
           "events"
+        ],
+        "type": "object"
+      },
+      "Set-approval-modeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "ask",
+              "auto",
+              "never"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
         ],
         "type": "object"
       },
@@ -1728,6 +1975,138 @@
           "current"
         ],
         "type": "object"
+      },
+      "ZoneBody": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "idle_minutes": {
+            "format": "int64",
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "network": {
+            "enum": [
+              "open",
+              "allowlist"
+            ],
+            "type": "string"
+          },
+          "provider_id": {
+            "description": "Empty uses the default provider.",
+            "type": "string"
+          },
+          "size": {
+            "enum": [
+              "small",
+              "browser",
+              "desktop"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "network",
+          "size"
+        ],
+        "type": "object"
+      },
+      "ZoneView": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_hosts": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "bots": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "computer_error": {
+            "type": "string"
+          },
+          "computer_state": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "idle_minutes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "provider_kind": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider_kind",
+          "network",
+          "allow_hosts",
+          "size",
+          "idle_minutes",
+          "computer_state",
+          "bots"
+        ],
+        "type": "object"
+      },
+      "ZonesOutBody": {
+        "additionalProperties": false,
+        "properties": {
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "zones"
+        ],
+        "type": "object"
       }
     }
   },
@@ -2079,6 +2458,59 @@
         "summary": "Change the name or time zone of a space",
         "tags": [
           "spaces"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/approval-mode": {
+      "put": {
+        "operationId": "set-approval-mode",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-approval-modeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardReply"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ask to change the approval mode. It changes after a person allows the card.",
+        "tags": [
+          "policy"
         ]
       }
     },
@@ -3041,6 +3473,92 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/computer-providers": {
+      "get": {
+        "operationId": "list-computer-providers",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the computer providers of this server",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/computer-providers/host/enable": {
+      "post": {
+        "operationId": "enable-host-provider",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardReply"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ask to turn on the host provider. It is on after a person allows the card.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/memory": {
       "get": {
         "operationId": "get-shared-memory",
@@ -3502,6 +4020,146 @@
         "summary": "Set the ordered targets of a role. An empty list removes a bot override.",
         "tags": [
           "models"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/policy": {
+      "get": {
+        "operationId": "list-policy",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulesOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The approval mode and the rules",
+        "tags": [
+          "policy"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/policy/rules": {
+      "post": {
+        "operationId": "add-policy-rule",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-policy-ruleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add an allow, ask or block rule",
+        "tags": [
+          "policy"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/policy/rules/{rule}": {
+      "delete": {
+        "operationId": "delete-policy-rule",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rule",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a rule",
+        "tags": [
+          "policy"
         ]
       }
     },
@@ -4314,6 +4972,222 @@
         "summary": "Change a vault item. An empty value keeps the stored value.",
         "tags": [
           "vault"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones": {
+      "get": {
+        "operationId": "list-zones",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZonesOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List zones with their computers",
+        "tags": [
+          "computers"
+        ]
+      },
+      "post": {
+        "operationId": "create-zone",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardReply"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ask to create a zone. The zone exists after a person allows the card.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}": {
+      "patch": {
+        "operationId": "update-zone",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change a zone. A change of the provider or the network replaces its computer.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}/grants": {
+      "post": {
+        "operationId": "add-zone-grant",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-zone-grantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardReply"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ask to give a zone a vault item or a connector account. The grant exists after a person allows the card.",
+        "tags": [
+          "computers"
         ]
       }
     }

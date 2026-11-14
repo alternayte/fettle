@@ -212,9 +212,13 @@ func Manager(t *testing.T, kind string, p computers.Provider, image string) {
 		t.Fatal(err)
 	}
 	newManager := func() *computers.Manager {
-		return computers.NewManager(&computers.Manager{E: db.Engine, Zones: zs, Vault: v, Objects: store, Providers: map[string]computers.Provider{kind: p}, Default: kind, Image: image})
+		return computers.NewManager(&computers.Manager{E: db.Engine, Zones: zs, Vault: v, Objects: store, Audit: al, Providers: map[string]computers.Provider{kind: p}, Default: kind, Image: image})
 	}
 	mgr := newManager()
+	// The host provider starts off (§10.4); this suite tests it, so it turns it on.
+	if err := mgr.SetEnabled(ctx, audit.Actor{Kind: "system", ID: "conformance"}, nil, kind, true); err != nil {
+		t.Fatal(err)
+	}
 	bot := uuid.New()
 	l, err := mgr.Acquire(ctx, personal.ID())
 	if err != nil {

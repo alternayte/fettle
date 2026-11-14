@@ -47,6 +47,7 @@ type Agent struct {
 	Log      *slog.Logger
 	Metrics  Metrics
 	now      func() time.Time
+	changes  map[string]Change
 }
 
 // Metrics receives counters from the loop.

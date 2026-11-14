@@ -106,14 +106,28 @@ type machine struct {
 	port int
 	spec computers.Spec
 
-	mu  sync.Mutex
-	cmd *exec.Cmd
+	mu   sync.Mutex
+	cmd  *exec.Cmd
+	done chan struct{} // closed when the agentd process of cmd exits
+}
+
+// running reports whether agentd runs. The caller holds m.mu.
+func (m *machine) running() bool {
+	if m.cmd == nil {
+		return false
+	}
+	select {
+	case <-m.done:
+		return false
+	default:
+		return true
+	}
 }
 
 func (m *machine) start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.cmd != nil && m.cmd.ProcessState == nil {
+	if m.running() {
 		return nil
 	}
 	cmd := exec.Command(m.p.AgentdBin)
@@ -143,10 +157,12 @@ func (m *machine) start() error {
 		_ = logf.Close()
 		return err
 	}
-	m.cmd = cmd
+	done := make(chan struct{})
+	m.cmd, m.done = cmd, done
 	go func() {
 		_ = cmd.Wait()
 		_ = logf.Close()
+		close(done)
 	}()
 	return nil
 }
@@ -156,7 +172,7 @@ func (m *machine) Ref() string { return m.ref }
 func (m *machine) AgentdURL(context.Context) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.cmd == nil || m.cmd.ProcessState != nil {
+	if !m.running() {
 		return "", errors.New("agentd is not running")
 	}
 	return "https://127.0.0.1:" + strconv.Itoa(m.port), nil
@@ -164,17 +180,16 @@ func (m *machine) AgentdURL(context.Context) (string, error) {
 
 func (m *machine) stop() error {
 	m.mu.Lock()
-	cmd := m.cmd
+	cmd, done := m.cmd, m.done
 	m.mu.Unlock()
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
 	terminateGroup(cmd)
-	for i := 0; i < 50; i++ {
-		if cmd.ProcessState != nil {
-			return nil
-		}
-		time.Sleep(100 * time.Millisecond)
+	select {
+	case <-done:
+		return nil
+	case <-time.After(5 * time.Second):
 	}
 	return killGroup(cmd)
 }
