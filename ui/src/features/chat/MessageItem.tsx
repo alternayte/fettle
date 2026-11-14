@@ -39,7 +39,10 @@ export const MessageItem = memo(function MessageItem({
     return (
       <div className="grid grid-cols-[3.25rem_1fr] gap-x-3 py-1 text-xs text-ink-faint sm:grid-cols-[4rem_1fr]">
         <span className="figures pt-px text-right">{formatClock(message.created_at)}</span>
-        <span>{message.body}</span>
+        <div className="min-w-0">
+          {message.body && <span>{message.body}</span>}
+          {message.card && <CardView card={message.card} onAnswer={(a) => onAnswer(message.card!.id, a)} />}
+        </div>
       </div>
     );
   }

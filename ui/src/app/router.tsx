@@ -95,7 +95,9 @@ export async function createAppRouter() {
       settings.addChildren([
         settingsIndex,
         sub("models", () => import("@/features/settings/ModelsPage"), "ModelsPage"),
+        sub("computers", () => import("@/features/settings/ComputersPage"), "ComputersPage"),
         sub("vault", () => import("@/features/settings/VaultPage"), "VaultPage"),
+        sub("approvals", () => import("@/features/settings/ApprovalsPage"), "ApprovalsPage"),
         sub("space", () => import("@/features/settings/SpacePage"), "SpacePage"),
         sub("usage", () => import("@/features/settings/UsagePage"), "UsagePage"),
         sub("audit", () => import("@/features/settings/AuditPage"), "AuditPage"),

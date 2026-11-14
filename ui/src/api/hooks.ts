@@ -8,6 +8,7 @@ import type {
   SchemaSpaceView,
   SchemaTarget,
   SchemaVaultBody,
+  SchemaZoneBody,
 } from "./schema";
 
 export type UsageDimension = "run" | "bot" | "step" | "role" | "model" | "day" | "month";
@@ -52,6 +53,9 @@ export const keys = {
   usage: (s: string, by: string, days: number) => ["s", s, "usage", by, days] as const,
   audit: (s: string, action: string) => ["s", s, "audit", action] as const,
   telemetry: ["telemetry"] as const,
+  zones: (s: string) => ["s", s, "zones"] as const,
+  computerProviders: (s: string) => ["s", s, "computer-providers"] as const,
+  policy: (s: string) => ["s", s, "policy"] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -476,5 +480,111 @@ export function useSetTelemetry() {
   return useMutation({
     mutationFn: (enabled: boolean) => must(api.PUT("/api/v1/admin/telemetry", { body: { enabled } })),
     onSuccess: (v) => qc.setQueryData(keys.telemetry, v),
+  });
+}
+
+// ---------------------------------------------------------------- computers and policy
+
+export function useZones() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.zones(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/zones", { params: { path: { space } } }))).zones ?? [],
+    refetchInterval: 5000,
+  });
+}
+
+export function useComputerProviders() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.computerProviders(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/computer-providers", { params: { path: { space } } }))).providers ??
+      [],
+  });
+}
+
+/** useCreateZone asks for a zone. The zone exists after a person allows the card. */
+export function useCreateZone() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: SchemaZoneBody) =>
+      must(api.POST("/api/v1/spaces/{space}/zones", { params: { path: { space } }, body })),
+  });
+}
+
+export function useUpdateZone() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: SchemaZoneBody }) =>
+      must(api.PATCH("/api/v1/spaces/{space}/zones/{zone}", { params: { path: { space, zone: id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useEnableHost asks to turn on the host provider. It is on after a person allows the card. */
+export function useEnableHost() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: () =>
+      must(api.POST("/api/v1/spaces/{space}/computer-providers/host/enable", { params: { path: { space } } })),
+  });
+}
+
+export function usePolicy() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.policy(space),
+    queryFn: () => must(api.GET("/api/v1/spaces/{space}/policy", { params: { path: { space } } })),
+  });
+}
+
+/** useSetMode asks to change the approval mode. It changes after a person allows the card. */
+export function useSetMode() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (mode: "ask" | "auto" | "never") =>
+      must(api.PUT("/api/v1/spaces/{space}/approval-mode", { params: { path: { space } }, body: { mode } })),
+  });
+}
+
+export function useAddRule() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: {
+      tool?: string;
+      site_pattern?: string;
+      recipient_pattern?: string;
+      effect: "allow" | "ask" | "block";
+    }) => must(api.POST("/api/v1/spaces/{space}/policy/rules", { params: { path: { space } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.policy(space) }),
+  });
+}
+
+export function useDeleteRule() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (id: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/policy/rules/{rule}", { params: { path: { space, rule: id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.policy(space) }),
+  });
+}
+
+/** useAnswerChange answers a hard-ask change card from a settings screen. */
+export function useAnswerChange() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ card, action }: { card: string; action: "allow" | "deny" }) => answerCard(space, card, action),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.zones(space) });
+      void qc.invalidateQueries({ queryKey: keys.computerProviders(space) });
+      void qc.invalidateQueries({ queryKey: keys.policy(space) });
+      void qc.invalidateQueries({ queryKey: keys.settings(space) });
+    },
   });
 }

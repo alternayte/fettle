@@ -88,7 +88,8 @@
       "budget": "Budget",
       "uncertain": "Check needed",
       "takeover": "Takeover",
-      "turn_limit": "Turn limit"
+      "turn_limit": "Turn limit",
+      "change": "Change"
     },
     "approval": {
       "tool": "Tool",
@@ -119,7 +120,11 @@
       "expired": "Expired",
       "answered": "Answer: {answer}"
     },
-    "answerFailed": "Fettle did not save your answer"
+    "answerFailed": "Fettle did not save your answer",
+    "change": {
+      "allow": "Allow",
+      "deny": "Deny"
+    }
   },
   "run": {
     "open": "Open the timeline of {label}",
@@ -501,7 +506,9 @@
       "space": "Space",
       "usage": "Cost",
       "audit": "Audit log",
-      "admin": "Instance"
+      "admin": "Instance",
+      "computers": "Computers",
+      "approvals": "Approvals"
     },
     "ownerOnly": {
       "title": "Only the owner can change settings",
@@ -587,5 +594,140 @@
     "saveFailed": "Fettle did not change telemetry",
     "loadFailed": "Fettle cannot load telemetry",
     "adminOnly": "Only an instance admin can see this page."
+  },
+  "change": {
+    "waits": "Waits for you",
+    "alsoInChat": "The same card is in the chat of your primary bot.",
+    "allowed": "The change is done.",
+    "denied": "The change did not happen."
+  },
+  "computers": {
+    "intro": "Each zone is one computer with its own logins. Bots in a zone share its computer.",
+    "zones": "Zones",
+    "providers": "Providers",
+    "newZone": "New zone",
+    "ask": "Ask to create",
+    "name": "Name",
+    "provider": "Provider",
+    "defaultProvider": "Default provider",
+    "size": "Size",
+    "idle": "Sleep after (minutes)",
+    "idleHint": "The computer sleeps after this time without work.",
+    "sizes": {
+      "small": "Small",
+      "browser": "Browser",
+      "desktop": "Desktop"
+    },
+    "sizeHint": {
+      "small": "1 CPU, 1 GiB. Shell, files, Python and Node.",
+      "browser": "2 CPU, 2 GiB. Adds a browser.",
+      "desktop": "2 CPU, 3 GiB. Adds screens you can take over."
+    },
+    "network": "Network",
+    "networks": {
+      "open": "All sites",
+      "allowlist": "Only listed sites"
+    },
+    "networkHint": {
+      "open": "The computer can reach any site.",
+      "allowlist": "The computer can reach only the sites in the list."
+    },
+    "hosts": "Allowed sites",
+    "hostsHint": "One host per line, for example docs.example.com.",
+    "allowCount": "{n} allowed sites",
+    "needName": "Give the zone a name.",
+    "needHosts": "Add at least one allowed site.",
+    "badIdle": "Give a number of minutes from 1 to 1440.",
+    "noAllowlist": "This provider cannot limit sites. Choose another provider, or allow all sites.",
+    "noBots": "No bots",
+    "saved": "The zone is saved.",
+    "saveFailed": "Fettle did not save the change",
+    "loadFailed": "Fettle could not load the zones",
+    "createTitle": "Create a zone",
+    "createDetail": "A zone is a separate computer with its own logins.",
+    "hostTitle": "Turn on the host provider",
+    "hostDetail": "Bots then run commands on this computer with your user rights. Nothing isolates them.",
+    "turnOn": "Turn on",
+    "on": "On",
+    "off": "Off",
+    "default": "Default",
+    "available": "Works on this server",
+    "unavailable": "Not available on this server",
+    "kind": {
+      "host": "Host (no isolation)",
+      "docker": "Docker",
+      "applecontainer": "Apple container",
+      "kiln": "Kiln",
+      "e2b": "E2B",
+      "": "Unknown"
+    },
+    "caps": {
+      "allowlist": "Site limits",
+      "snapshot": "Snapshots",
+      "fork": "Fast copies",
+      "screen": "Screens",
+      "none": "No extra features"
+    },
+    "state": {
+      "none": "Not started",
+      "starting": "Starting",
+      "running": "Running",
+      "sleeping": "Sleeping",
+      "stopping": "Stopping",
+      "error": "Error",
+      "quarantined": "Stopped for safety"
+    }
+  },
+  "approvals": {
+    "mode": "Approval mode",
+    "current": "Current",
+    "newMode": "New mode",
+    "modes": {
+      "ask": "Ask",
+      "auto": "Auto",
+      "never": "Never"
+    },
+    "modeHint": {
+      "ask": "Bots ask before each change outside the computer and each message they send.",
+      "auto": "Bots act without asking when the action clearly matches what you asked. Else they ask.",
+      "never": "Bots act without asking. Hard asks still need a card."
+    },
+    "changeTitle": "Change the approval mode",
+    "hardAsks": "Some actions always need a card: new bots, zones and grants, the host provider and payments.",
+    "rules": "Rules",
+    "newRule": "New rule",
+    "addRule": "Add rule",
+    "ruleAdded": "The rule is added.",
+    "rulesIntro": "A block rule wins over all other rules. An ask rule wins over an allow rule.",
+    "noRules": "No rules yet. Always allow on a card adds one here.",
+    "effect": "Effect",
+    "effects": {
+      "allow": "Allow",
+      "ask": "Ask",
+      "block": "Block"
+    },
+    "matches": "Matches",
+    "targets": {
+      "tool": "A tool",
+      "site": "A site",
+      "recipient": "A recipient"
+    },
+    "valueLabel": {
+      "tool": "Tool name",
+      "site": "Site pattern",
+      "recipient": "Recipient pattern"
+    },
+    "valueHint": {
+      "tool": "For example browser_act. Use * for every tool.",
+      "site": "For example *.example.com.",
+      "recipient": "For example *@acme.test."
+    },
+    "needValue": "Give a tool name or a pattern.",
+    "forTool": "Tool {tool}",
+    "everyTool": "every tool",
+    "forSite": "Site {site}",
+    "forRecipient": "Recipient {who}",
+    "fromCard": "From a card",
+    "deleteRule": "Delete the rule: {what}"
   }
 }

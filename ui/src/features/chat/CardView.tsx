@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
-import { Check, CircleHelp, Coins, Hand, ShieldQuestion, TriangleAlert, X } from "lucide-react";
+import { Check, CircleHelp, Coins, Hand, KeyRound, ShieldQuestion, TriangleAlert, X } from "lucide-react";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { Card } from "./types";
@@ -13,6 +13,7 @@ const icons = {
   uncertain: TriangleAlert,
   takeover: Hand,
   turn_limit: TriangleAlert,
+  change: KeyRound,
 } as const;
 
 function ActionButton({
@@ -112,6 +113,16 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
             )}
             <ActionButton kind="quiet" onClick={() => onAnswer({ action: "deny" })}>
               {t("card.approval.deny")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "change" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "allow" })}>
+              {t("card.change.allow")}
+            </ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "deny" })}>
+              {t("card.change.deny")}
             </ActionButton>
           </>
         )}

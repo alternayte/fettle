@@ -4,7 +4,7 @@ import { useSession } from "@/api/hooks";
 import { Notice, Page } from "@/app/Page";
 import { t } from "@/lib/copy";
 
-const tabs = ["models", "vault", "space", "usage", "audit"] as const;
+const tabs = ["models", "computers", "vault", "approvals", "space", "usage", "audit"] as const;
 
 const tabCls =
   "inline-flex h-8 shrink-0 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-sm text-ink-soft hover:text-ink aria-[current=page]:border-ink aria-[current=page]:font-[var(--weight-medium)] aria-[current=page]:text-ink";
