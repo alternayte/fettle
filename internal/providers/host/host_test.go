@@ -1,6 +1,7 @@
 package host_test
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -11,6 +12,9 @@ import (
 )
 
 func agentd(t *testing.T) string {
+	if b := os.Getenv("FETTLE_AGENTD_BIN"); b != "" {
+		return b
+	}
 	bin := filepath.Join(t.TempDir(), "fettle-agentd")
 	_, file, _, _ := runtime.Caller(0)
 	cmd := exec.Command("go", "build", "-o", bin, "./cmd/fettle-agentd")

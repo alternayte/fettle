@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
@@ -32,14 +33,16 @@ import (
 // hostComputers starts an app whose zones use the host provider, turned on.
 func hostComputers(t *testing.T, dialect string, opts ...apptest.Option) *apptest.Env {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "fettle-agentd")
-	_, file, _, _ := goruntime.Caller(0)
-	cmd := exec.Command("go", "build", "-o", bin, "./cmd/fettle-agentd")
-	cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build agentd: %v\n%s", err, out)
+	if os.Getenv("FETTLE_AGENTD_BIN") == "" {
+		bin := filepath.Join(t.TempDir(), "fettle-agentd")
+		_, file, _, _ := goruntime.Caller(0)
+		cmd := exec.Command("go", "build", "-o", bin, "./cmd/fettle-agentd")
+		cmd.Dir = filepath.Join(filepath.Dir(file), "..", "..")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("build agentd: %v\n%s", err, out)
+		}
+		t.Setenv("FETTLE_AGENTD_BIN", bin)
 	}
-	t.Setenv("FETTLE_AGENTD_BIN", bin)
 	t.Setenv("FETTLE_DEFAULT_PROVIDER", "host")
 	e := apptest.Start(t, dialect, opts...)
 	if err := e.App.Computers.SetEnabled(context.Background(), audit.Actor{Kind: "system", ID: "test"}, nil, "host", true); err != nil {

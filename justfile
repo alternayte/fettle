@@ -79,8 +79,9 @@ lint:
 # recipe: test
 # Unit and integration tests on SQLite and PostgreSQL (layers U and I).
 test:
-    go test -race -count=1 ./...
-    go test -count=1 -run 'TestSCN_RUN_009|TestSCN_RUN_010' ./internal/agent/
+    go build -o bin/fettle-agentd ./cmd/fettle-agentd
+    FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -race -count=1 ./...
+    FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -count=1 -run 'TestSCN_RUN_009|TestSCN_RUN_010' ./internal/agent/
     cd ui && bun test scripts
 
 # recipe: contract
