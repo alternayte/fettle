@@ -2,10 +2,15 @@ package agent
 
 import (
 	"context"
+
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/alternayte/drel"
+
+	"github.com/alternayte/fettle/internal/policy"
 
 	"github.com/google/uuid"
 
@@ -176,6 +181,25 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		evs := []runs.New{{Type: runs.EvCardAnswered, Data: evCard{CardID: cardID, Kind: card.Kind, Action: action, Value: value, By: user.ID}}}
 		if action == "stop" {
 			evs = append(evs, runs.New{Type: runs.EvCancel, Data: evCancel{By: user.ID}})
+		}
+		if card.Kind == "approval" {
+			if action == "always" && card.HardAsk {
+				return fmt.Errorf("%w: this action always needs approval", ErrBadAction)
+			}
+			decision := "allowed"
+			if action == "deny" {
+				decision = "denied"
+			}
+			evs = append(evs, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: card.Data["call_id"], CardID: cardID, Tool: card.Tool, Decision: decision}})
+			tx := drel.MustFromContext(ctx)
+			if _, err := tx.Exec(ctx, "UPDATE approvals SET status = $1, decided_by = $2 WHERE card_id = $3", decision, user.ID, cardID); err != nil {
+				return err
+			}
+			if action == "always" {
+				if err := a.Policy.AddRule(ctx, user, &policy.Rule{SpaceID: spaceID, Tool: card.Tool, Effect: "allow", CreatedFromCard: cardID}); err != nil {
+					return err
+				}
+			}
 		}
 		if card.Kind == "budget" && action == "add_budget" {
 			usd, err := strconv.ParseFloat(value, 64)

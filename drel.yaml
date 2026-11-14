@@ -35,3 +35,6 @@ modules:
   - name: usage
     packages: [./internal/usage]
     migrations: ./internal/usage/migrations/sqlite
+  - name: policy
+    packages: [./internal/policy]
+    migrations: ./internal/policy/migrations/sqlite

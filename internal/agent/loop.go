@@ -436,10 +436,26 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		return err
 	}
 	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData}
-	side := tool.Class != envelopes.ClassRead
+	class := tool.classOf(ctx, env, call.Args)
+	side := class != envelopes.ClassRead
+	if side || tool.MemoryWrite {
+		switch st.approvals[call.ID] {
+		case "allowed":
+		case "denied":
+			_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Error: "The user denied this action. Do not try it again in another way. Ask the user what to do instead."}})
+			return err
+		case "requested":
+			return x.wait(ctx, "card")
+		default:
+			proceed, err := x.authorize(ctx, st, tool, class, call)
+			if err != nil || !proceed {
+				return err
+			}
+		}
+	}
 	idem := fmt.Sprintf("%s:%d", x.run.ID(), st.lastSeq+1)
 	if side {
-		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvToolIntent, Data: evTool{CallID: call.ID, Tool: call.Name, Class: tool.Class, Args: call.Args, Idem: idem}}); err != nil {
+		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvToolIntent, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Args: call.Args, Idem: idem}}); err != nil {
 			return err
 		}
 	}
@@ -448,7 +464,7 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	res := evTool{CallID: call.ID, Tool: call.Name, Class: tool.Class, Result: truncate(out.Text, 64*1024), Origin: out.Origin, MS: time.Since(start).Milliseconds()}
+	res := evTool{CallID: call.ID, Tool: call.Name, Class: class, Result: truncate(out.Text, 64*1024), Origin: out.Origin, MS: time.Since(start).Milliseconds()}
 	if res.Origin == "" {
 		res.Origin = OriginTool
 	}

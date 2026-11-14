@@ -21,8 +21,23 @@ type Tool struct {
 	Description string
 	Class       string
 	Schema      json.RawMessage
-	// SubagentOK marks tools that sub-agents may use (read tools only, D-10).
-	Run func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error)
+	// HardAsk marks actions that need a card in every mode (§11.2).
+	HardAsk bool
+	// MemoryWrite marks remember and forget (§11.3).
+	MemoryWrite bool
+	// Target returns the site and the recipient that a call touches, for rules.
+	Target func(args json.RawMessage) (site, recipient string)
+	// ClassOf returns the class of one call when it depends on the arguments (browser_act).
+	ClassOf func(ctx context.Context, env *ToolEnv, args json.RawMessage) string
+	Run     func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error)
+}
+
+// classOf returns the class of one call.
+func (t Tool) classOf(ctx context.Context, env *ToolEnv, args json.RawMessage) string {
+	if t.ClassOf != nil {
+		return t.ClassOf(ctx, env, args)
+	}
+	return t.Class
 }
 
 // ToolOutput is the result of a tool call.

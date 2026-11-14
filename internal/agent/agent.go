@@ -12,6 +12,7 @@ import (
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/models"
+	"github.com/alternayte/fettle/internal/policy"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
@@ -34,6 +35,7 @@ type Agent struct {
 	Spaces    *spaces.Service
 	Vault     *vault.Vault
 	Tools     *Registry
+	Policy    *policy.Service
 	HTTP      *http.Client
 	Log       *slog.Logger
 	Metrics   Metrics

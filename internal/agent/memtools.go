@@ -15,6 +15,7 @@ func (a *Agent) registerMemoryTools() {
 		Name:        "remember",
 		Description: "Save one fact in your MEMORY.md. Keep one fact per line. To change a fact, give the old fact in replaces.",
 		Class:       envelopes.ClassWriteLocal,
+		MemoryWrite: true,
 		Schema:      schema(`{"type":"object","properties":{"fact":{"type":"string","description":"The fact, in one line."},"replaces":{"type":"string","description":"Text of the old fact that this fact replaces."}},"required":["fact"],"additionalProperties":false}`),
 		Run: func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error) {
 			in, err := decode[struct{ Fact, Replaces string }](args)
@@ -33,6 +34,7 @@ func (a *Agent) registerMemoryTools() {
 		Name:        "forget",
 		Description: "Remove one fact from your MEMORY.md. Give enough text to match one fact.",
 		Class:       envelopes.ClassWriteLocal,
+		MemoryWrite: true,
 		Schema:      schema(`{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"],"additionalProperties":false}`),
 		Run: func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error) {
 			in, err := decode[struct{ Fact string }](args)

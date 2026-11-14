@@ -65,6 +65,14 @@ type (
 	evCancel struct {
 		By string `json:"by"`
 	}
+	evApproval struct {
+		CallID   string `json:"call_id"`
+		CardID   string `json:"card_id,omitempty"`
+		Tool     string `json:"tool"`
+		Decision string `json:"decision,omitempty"` // allowed or denied
+		Reason   string `json:"reason,omitempty"`
+		Auto     bool   `json:"auto,omitempty"` // decided by the verifier in Auto mode
+	}
 )
 
 // state is the run rebuilt from its journal.
@@ -89,10 +97,12 @@ type state struct {
 	finalText   string
 	lastMsgID   string
 	budgetHalts int
+	approvals   map[string]string // call ID -> requested, allowed, denied
+	intent      []string          // user items of this run: the goal and steer texts
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs}
+	st := &state{events: evs, approvals: map[string]string{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -103,6 +113,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evRunStarted
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.started, st.step = true, d.Step
+			st.intent = append(st.intent, d.Goal)
 		case runs.EvModelTurn:
 			var d evModelTurn
 			_ = json.Unmarshal([]byte(ev.Data), &d)
@@ -143,6 +154,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evSteer
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.steers = append(st.steers, d.Text)
+			st.intent = append(st.intent, d.Text)
 		case runs.EvCardPosted:
 			var d evCard
 			_ = json.Unmarshal([]byte(ev.Data), &d)
@@ -162,6 +174,14 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			summary = &d
 			st.summarySeq = d.Through
+		case runs.EvApprovalRequested:
+			var d evApproval
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.approvals[d.CallID] = "requested"
+		case runs.EvApprovalDecided:
+			var d evApproval
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.approvals[d.CallID] = d.Decision
 		case runs.EvBudgetReached:
 			st.budgetHalts++
 		case runs.EvCancel:

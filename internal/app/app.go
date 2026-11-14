@@ -27,6 +27,7 @@ import (
 	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/objects"
+	"github.com/alternayte/fettle/internal/policy"
 	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/spaces"
@@ -55,6 +56,7 @@ type App struct {
 	Journal  *runs.Journal
 	Models   *models.Service
 	Usage    *usage.Service
+	Policy   *policy.Service
 	Agent    *agent.Agent
 	Queue    jobs.Queue
 
@@ -120,7 +122,8 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Journal.Redact = a.Vault.Redactor.String
 	a.Models = models.NewService(e, a.Vault, a.Audit, a.HTTP)
 	a.Usage = usage.New(e)
-	a.Agent = agent.New(agent.Agent{E: e, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
+	a.Policy = policy.New(e, a.Audit)
+	a.Agent = agent.New(agent.Agent{E: e, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
 	a.Telemetry = NewTelemetry(a)
 
 	workers := river.NewWorkers()

@@ -57,6 +57,8 @@ func init() {
 	Register(Def{Key: "space.time_zone", Scope: "space", Default: "UTC", Doc: "Time zone of the space."})
 	Register(Def{Key: "space.name", Scope: "space", Default: "", Doc: "Name of the owner."})
 	Register(Def{Key: "telemetry.enabled", Scope: "instance", Default: false, Doc: "Send anonymous counts."})
+	Register(Def{Key: "approval.mode", Scope: "space", Default: "ask", Doc: "Ask, auto or never: when bots ask before outside changes."})
+	Register(Def{Key: "approval.unattended_expiry_minutes", Scope: "space", Default: 30, Doc: "Cards from routines and webhooks expire after this time."})
 }
 
 // ErrUnknown means the key is not registered.

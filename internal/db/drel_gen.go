@@ -12,6 +12,7 @@ import (
 	chats "github.com/alternayte/fettle/internal/chats"
 	envelopes "github.com/alternayte/fettle/internal/envelopes"
 	models "github.com/alternayte/fettle/internal/models"
+	policy "github.com/alternayte/fettle/internal/policy"
 	runs "github.com/alternayte/fettle/internal/runs"
 	settings "github.com/alternayte/fettle/internal/settings"
 	spaces "github.com/alternayte/fettle/internal/spaces"
@@ -33,6 +34,8 @@ type DB struct {
 	Envelopes           *envelopes.EnvelopeRepository
 	ModelProviders      *models.ModelProviderRepository
 	ModelRoles          *models.ModelRoleRepository
+	Approvals           *policy.ApprovalRepository
+	Rules               *policy.RuleRepository
 	Runs                *runs.RunRepository
 	RunEvents           *runs.RunEventRepository
 	Settings            *settings.SettingRepository
@@ -64,6 +67,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		Envelopes:           &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
 		ModelRoles:          &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
+		Approvals:           &policy.ApprovalRepository{Repository: drel.NewRepository(engine, policy.ApprovalMeta)},
+		Rules:               &policy.RuleRepository{Repository: drel.NewRepository(engine, policy.RuleMeta)},
 		Runs:                &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
 		RunEvents:           &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
 		Settings:            &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
@@ -97,6 +102,10 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 			Models: ModelsRepos{
 				ModelProviders: &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
 				ModelRoles:     &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
+			},
+			Policy: PolicyRepos{
+				Approvals: &policy.ApprovalRepository{Repository: drel.NewRepository(engine, policy.ApprovalMeta)},
+				Rules:     &policy.RuleRepository{Repository: drel.NewRepository(engine, policy.RuleMeta)},
 			},
 			Runs: RunsRepos{
 				Runs:      &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
@@ -136,6 +145,8 @@ type TxRepos struct {
 	Envelopes           *envelopes.TxEnvelopeRepository
 	ModelProviders      *models.TxModelProviderRepository
 	ModelRoles          *models.TxModelRoleRepository
+	Approvals           *policy.TxApprovalRepository
+	Rules               *policy.TxRuleRepository
 	Runs                *runs.TxRunRepository
 	RunEvents           *runs.TxRunEventRepository
 	Settings            *settings.TxSettingRepository
@@ -165,6 +176,8 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		Envelopes:           &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
 		ModelProviders:      &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
 		ModelRoles:          &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
+		Approvals:           &policy.TxApprovalRepository{TxRepository: drel.NewTxRepository(tx, policy.ApprovalMeta)},
+		Rules:               &policy.TxRuleRepository{TxRepository: drel.NewTxRepository(tx, policy.RuleMeta)},
 		Runs:                &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
 		RunEvents:           &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
 		Settings:            &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
@@ -198,6 +211,10 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 			Models: ModelsTxRepos{
 				ModelProviders: &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
 				ModelRoles:     &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
+			},
+			Policy: PolicyTxRepos{
+				Approvals: &policy.TxApprovalRepository{TxRepository: drel.NewTxRepository(tx, policy.ApprovalMeta)},
+				Rules:     &policy.TxRuleRepository{TxRepository: drel.NewTxRepository(tx, policy.RuleMeta)},
 			},
 			Runs: RunsTxRepos{
 				Runs:      &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
@@ -294,6 +311,18 @@ type ModelsTxRepos struct {
 	ModelRoles     *models.TxModelRoleRepository
 }
 
+// PolicyRepos holds the untracked repositories of the "policy" module.
+type PolicyRepos struct {
+	Approvals *policy.ApprovalRepository
+	Rules     *policy.RuleRepository
+}
+
+// PolicyTxRepos holds the tracked repositories of the "policy" module.
+type PolicyTxRepos struct {
+	Approvals *policy.TxApprovalRepository
+	Rules     *policy.TxRuleRepository
+}
+
 // RunsRepos holds the untracked repositories of the "runs" module.
 type RunsRepos struct {
 	Runs      *runs.RunRepository
@@ -361,6 +390,7 @@ type Modules struct {
 	Chats     ChatsRepos
 	Envelopes EnvelopesRepos
 	Models    ModelsRepos
+	Policy    PolicyRepos
 	Runs      RunsRepos
 	Settings  SettingsRepos
 	Spaces    SpacesRepos
@@ -377,6 +407,7 @@ type TxModules struct {
 	Chats     ChatsTxRepos
 	Envelopes EnvelopesTxRepos
 	Models    ModelsTxRepos
+	Policy    PolicyTxRepos
 	Runs      RunsTxRepos
 	Settings  SettingsTxRepos
 	Spaces    SpacesTxRepos

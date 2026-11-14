@@ -94,8 +94,9 @@ contract:
 # recipe: e2e
 # Build the binary and run the end-to-end flows and Playwright (layer E).
 e2e: build
+    go build -tags fakes -o bin/fettle-fakes ./cmd/fettle
     go test -count=1 -tags e2e ./tests/flows/...
-    cd tests/e2e && FETTLE_BIN=../../bin/fettle bunx playwright test
+    cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 
 # recipe: ci
 # The gate (grows by slice, D-105).

@@ -1,0 +1,181 @@
+{
+  "tables": [
+    {
+      "name": "approvals",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "run_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "name": "call_id",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "card_id",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "tool",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "class",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "args_preview",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "notNull": true,
+          "check": "status IN ('pending','allowed','denied','expired')"
+        },
+        {
+          "name": "hard_ask",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
+          "name": "decided_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "rule_id",
+          "type": "uuid",
+          "notNull": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_approvals_run",
+          "columns": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "uq_approvals_card_id",
+          "columns": [
+            "card_id"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "policy_rules",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "tool",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "connector",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "site_pattern",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "recipient_pattern",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "effect",
+          "type": "text",
+          "notNull": true,
+          "check": "effect IN ('allow','ask','block')"
+        },
+        {
+          "name": "created_from_card",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_policy_rules_space",
+          "columns": [
+            "space_id"
+          ]
+        }
+      ]
+    }
+  ]
+}
