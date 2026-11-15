@@ -42,6 +42,8 @@ func (a *App) Handler() http.Handler {
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}
+	// Sign-up by invite link writes the session cookie, so it is outside the API group.
+	r.Post(APIPrefix+"/invites/{token}/signup", a.inviteSignup)
 	r.Group(func(g chi.Router) {
 		if a.Cfg.Mode == ModeLocal {
 			g.Use(auth.LocalAuth(a.LocalToken, func(ctx context.Context) (*auth.User, error) { return a.LocalOwner(ctx) }, publicAPIPath))
@@ -55,7 +57,8 @@ func (a *App) Handler() http.Handler {
 }
 
 func publicAPIPath(p string) bool {
-	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local" || p == APIPrefix+"/instance"
+	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local" || p == APIPrefix+"/instance" ||
+		(strings.HasPrefix(p, APIPrefix+"/invites/") && strings.Count(p, "/") == 4)
 }
 
 func securityHeaders(next http.Handler) http.Handler {

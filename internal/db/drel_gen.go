@@ -63,6 +63,7 @@ type DB struct {
 	BotSkills           *skills.BotSkillRepository
 	Skills              *skills.SkillRepository
 	SkillVersions       *skills.SkillVersionRepository
+	Invites             *spaces.InviteRepository
 	Spaces              *spaces.SpaceRepository
 	SpaceMembers        *spaces.SpaceMemberRepository
 	UsageEvents         *usage.UsageEventRepository
@@ -114,6 +115,7 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		BotSkills:           &skills.BotSkillRepository{Repository: drel.NewRepository(engine, skills.BotSkillMeta)},
 		Skills:              &skills.SkillRepository{Repository: drel.NewRepository(engine, skills.SkillMeta)},
 		SkillVersions:       &skills.SkillVersionRepository{Repository: drel.NewRepository(engine, skills.SkillVersionMeta)},
+		Invites:             &spaces.InviteRepository{Repository: drel.NewRepository(engine, spaces.InviteMeta)},
 		Spaces:              &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
@@ -189,6 +191,7 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				SkillVersions: &skills.SkillVersionRepository{Repository: drel.NewRepository(engine, skills.SkillVersionMeta)},
 			},
 			Spaces: SpacesRepos{
+				Invites:      &spaces.InviteRepository{Repository: drel.NewRepository(engine, spaces.InviteMeta)},
 				Spaces:       &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 				SpaceMembers: &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
 			},
@@ -244,6 +247,7 @@ type TxRepos struct {
 	BotSkills           *skills.TxBotSkillRepository
 	Skills              *skills.TxSkillRepository
 	SkillVersions       *skills.TxSkillVersionRepository
+	Invites             *spaces.TxInviteRepository
 	Spaces              *spaces.TxSpaceRepository
 	SpaceMembers        *spaces.TxSpaceMemberRepository
 	UsageEvents         *usage.TxUsageEventRepository
@@ -293,6 +297,7 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		BotSkills:           &skills.TxBotSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.BotSkillMeta)},
 		Skills:              &skills.TxSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillMeta)},
 		SkillVersions:       &skills.TxSkillVersionRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillVersionMeta)},
+		Invites:             &spaces.TxInviteRepository{TxRepository: drel.NewTxRepository(tx, spaces.InviteMeta)},
 		Spaces:              &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
 		UsageEvents:         &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
@@ -368,6 +373,7 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				SkillVersions: &skills.TxSkillVersionRepository{TxRepository: drel.NewTxRepository(tx, skills.SkillVersionMeta)},
 			},
 			Spaces: SpacesTxRepos{
+				Invites:      &spaces.TxInviteRepository{TxRepository: drel.NewTxRepository(tx, spaces.InviteMeta)},
 				Spaces:       &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
 				SpaceMembers: &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
 			},
@@ -583,12 +589,14 @@ type SkillsTxRepos struct {
 
 // SpacesRepos holds the untracked repositories of the "spaces" module.
 type SpacesRepos struct {
+	Invites      *spaces.InviteRepository
 	Spaces       *spaces.SpaceRepository
 	SpaceMembers *spaces.SpaceMemberRepository
 }
 
 // SpacesTxRepos holds the tracked repositories of the "spaces" module.
 type SpacesTxRepos struct {
+	Invites      *spaces.TxInviteRepository
 	Spaces       *spaces.TxSpaceRepository
 	SpaceMembers *spaces.TxSpaceMemberRepository
 }

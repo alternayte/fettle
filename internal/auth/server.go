@@ -10,6 +10,7 @@ import (
 	"time"
 
 	authall "github.com/alternayte/auth-all"
+	"github.com/alternayte/auth-all/apierr"
 	"github.com/alternayte/auth-all/plugins/apikeys"
 	"github.com/alternayte/auth-all/plugins/roles"
 	"github.com/alternayte/auth-all/ratelimit"
@@ -157,4 +158,34 @@ func (s *Server) Middleware(public func(path string) bool) func(http.Handler) ht
 		})
 		return s.Auth.LoadSession(inner)
 	}
+}
+
+// SignUp creates an account with a password and signs it in on this response: an invited
+// person's first sign-in (§16). Self sign-up without an invite stays closed.
+func (s *Server) SignUp(ctx context.Context, w http.ResponseWriter, email, name, password, clientIP string) (*User, error) {
+	au, err := s.Auth.CreateUser(ctx, authall.CreateUserInput{Email: email, Password: password, DisplayName: name, EmailVerified: true})
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.users.Ensure(ctx, au.Email, name, false)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.Auth.SignIn(ctx, authall.SignInInput{Email: email, Password: password, ClientIP: clientIP})
+	if err != nil {
+		return nil, err
+	}
+	if res.Session != nil {
+		s.Auth.SetSessionCookie(w, res.Token, res.Session.ExpiresAt)
+	}
+	return u, nil
+}
+
+// PublicError returns the status and the message of an auth-all error, when err is one.
+func PublicError(err error) (int, string, bool) {
+	var e *apierr.Error
+	if errors.As(err, &e) {
+		return e.Status, e.Message, true
+	}
+	return 0, "", false
 }

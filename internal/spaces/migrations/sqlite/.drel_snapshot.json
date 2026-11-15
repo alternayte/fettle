@@ -1,6 +1,88 @@
 {
   "tables": [
     {
+      "name": "space_invites",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "token_hash",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "role IN ('owner','member')"
+        },
+        {
+          "name": "created_by",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "expires_at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
+          "name": "accepted_by",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "accepted_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "revoked_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_space_invites_space",
+          "columns": [
+            "space_id"
+          ]
+        },
+        {
+          "name": "uq_space_invites_hash",
+          "columns": [
+            "token_hash"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
       "name": "spaces",
       "columns": [
         {

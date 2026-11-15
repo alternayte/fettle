@@ -843,6 +843,30 @@
         ],
         "type": "object"
       },
+      "Create-inviteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "description": "Days the link works. Default 7.",
+            "format": "int64",
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "role": {
+            "default": "member",
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
       "CreateOutBody": {
         "additionalProperties": false,
         "properties": {
@@ -1303,6 +1327,60 @@
         ],
         "type": "object"
       },
+      "InviteInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "space": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "space",
+          "role",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "InviteView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "expires_at",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "List-auditResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1354,6 +1432,42 @@
         },
         "required": [
           "versions"
+        ],
+        "type": "object"
+      },
+      "List-invitesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "invites": {
+            "items": {
+              "$ref": "#/components/schemas/InviteView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "invites"
+        ],
+        "type": "object"
+      },
+      "List-membersResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/MemberView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "members"
         ],
         "type": "object"
       },
@@ -1623,6 +1737,43 @@
           "version",
           "spaces",
           "setup"
+        ],
+        "type": "object"
+      },
+      "MemberView": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "you": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "user_id",
+          "email",
+          "name",
+          "role",
+          "since",
+          "you"
         ],
         "type": "object"
       },
@@ -2983,6 +3134,22 @@
         ],
         "type": "object"
       },
+      "Set-member-roleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
       "Set-model-roleRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4304,6 +4471,90 @@
         "summary": "The mode and the version of this server. It needs no sign-in.",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/invites/{token}": {
+      "get": {
+        "operationId": "get-invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteInfo"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "What an invite link gives, before it is accepted (no sign-in)",
+        "tags": [
+          "members"
+        ]
+      }
+    },
+    "/api/v1/invites/{token}/accept": {
+      "post": {
+        "operationId": "accept-invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Join the space of an invite link with the signed-in account",
+        "tags": [
+          "members"
         ]
       }
     },
@@ -6828,6 +7079,144 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/invites": {
+      "get": {
+        "operationId": "list-invites",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-invitesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The invite links of a space that still work",
+        "tags": [
+          "members"
+        ]
+      },
+      "post": {
+        "operationId": "create-invite",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-inviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Make a single-use invite link with a role (server mode)",
+        "tags": [
+          "members"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/invites/{invite}": {
+      "delete": {
+        "operationId": "revoke-invite",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invite",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Stop an invite link",
+        "tags": [
+          "members"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/learning/patches/run": {
       "post": {
         "operationId": "run-patch-job",
@@ -7035,6 +7424,145 @@
         "summary": "Steering signals of a space, newest first",
         "tags": [
           "learning"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/members": {
+      "get": {
+        "operationId": "list-members",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-membersResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The people of a space with their roles",
+        "tags": [
+          "members"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/members/{user}": {
+      "delete": {
+        "operationId": "remove-member",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove a person from a space; a member can remove themself. A space keeps at least one owner.",
+        "tags": [
+          "members"
+        ]
+      },
+      "put": {
+        "operationId": "set-member-role",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-member-roleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change the role of a member. A space keeps at least one owner.",
+        "tags": [
+          "members"
         ]
       }
     },

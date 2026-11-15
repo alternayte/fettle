@@ -192,6 +192,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/invites/{token}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** What an invite link gives, before it is accepted (no sign-in) */
+    get: operations["get-invite"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/invites/{token}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Join the space of an invite link with the signed-in account */
+    post: operations["accept-invite"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/me": {
     parameters: {
       query?: never;
@@ -813,6 +847,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/invites": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The invite links of a space that still work */
+    get: operations["list-invites"];
+    put?: never;
+    /** Make a single-use invite link with a role (server mode) */
+    post: operations["create-invite"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/invites/{invite}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Stop an invite link */
+    delete: operations["revoke-invite"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/learning/patches/run": {
     parameters: {
       query?: never;
@@ -876,6 +945,41 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/members": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The people of a space with their roles */
+    get: operations["list-members"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/members/{user}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Change the role of a member. A space keeps at least one owner. */
+    put: operations["set-member-role"];
+    post?: never;
+    /** Remove a person from a space; a member can remove themself. A space keeps at least one owner. */
+    delete: operations["remove-member"];
     options?: never;
     head?: never;
     patch?: never;
@@ -1806,6 +1910,18 @@ export interface components {
       bot_ids: string[] | null;
       name: string;
     };
+    "Create-inviteRequest": {
+      /**
+       * Format: int64
+       * @description Days the link works. Default 7.
+       */
+      days?: number;
+      /**
+       * @default member
+       * @enum {string}
+       */
+      role: "owner" | "member";
+    };
     CreateOutBody: {
       routine: components["schemas"]["RoutineView"];
       secret?: string;
@@ -1945,6 +2061,22 @@ export interface components {
       mode: "local" | "server";
       version: string;
     };
+    InviteInfo: {
+      /** Format: date-time */
+      expires_at: string;
+      role: string;
+      space: string;
+    };
+    InviteView: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      expires_at: string;
+      id: string;
+      /** @enum {string} */
+      role: "owner" | "member";
+      url?: string;
+    };
     "List-auditResponse": {
       entries: components["schemas"]["AuditView"][] | null;
     };
@@ -1953,6 +2085,12 @@ export interface components {
     };
     "List-instruction-versionsResponse": {
       versions: components["schemas"]["VersionView"][] | null;
+    };
+    "List-invitesResponse": {
+      invites: components["schemas"]["InviteView"][] | null;
+    };
+    "List-membersResponse": {
+      members: components["schemas"]["MemberView"][] | null;
     };
     "List-model-presetsResponse": {
       presets: components["schemas"]["Preset"][] | null;
@@ -2002,6 +2140,16 @@ export interface components {
       setup: components["schemas"]["SetupState"];
       spaces: components["schemas"]["SpaceView"][] | null;
       version: string;
+    };
+    MemberView: {
+      email: string;
+      name: string;
+      /** @enum {string} */
+      role: "owner" | "member";
+      /** Format: date-time */
+      since: string;
+      user_id: string;
+      you: boolean;
     };
     MemoryView: {
       /** Format: int64 */
@@ -2363,6 +2511,10 @@ export interface components {
       class?: "read" | "write_local" | "write_external" | "send" | "admin";
       disabled: boolean;
     };
+    "Set-member-roleRequest": {
+      /** @enum {string} */
+      role: "owner" | "member";
+    };
     "Set-model-roleRequest": {
       bot_id?: string;
       targets: components["schemas"]["Target"][] | null;
@@ -2631,6 +2783,7 @@ export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-ca
 export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
 export type SchemaCreateGroupRequest = components["schemas"]["Create-groupRequest"];
+export type SchemaCreateInviteRequest = components["schemas"]["Create-inviteRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDesktopConnectRequest = components["schemas"]["Desktop-connectRequest"];
 export type SchemaDesktopConnectResponse = components["schemas"]["Desktop-connectResponse"];
@@ -2649,9 +2802,13 @@ export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
+export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
+export type SchemaInviteView = components["schemas"]["InviteView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
 export type SchemaListInstructionVersionsResponse = components["schemas"]["List-instruction-versionsResponse"];
+export type SchemaListInvitesResponse = components["schemas"]["List-invitesResponse"];
+export type SchemaListMembersResponse = components["schemas"]["List-membersResponse"];
 export type SchemaListModelPresetsResponse = components["schemas"]["List-model-presetsResponse"];
 export type SchemaListModelProvidersResponse = components["schemas"]["List-model-providersResponse"];
 export type SchemaListModelRolesResponse = components["schemas"]["List-model-rolesResponse"];
@@ -2666,6 +2823,7 @@ export type SchemaListOutBody2 = components["schemas"]["ListOutBody2"];
 export type SchemaLocalAuthInBody = components["schemas"]["LocalAuthInBody"];
 export type SchemaLocalAuthOutBody = components["schemas"]["LocalAuthOutBody"];
 export type SchemaMeView = components["schemas"]["MeView"];
+export type SchemaMemberView = components["schemas"]["MemberView"];
 export type SchemaMemoryView = components["schemas"]["MemoryView"];
 export type SchemaMessagePage = components["schemas"]["MessagePage"];
 export type SchemaMessageView = components["schemas"]["MessageView"];
@@ -2711,6 +2869,7 @@ export type SchemaScreenControl = components["schemas"]["ScreenControl"];
 export type SchemaScreenView = components["schemas"]["ScreenView"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
+export type SchemaSetMemberRoleRequest = components["schemas"]["Set-member-roleRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
 export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequest"];
@@ -3098,6 +3257,68 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InstanceView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InviteInfo"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "accept-invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SpaceView"];
         };
       };
       /** @description Error */
@@ -4712,6 +4933,105 @@ export interface operations {
       };
     };
   };
+  "list-invites": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-invitesResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Create-inviteRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InviteView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "revoke-invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        invite: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "run-patch-job": {
     parameters: {
       query?: never;
@@ -4835,6 +5155,104 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["List-signalsResponse"];
         };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-members": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-membersResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "set-member-role": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        user: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Set-member-roleRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "remove-member": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        user: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Error */
       default: {

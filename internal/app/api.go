@@ -89,6 +89,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerComputerOps(api)
 	a.registerLearning(api)
 	a.registerPatches(api)
+	a.registerMembers(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)
