@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -11,6 +12,7 @@ import {
   Monitor,
   ShieldQuestion,
   TriangleAlert,
+  UserPlus,
   X,
 } from "lucide-react";
 import { t } from "@/lib/copy";
@@ -30,22 +32,88 @@ const icons = {
   warning: TriangleAlert,
   verification: ListX,
   check: ListChecks,
+  proposal: UserPlus,
 } as const;
+
+type Proposed = { name: string; job: string; instructions: string; [k: string]: unknown };
+
+/** ProposalEditor changes the proposed bots before Create (§9.8). */
+function ProposalEditor({
+  raw,
+  onCreate,
+  onCancel,
+}: {
+  raw: string;
+  onCreate: (v: string) => void;
+  onCancel: () => void;
+}) {
+  const [list, setList] = useState<Proposed[]>(() => {
+    try {
+      return JSON.parse(raw) as Proposed[];
+    } catch {
+      return [];
+    }
+  });
+  const set = (i: number, k: "name" | "job" | "instructions", v: string) =>
+    setList((l) => l.map((p, j) => (j === i ? { ...p, [k]: v } : p)));
+  const field = "mt-0.5 w-full rounded-xs border border-rule-strong bg-surface px-2 py-1 text-sm text-ink";
+  return (
+    <form
+      className="space-y-3 px-3 py-2.5 pl-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onCreate(JSON.stringify(list));
+      }}
+    >
+      {list.map((p, i) => (
+        <fieldset key={i} className="space-y-1.5">
+          <label className="block text-xs text-ink-soft">
+            {t("card.proposal.name")}
+            <input value={p.name} maxLength={40} onChange={(e) => set(i, "name", e.target.value)} className={field} />
+          </label>
+          <label className="block text-xs text-ink-soft">
+            {t("card.proposal.job")}
+            <input value={p.job} onChange={(e) => set(i, "job", e.target.value)} className={field} />
+          </label>
+          <label className="block text-xs text-ink-soft">
+            {t("card.proposal.instructions")}
+            <textarea
+              rows={4}
+              value={p.instructions}
+              onChange={(e) => set(i, "instructions", e.target.value)}
+              className={cn(field, "font-mono text-xs")}
+            />
+          </label>
+        </fieldset>
+      ))}
+      <div className="flex gap-1.5">
+        <ActionButton kind="act" type="submit">
+          {t("card.proposal.create")}
+        </ActionButton>
+        <ActionButton kind="quiet" onClick={onCancel}>
+          {t("common.cancel")}
+        </ActionButton>
+      </div>
+    </form>
+  );
+}
 
 function ActionButton({
   children,
   kind = "plain",
   onClick,
   disabled,
+  type = "button",
 }: {
   children: React.ReactNode;
   kind?: "act" | "plain" | "quiet";
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
+  type?: "button" | "submit";
 }) {
   return (
     <button
-      type="button"
+      type={type}
       disabled={disabled}
       onClick={onClick}
       className={cn(
@@ -83,6 +151,7 @@ function Resolved({ card }: { card: Card }) {
 
 export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAnswer) => void }) {
   const reduce = useReducedMotion();
+  const [editing, setEditing] = useState(false);
   if (card.status !== "pending") return <Resolved card={card} />;
   const Icon = icons[card.kind];
   return (
@@ -120,6 +189,13 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         )}
         {card.hard_ask && <p className="text-xs text-ink-faint">{t("card.approval.hardAsk")}</p>}
       </div>
+      {editing && card.kind === "proposal" && (
+        <ProposalEditor
+          raw={card.data?.proposal ?? "[]"}
+          onCancel={() => setEditing(false)}
+          onCreate={(v) => onAnswer({ action: "create", value: v })}
+        />
+      )}
       <footer className="flex flex-wrap items-center gap-1.5 border-t border-rule bg-surface px-3 py-2 pl-4">
         {card.kind === "approval" && (
           <>
@@ -185,6 +261,17 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
             </ActionButton>
             <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
               {t("card.turnLimit.stop")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "proposal" && !editing && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "create" })}>
+              {t("card.proposal.create")}
+            </ActionButton>
+            <ActionButton onClick={() => setEditing(true)}>{t("card.proposal.edit")}</ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "decline" })}>
+              {t("card.proposal.decline")}
             </ActionButton>
           </>
         )}

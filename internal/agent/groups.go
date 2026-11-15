@@ -23,7 +23,7 @@ type EveryoneHint struct {
 }
 
 func (e *EveryoneHint) Error() string {
-	return fmt.Sprintf("@everyone wakes %d bots. Together they can spend up to $%.2f. Send again to confirm.", e.Bots, e.MaxUSD)
+	return fmt.Sprintf("@everyone wakes %d bots. Together they can spend up to $%.2f.", e.Bots, e.MaxUSD)
 }
 
 // Mentions returns the bots that a message names with @Name, in their order in the

@@ -68,7 +68,8 @@
     },
     "empty": {
       "title": "Start a chat with {name}",
-      "body": "Write what you need. The bot replies here and shows its work as a run."
+      "body": "Write what you need. The bot replies here and shows its work as a run.",
+      "groupBody": "Name a bot with @ to ask it. Without a name, the bot whose job fits best answers."
     },
     "loadFailed": "Fettle cannot load this chat",
     "loadOlderFailed": "Fettle cannot load older messages",
@@ -79,7 +80,22 @@
     },
     "sendFailed": "Fettle did not send your message",
     "steered": "Your note goes to the run that works now.",
-    "botSettings": "Open the settings of {name}"
+    "botSettings": "Open the settings of {name}",
+    "everyone": {
+      "title": "Wake every bot of the group?",
+      "send": "Send to everyone"
+    },
+    "reply": "Reply",
+    "replyingTo": "Replying to {name}",
+    "cancelReply": "Cancel the reply",
+    "react": "React",
+    "reactWith": "React with {emoji}",
+    "uploading": "Uploading {name}",
+    "uploadFailed": "Fettle cannot upload {name}",
+    "removeFile": "Remove {name}",
+    "download": "Download {name}",
+    "mentions": "Bots of this group",
+    "quoted": "Reply to {name}"
   },
   "card": {
     "waits": "This card waits for you",
@@ -93,7 +109,8 @@
       "change": "Change",
       "warning": "Warning",
       "verification": "Failed checks",
-      "check": "Your check"
+      "check": "Your check",
+      "proposal": "Proposal"
     },
     "approval": {
       "tool": "Tool",
@@ -140,6 +157,14 @@
     "check": {
       "pass": "It passes",
       "fail": "It fails"
+    },
+    "proposal": {
+      "create": "Create",
+      "edit": "Edit",
+      "decline": "Decline",
+      "name": "Name",
+      "job": "Job",
+      "instructions": "Instructions"
     }
   },
   "run": {
@@ -514,7 +539,7 @@
     "view": "Show",
     "hide": "Hide",
     "restore": "Restore",
-    "restored": "Version {rev} is current again",
+    "restored": "Restored {name}. Its routines stay paused.",
     "restoreFailed": "Fettle did not restore the version",
     "emptyInstructions": "(empty)",
     "memory": "Memory",
@@ -525,7 +550,23 @@
     "skills": "Skills",
     "skillsBody": "This bot sees the name and description of each skill that is on. It loads a skill when the work needs it.",
     "noSkills": "The library has no skills.",
-    "useSkill": "Give this bot the skill {skill}"
+    "useSkill": "Give this bot the skill {skill}",
+    "manage": "Manage",
+    "duplicate": "Duplicate",
+    "duplicateHint": "The copy gets the profile, instructions, zone, model choices, skills and paused routines. Memory, chats and files stay here.",
+    "duplicated": "Made {name}.",
+    "archive": "Archive",
+    "archiveHint": "Archive keeps everything and stops the routines.",
+    "archived": "Archived {name}.",
+    "makePrimary": "Make primary",
+    "primaryHint": "The primary bot answers messages that name no bot and proposes new bots.",
+    "primaryAsked": "Allow the card in the chat of the primary bot.",
+    "delete": "Delete",
+    "deleteHint": "Delete removes the bot, its chats, memory, routines and files. Type {name} to confirm.",
+    "deleteLabel": "Type the name of the bot",
+    "deleted": "Deleted {name}.",
+    "isPrimary": "This is the primary bot. Make another bot primary before you archive or delete it.",
+    "isArchived": "This bot is archived."
   },
   "settings": {
     "nav": "Settings pages",
@@ -971,5 +1012,17 @@
     "failed": "Fettle cannot open the screen",
     "returned": "You gave the screen back to {bot}.",
     "request": "{bot} asks you to take over: {reason}"
+  },
+  "groups": {
+    "new": "New group",
+    "name": "Group name",
+    "bots": "Bots",
+    "botsHint": "Pick {min} to {max} bots.",
+    "picked": {
+      "one": "{n} bot",
+      "other": "{n} bots"
+    },
+    "create": "Create group",
+    "failed": "Fettle cannot create the group"
   }
 }

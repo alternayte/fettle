@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { CircleAlert, History, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
+  useArchiveBot,
   useAssignSkill,
+  useDeleteBot,
+  useDuplicateBot,
+  useMakePrimary,
+  useRestoreBot,
   useBot,
   useBotMemory,
   useInstructionVersions,
@@ -243,6 +248,126 @@ function BotSkills({ botId }: { botId: string }) {
   );
 }
 
+/** Manage holds duplicate, archive, primary and delete (§6.1, §9.8). */
+function Manage({ bot }: { bot: SchemaBotView }) {
+  const navigate = useNavigate();
+  const dup = useDuplicateBot();
+  const archive = useArchiveBot();
+  const restore = useRestoreBot();
+  const primary = useMakePrimary();
+  const del = useDeleteBot();
+  const [confirm, setConfirm] = useState("");
+  const fail = (err: unknown) => toast.error(errorText(err));
+  const archived = bot.status === "archived";
+  return (
+    <div className="divide-y divide-rule border-y border-rule">
+      <div className="flex flex-wrap items-center gap-3 py-3">
+        <p className="min-w-0 flex-1 text-sm text-ink-soft">{t("botPage.duplicateHint")}</p>
+        <Btn
+          size="sm"
+          busy={dup.isPending}
+          onClick={() =>
+            dup.mutate(bot.id, {
+              onSuccess: (b) => {
+                toast.success(t("botPage.duplicated", { name: b.name }));
+                void navigate({ to: "/bots/$botId", params: { botId: b.id } });
+              },
+              onError: fail,
+            })
+          }
+        >
+          {t("botPage.duplicate")}
+        </Btn>
+      </div>
+      {!bot.is_primary && !archived && (
+        <div className="flex flex-wrap items-center gap-3 py-3">
+          <p className="min-w-0 flex-1 text-sm text-ink-soft">{t("botPage.primaryHint")}</p>
+          <Btn
+            size="sm"
+            busy={primary.isPending}
+            onClick={() => primary.mutate(bot.id, { onSuccess: () => toast(t("botPage.primaryAsked")), onError: fail })}
+          >
+            {t("botPage.makePrimary")}
+          </Btn>
+        </div>
+      )}
+      {bot.is_primary ? (
+        <p className="py-3 text-sm text-ink-faint">{t("botPage.isPrimary")}</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3 py-3">
+            <p className="min-w-0 flex-1 text-sm text-ink-soft">
+              {archived ? t("botPage.isArchived") : t("botPage.archiveHint")}
+            </p>
+            {archived ? (
+              <Btn
+                size="sm"
+                busy={restore.isPending}
+                onClick={() =>
+                  restore.mutate(bot.id, {
+                    onSuccess: () => toast.success(t("botPage.restored", { name: bot.name })),
+                    onError: fail,
+                  })
+                }
+              >
+                {t("botPage.restore")}
+              </Btn>
+            ) : (
+              <Btn
+                size="sm"
+                busy={archive.isPending}
+                onClick={() =>
+                  archive.mutate(bot.id, {
+                    onSuccess: () => toast.success(t("botPage.archived", { name: bot.name })),
+                    onError: fail,
+                  })
+                }
+              >
+                {t("botPage.archive")}
+              </Btn>
+            )}
+          </div>
+          <form
+            className="flex flex-wrap items-end gap-3 py-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (confirm !== bot.name) return;
+              del.mutate(
+                { bot: bot.id, confirm },
+                {
+                  onSuccess: () => {
+                    toast.success(t("botPage.deleted", { name: bot.name }));
+                    void navigate({ to: "/" });
+                  },
+                  onError: fail,
+                },
+              );
+            }}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-ink-soft">{t("botPage.deleteHint", { name: bot.name })}</p>
+              <label htmlFor="bot-delete" className="sr-only">
+                {t("botPage.deleteLabel")}
+              </label>
+              <input
+                id="bot-delete"
+                value={confirm}
+                autoComplete="off"
+                placeholder={bot.name}
+                onChange={(e) => setConfirm(e.target.value)}
+                className={cn(inputCls, "mt-1.5 max-w-64")}
+              />
+            </div>
+            <Btn type="submit" size="sm" kind="danger" disabled={confirm !== bot.name} busy={del.isPending}>
+              {t("botPage.delete")}
+            </Btn>
+          </form>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function BotPage() {
   const { botId } = useParams({ strict: false }) as { botId: string };
   const bot = useBot(botId);
@@ -320,6 +445,9 @@ export function BotPage() {
           onSave={(c) => putMemory.mutateAsync(c)}
           saving={putMemory.isPending}
         />
+      </Section>
+      <Section id="manage" title={t("botPage.manage")}>
+        <Manage bot={b} />
       </Section>
     </Page>
   );

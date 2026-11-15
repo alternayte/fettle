@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BookOpen, Loader, Menu, PanelRight } from "lucide-react";
 import { t } from "@/lib/copy";
 import { formatDay } from "@/lib/format";
@@ -7,7 +7,7 @@ import { BotMark } from "./BotMark";
 import type { CardAnswer } from "./CardView";
 import { Composer } from "./Composer";
 import { MessageItem } from "./MessageItem";
-import type { Bot, Message } from "./types";
+import type { Attachment, Bot, Message } from "./types";
 
 const FIVE_MIN = 5 * 60 * 1000;
 
@@ -93,6 +93,10 @@ export function MessageList({
   empty,
   onReachTop,
   loadingOlder,
+  me,
+  onReply,
+  onReact,
+  fileHref,
 }: {
   messages: Message[];
   bots: Record<string, Bot>;
@@ -103,7 +107,14 @@ export function MessageList({
   /** Called when the reader scrolls near the oldest loaded message. */
   onReachTop?: () => void;
   loadingOlder?: boolean;
+  me?: string;
+  onReply?: (m: Message) => void;
+  onReact?: (id: string, emoji: string) => void;
+  fileHref?: (attachmentId: string) => string;
 }) {
+  const byId = new Map(messages.map((m) => [m.id, m]));
+  const authorName = (m: Message) =>
+    m.author_kind === "user" ? t("chat.you") : (bots[m.author_id]?.name ?? t("chat.unknownBot"));
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const reachTop = useRef(onReachTop);
@@ -175,10 +186,18 @@ export function MessageList({
               <MessageItem
                 message={m}
                 bot={m.author_kind === "bot" ? bots[m.author_id] : undefined}
-                continued={continued}
+                continued={continued && !m.reply_to}
                 activeRunId={activeRunId}
                 onOpenRun={onOpenRun}
                 onAnswer={onAnswer}
+                quoted={(() => {
+                  const q = m.reply_to ? byId.get(m.reply_to) : undefined;
+                  return q ? { name: authorName(q), body: q.body } : undefined;
+                })()}
+                me={me}
+                onReply={onReply}
+                onReact={onReact}
+                fileHref={fileHref}
               />
             </Fragment>
           );
@@ -208,6 +227,11 @@ export function ChatView({
   onReachTop,
   loadingOlder,
   headerActions,
+  me,
+  members,
+  onUpload,
+  onReact,
+  fileHref,
 }: {
   title: string;
   subtitle?: string;
@@ -215,7 +239,7 @@ export function ChatView({
   bots: Record<string, Bot>;
   messages: Message[];
   running: boolean;
-  onSend: (text: string) => void;
+  onSend: (text: string, o?: { replyTo?: string; attachments?: Attachment[] }) => void;
   onStop?: () => void;
   onAnswer: (cardId: string, a: CardAnswer) => void;
   onOpenRun: (runId: string) => void;
@@ -228,7 +252,19 @@ export function ChatView({
   onReachTop?: () => void;
   loadingOlder?: boolean;
   headerActions?: React.ReactNode;
+  me?: string;
+  /** The bots of a group chat, for @mentions. */
+  members?: Bot[];
+  onUpload?: (file: File) => Promise<Attachment>;
+  onReact?: (id: string, emoji: string) => void;
+  fileHref?: (attachmentId: string) => string;
 }) {
+  const [replyTo, setReplyTo] = useState<Message | undefined>(undefined);
+  const replyName = replyTo
+    ? replyTo.author_kind === "user"
+      ? t("chat.you")
+      : (bots[replyTo.author_id]?.name ?? t("chat.unknownBot"))
+    : undefined;
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ChatHeader
@@ -251,8 +287,25 @@ export function ChatView({
         empty={empty}
         onReachTop={onReachTop}
         loadingOlder={loadingOlder}
+        me={me}
+        onReply={me ? setReplyTo : undefined}
+        onReact={onReact}
+        fileHref={fileHref}
       />
-      <Composer botName={bot?.name ?? title} running={running} onSend={onSend} onStop={onStop} />
+      <Composer
+        botName={bot?.name ?? title}
+        running={running}
+        onSend={(text, attachments) => {
+          onSend(text, { replyTo: replyTo?.id, attachments });
+          setReplyTo(undefined);
+        }}
+        onStop={onStop}
+        onUpload={onUpload}
+        members={members}
+        replyTo={replyTo}
+        replyName={replyName}
+        onCancelReply={() => setReplyTo(undefined)}
+      />
     </section>
   );
 }

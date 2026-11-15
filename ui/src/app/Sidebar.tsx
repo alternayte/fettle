@@ -16,6 +16,7 @@ import { t } from "@/lib/copy";
 import { useTheme, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { BotMark } from "@/features/chat/BotMark";
+import { NewGroup } from "./NewGroup";
 import type { Bot, ChatSummary } from "@/features/chat/types";
 
 export type NavTarget =
@@ -144,9 +145,12 @@ export function Sidebar({
             );
           })}
         </ul>
-        {groups.length > 0 && (
+        {bots.length >= 2 && (
           <>
-            <h2 className="label-caps px-2 pt-4 pb-1">{t("shell.groups")}</h2>
+            <div className="flex items-center justify-between px-2 pt-4 pb-1">
+              <h2 className="label-caps">{t("shell.groups")}</h2>
+              <NewGroup bots={bots} onCreated={(id) => onNavigate({ kind: "chat", chatId: id })} />
+            </div>
             <ul>
               {groups.map((c) => (
                 <li key={c.id}>

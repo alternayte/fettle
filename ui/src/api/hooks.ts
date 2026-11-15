@@ -214,14 +214,71 @@ export function fetchMessages(space: string, chat: string, before?: string) {
   );
 }
 
-export function postMessage(space: string, chat: string, body: string) {
+export type PostOptions = { replyTo?: string; attachments?: string[]; confirmEveryone?: boolean };
+
+export function postMessage(space: string, chat: string, body: string, o: PostOptions = {}) {
   return must(
-    api.POST("/api/v1/spaces/{space}/chats/{chat}/messages", { params: { path: { space, chat } }, body: { body } }),
+    api.POST("/api/v1/spaces/{space}/chats/{chat}/messages", {
+      params: { path: { space, chat } },
+      body: {
+        body,
+        reply_to: o.replyTo,
+        attachments: o.attachments && o.attachments.length > 0 ? o.attachments : undefined,
+        confirm_everyone: o.confirmEveryone || undefined,
+      },
+    }),
   );
 }
 
+/** uploadAttachment sends one file for the next message of a chat. */
+export async function uploadAttachment(space: string, chat: string, file: File) {
+  const res = await fetch(`/api/v1/spaces/${space}/chats/${chat}/attachments?name=${encodeURIComponent(file.name)}`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, (body as { detail?: string }).detail ?? `HTTP ${res.status}`);
+  return body as { id: string; name: string; size: number; type: string };
+}
+
+export function setReaction(space: string, chat: string, message: string, emoji: string) {
+  return must(
+    api.PUT("/api/v1/spaces/{space}/chats/{chat}/messages/{message}/reaction", {
+      params: { path: { space, chat, message } },
+      body: { emoji },
+    }),
+  );
+}
+
+export function useCreateGroup() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (b: { name: string; bot_ids: string[] }) =>
+      must(api.POST("/api/v1/spaces/{space}/chats", { params: { path: { space } }, body: b })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.chats(space) }),
+  });
+}
+
 export type CardAction =
-  "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done" | "dismiss";
+  | "allow"
+  | "always"
+  | "deny"
+  | "answer"
+  | "continue"
+  | "stop"
+  | "add_budget"
+  | "done"
+  | "not_done"
+  | "dismiss"
+  | "accept"
+  | "retry"
+  | "pass"
+  | "fail"
+  | "create"
+  | "decline";
 
 export function answerCard(space: string, card: string, action: CardAction, value?: string) {
   return must(
@@ -753,6 +810,51 @@ export function useDraftSkill() {
     mutationFn: async (run: string) =>
       (await must(api.POST("/api/v1/spaces/{space}/runs/{run}/draft-skill", { params: { path: { space, run } } })))
         .skill_md,
+  });
+}
+
+// ---------------------------------------------------------------- bot lifecycle
+
+function useBotAction<T>(fn: (space: string, bot: string) => Promise<T>) {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (bot: string) => fn(space, bot),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.bots(space) });
+      void qc.invalidateQueries({ queryKey: keys.chats(space) });
+      void qc.invalidateQueries({ queryKey: keys.routines(space) });
+    },
+  });
+}
+
+export const useDuplicateBot = () =>
+  useBotAction((space, bot) =>
+    must(api.POST("/api/v1/spaces/{space}/bots/{bot}/duplicate", { params: { path: { space, bot } } })),
+  );
+export const useArchiveBot = () =>
+  useBotAction((space, bot) =>
+    must(api.POST("/api/v1/spaces/{space}/bots/{bot}/archive", { params: { path: { space, bot } } })),
+  );
+export const useRestoreBot = () =>
+  useBotAction((space, bot) =>
+    must(api.POST("/api/v1/spaces/{space}/bots/{bot}/restore", { params: { path: { space, bot } } })),
+  );
+export const useMakePrimary = () =>
+  useBotAction((space, bot) =>
+    must(api.POST("/api/v1/spaces/{space}/bots/{bot}/primary", { params: { path: { space, bot } } })),
+  );
+
+export function useDeleteBot() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ bot, confirm }: { bot: string; confirm: string }) =>
+      must(api.DELETE("/api/v1/spaces/{space}/bots/{bot}", { params: { path: { space, bot }, query: { confirm } } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.bots(space) });
+      void qc.invalidateQueries({ queryKey: keys.chats(space) });
+    },
   });
 }
 

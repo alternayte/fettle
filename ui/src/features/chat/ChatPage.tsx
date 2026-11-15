@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { CircleAlert, Settings2 } from "lucide-react";
-import { useBots, useChats, useSession, useStopRun } from "@/api/hooks";
+import { uploadAttachment, useBots, useChats, useSession, useStopRun } from "@/api/hooks";
 import { errorText } from "@/api/client";
 import { Notice, Page } from "@/app/Page";
 import { useShell } from "@/app/shell-context";
@@ -12,7 +12,7 @@ import { ChatView } from "./ChatView";
 import { toBot } from "./map";
 import { useChat } from "./useChat";
 
-function Empty({ name, loaded }: { name: string; loaded: boolean }) {
+function Empty({ name, loaded, group }: { name: string; loaded: boolean; group?: boolean }) {
   if (!loaded)
     return (
       <p className="pt-10 text-center text-sm text-ink-faint" role="status">
@@ -22,7 +22,7 @@ function Empty({ name, loaded }: { name: string; loaded: boolean }) {
   return (
     <div className="pt-16 pb-4 text-center">
       <p className="serif-title text-2xl text-ink">{t("chat.empty.title", { name })}</p>
-      <p className="mt-1.5 text-base text-ink-soft">{t("chat.empty.body")}</p>
+      <p className="mt-1.5 text-base text-ink-soft">{group ? t("chat.empty.groupBody") : t("chat.empty.body")}</p>
     </div>
   );
 }
@@ -78,6 +78,13 @@ function ChatScreen({ chatId }: { chatId: string }) {
   }
 
   const title = chat?.name || bot?.name || "";
+  const groupNames =
+    chat?.kind === "group"
+      ? (chat.bot_ids ?? [])
+          .map((id) => botMap[id]?.name)
+          .filter(Boolean)
+          .join(", ")
+      : undefined;
   const empty = c.error ? (
     <div className="pt-10">
       <Notice icon={CircleAlert} tone="danger" title={t("chat.loadFailed")}>
@@ -88,13 +95,13 @@ function ChatScreen({ chatId }: { chatId: string }) {
       </Notice>
     </div>
   ) : (
-    <Empty name={bot?.name ?? title} loaded={c.loaded} />
+    <Empty name={bot?.name ?? title} loaded={c.loaded} group={chat?.kind === "group"} />
   );
 
   return (
     <ChatView
       title={title}
-      subtitle={bot?.job}
+      subtitle={bot?.job ?? groupNames}
       bot={bot}
       bots={botMap}
       messages={c.messages}
@@ -110,6 +117,11 @@ function ChatScreen({ chatId }: { chatId: string }) {
       onMemory={
         bot ? () => void navigate({ to: "/bots/$botId", params: { botId: bot.id }, hash: "memory" }) : undefined
       }
+      me={me.id}
+      members={chat?.kind === "group" ? (chat.bot_ids ?? []).map((id) => botMap[id]).filter(Boolean) : undefined}
+      onUpload={(file) => uploadAttachment(space.id, chatId, file)}
+      onReact={c.react}
+      fileHref={(id) => `/api/v1/spaces/${space.id}/chats/${chatId}/attachments/${id}`}
       onReachTop={c.hasOlder ? c.loadOlder : undefined}
       loadingOlder={c.loadingOlder}
       empty={empty}

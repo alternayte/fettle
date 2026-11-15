@@ -61,5 +61,7 @@ export function toMessage(m: SchemaMessageView, run?: SchemaRunLine): Message {
     card: m.card ? toCard(m.card) : undefined,
     run: run ? toRunLine(run) : undefined,
     attachments: m.attachments ?? undefined,
+    reply_to: m.reply_to || undefined,
+    reactions: m.reactions && Object.keys(m.reactions).length > 0 ? m.reactions : undefined,
   };
 }

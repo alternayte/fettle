@@ -27,7 +27,8 @@ export type CardKind =
   | "change"
   | "warning"
   | "verification"
-  | "check";
+  | "check"
+  | "proposal";
 export type CardStatus = "pending" | "allowed" | "denied" | "answered" | "expired";
 
 export interface Card {
@@ -82,4 +83,8 @@ export interface Message {
   card?: Card;
   run?: RunLine;
   attachments?: Attachment[];
+  /** The message this one replies to. */
+  reply_to?: string;
+  /** Reactions by person ID. */
+  reactions?: Record<string, string>;
 }

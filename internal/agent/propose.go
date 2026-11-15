@@ -141,8 +141,11 @@ func (x *exec) propose(ctx context.Context, call models.ToolCall) error {
 		if len(p.Grants) > 0 {
 			line += " · access " + strings.Join(p.Grants, ", ")
 		}
-		if len(p.Routines) > 0 {
-			line += fmt.Sprintf(" · %d routines (paused)", len(p.Routines))
+		switch n := len(p.Routines); {
+		case n == 1:
+			line += " · 1 routine (paused)"
+		case n > 1:
+			line += fmt.Sprintf(" · %d routines (paused)", n)
 		}
 		preview[p.Name] = line
 	}

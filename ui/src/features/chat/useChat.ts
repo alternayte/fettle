@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { errorText } from "@/api/client";
-import { answerCard, fetchMessages, keys, LIVE_STATES, postMessage, type CardAction } from "@/api/hooks";
+import { ApiError, errorText } from "@/api/client";
+import { answerCard, fetchMessages, keys, LIVE_STATES, postMessage, setReaction, type CardAction } from "@/api/hooks";
 import type { SchemaMessagePage, SchemaMessageView, SchemaRunLine } from "@/api/schema";
 import { useEventStream } from "@/api/sse";
 import { t } from "@/lib/copy";
 import type { CardAnswer } from "./CardView";
 import { toMessage } from "./map";
-import type { Message } from "./types";
+import type { Attachment, Message } from "./types";
 
 interface State {
   list: SchemaMessageView[];
@@ -96,6 +96,9 @@ function reducer(s: State, a: Action): State {
   }
 }
 
+/** SendOptions are the parts of a message besides its text. */
+export type SendOptions = { replyTo?: string; attachments?: Attachment[] };
+
 let localSeq = 0;
 
 /** useChat loads the messages of one chat, follows its stream and sends messages and card answers. */
@@ -174,7 +177,7 @@ export function useChat(space: string, chat: string, userId: string) {
   useEventStream(`/api/v1/spaces/${space}/chats/${chat}/stream`, handlers, loadLatest);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, o: SendOptions = {}) => {
       const localId = `local-${++localSeq}`;
       const local: SchemaMessageView = {
         id: localId,
@@ -183,33 +186,66 @@ export function useChat(space: string, chat: string, userId: string) {
         author_id: userId,
         body: text,
         created_at: new Date().toISOString(),
-        attachments: [],
+        attachments: (o.attachments ?? []).map((a) => ({ ...a, object_key: "" })),
         reactions: {},
+        reply_to: o.replyTo,
       };
       dispatch({ type: "upsert", m: local });
-      postMessage(space, chat, text).then(
-        (res) => {
-          dispatch({ type: "remove", id: localId });
-          dispatch({ type: "upsert", m: res.message });
-          if (res.steered) toast(t("chat.steered"));
-        },
-        (err) => {
-          dispatch({ type: "remove", id: localId });
-          toast.error(t("chat.sendFailed"), { description: errorText(err) });
-        },
-      );
+      const post = (confirmEveryone: boolean) =>
+        postMessage(space, chat, text, {
+          replyTo: o.replyTo,
+          attachments: o.attachments?.map((a) => a.id),
+          confirmEveryone,
+        }).then(
+          (res) => {
+            dispatch({ type: "remove", id: localId });
+            dispatch({ type: "upsert", m: res.message });
+            if (res.steered) toast(t("chat.steered"));
+          },
+          (err) => {
+            // @everyone wakes every bot of the group; the cost hint asks first (§9.6).
+            if (err instanceof ApiError && err.status === 409 && err.message.includes("@everyone")) {
+              toast(t("chat.everyone.title"), {
+                description: err.message,
+                duration: 30000,
+                action: { label: t("chat.everyone.send"), onClick: () => void post(true) },
+                onDismiss: () => dispatch({ type: "remove", id: localId }),
+                onAutoClose: () => dispatch({ type: "remove", id: localId }),
+              });
+              return;
+            }
+            dispatch({ type: "remove", id: localId });
+            toast.error(t("chat.sendFailed"), { description: errorText(err) });
+          },
+        );
+      void post(false);
     },
     [space, chat, userId],
+  );
+
+  const react = useCallback(
+    (messageId: string, emoji: string) => {
+      setReaction(space, chat, messageId, emoji).then(
+        (m) => dispatch({ type: "upsert", m }),
+        (err) => toast.error(errorText(err)),
+      );
+    },
+    [space, chat],
   );
 
   const answer = useCallback(
     (cardId: string, a: CardAnswer) => {
       answerCard(space, cardId, a.action as CardAction, a.value).then(
-        (m) => dispatch({ type: "upsert", m }),
+        (m) => {
+          dispatch({ type: "upsert", m });
+          // A proposal or a change card can add bots or move the primary role.
+          void qc.invalidateQueries({ queryKey: keys.bots(space) });
+          void qc.invalidateQueries({ queryKey: keys.chats(space) });
+        },
         (err) => toast.error(t("card.answerFailed"), { description: errorText(err) }),
       );
     },
-    [space],
+    [space, qc],
   );
 
   // UI messages are cached per source object so memoized rows skip unchanged messages.
@@ -246,6 +282,7 @@ export function useChat(space: string, chat: string, userId: string) {
     loadingOlder: s.loadingOlder,
     loadOlder,
     send,
+    react,
     answer,
     reload: loadLatest,
   };
