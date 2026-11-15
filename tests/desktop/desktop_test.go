@@ -15,6 +15,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net"
@@ -446,6 +447,24 @@ func TestSCN_UX_001_DesktopWindowTrayUpdateAndFirstRun(t *testing.T) {
 		report(t, "SCN-UX-003", firstReply > 0, map[string]any{"first_reply_ms": firstReply.Milliseconds(), "provider": setup.Default})
 		report(t, "NFR-003", firstReply > 0 && firstReply <= 120*time.Second, map[string]any{"first_reply_ms": firstReply.Milliseconds()})
 		if firstReply == 0 {
+			// Show where the first run stopped: the setup state, the providers and the page's
+			// last requests.
+			var me map[string]any
+			a.do("GET", "/me", nil, &me)
+			t.Logf("me: %v", me)
+			if sps, _ := me["spaces"].([]any); len(sps) > 0 {
+				if sp, _ := sps[0].(map[string]any); sp != nil {
+					var mp any
+					a.do("GET", fmt.Sprintf("/spaces/%v/model-providers", sp["id"]), nil, &mp)
+					t.Logf("model providers: %v", mp)
+				}
+			}
+			if st, err := sm.send("state", ""); err == nil {
+				n := len(st.Requests)
+				for _, r := range st.Requests[max(0, n-15):] {
+					t.Logf("page request %s", r.Path)
+				}
+			}
 			t.Fatal("the Chief's first reply did not stream within 120 s of opening the app")
 		}
 
