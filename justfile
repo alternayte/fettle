@@ -29,6 +29,20 @@ ui:
 build: ui
     go build -trimpath -ldflags "-s -w -X main.version={{version}}" -o bin/fettle ./cmd/fettle
 
+# recipe: desktop-app
+# Build the desktop app (Wails v3, build tag desktop) into bin/; on macOS also bin/Fettle.app.
+desktop-app: ui
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export MACOSX_DEPLOYMENT_TARGET=13.0 CGO_CFLAGS="-mmacosx-version-min=13.0" CGO_LDFLAGS="-mmacosx-version-min=13.0"
+    go build -tags desktop -trimpath -ldflags "-s -w -X main.version={{version}}" -o bin/fettle-desktop ./cmd/fettle-desktop
+    if [ "$(uname)" = "Darwin" ]; then
+      rm -rf bin/Fettle.app && mkdir -p bin/Fettle.app/Contents/MacOS
+      cp bin/fettle-desktop bin/Fettle.app/Contents/MacOS/fettle-desktop
+      sed "s/VERSION/{{version}}/g" desktop/macos/Info.plist > bin/Fettle.app/Contents/Info.plist
+      codesign --force --sign - bin/Fettle.app >/dev/null 2>&1 || true
+    fi
+
 # recipe: dev
 # Run the server and the UI dev server with hot reload.
 dev:

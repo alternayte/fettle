@@ -60,6 +60,8 @@ type App struct {
 	Skills   *skills.Service
 	Skael    *skills.Skael
 	Screens  *screens.Service
+	// Desktop is set when the desktop app runs this server in process (§15.1).
+	Desktop *Desktop
 	// Connectors holds the MCP connectors (§12).
 	Connectors *connectors.Service
 	// SignIn is the server-mode sign-in; nil in local mode.

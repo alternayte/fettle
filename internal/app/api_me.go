@@ -64,21 +64,20 @@ type spaceIn struct {
 
 type spaceOut struct{ Body SpaceView }
 
+// InstanceView is what the UI needs before sign-in.
+type InstanceView struct {
+	Mode    string `json:"mode" enum:"local,server"`
+	Version string `json:"version"`
+	Desktop bool   `json:"desktop" doc:"The server runs inside the desktop app."`
+	// DesktopFirstRun asks the user to choose this computer or a server (§15.3).
+	DesktopFirstRun bool `json:"desktop_first_run"`
+}
+
 func (a *App) registerMe(api huma.API) {
-	huma.Register(api, op("get-instance", http.MethodGet, "/instance", "The mode and the version of this server. It needs no sign-in.", "auth"), func(ctx context.Context, _ *struct{}) (*struct {
-		Body struct {
-			Mode    string `json:"mode" enum:"local,server"`
-			Version string `json:"version"`
-		}
-	}, error) {
-		out := &struct {
-			Body struct {
-				Mode    string `json:"mode" enum:"local,server"`
-				Version string `json:"version"`
-			}
-		}{}
-		out.Body.Mode, out.Body.Version = string(a.Cfg.Mode), a.Cfg.Version
-		return out, nil
+	huma.Register(api, op("get-instance", http.MethodGet, "/instance", "The mode and the version of this server. It needs no sign-in.", "auth"), func(ctx context.Context, _ *struct{}) (*struct{ Body InstanceView }, error) {
+		v := InstanceView{Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Desktop: a.Desktop != nil}
+		v.DesktopFirstRun = a.Desktop != nil && a.Desktop.FirstRun != nil && a.Desktop.FirstRun()
+		return &struct{ Body InstanceView }{Body: v}, nil
 	})
 
 	huma.Register(api, op("local-auth", http.MethodPost, "/auth/local", "Exchange the local token for a UI cookie", "auth"), func(ctx context.Context, in *localAuthIn) (*localAuthOut, error) {

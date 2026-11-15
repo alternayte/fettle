@@ -26,6 +26,9 @@ func (a *App) setupPush() {
 	}
 	a.Push.Sent = func(_, result string) { a.Metrics.PushDeliveries.WithLabelValues(result).Inc() }
 	a.Agent.Notify = func(ctx context.Context, spaceID uuid.UUID, kind, title, body, url string) {
+		if a.Desktop != nil && a.Desktop.Notify != nil {
+			a.Desktop.Notify(title, body, url)
+		}
 		// Delivery never holds up a run.
 		go a.Push.NotifySpace(context.WithoutCancel(ctx), spaceID, push.Notification{Type: kind, Title: title, Body: body, URL: url})
 	}

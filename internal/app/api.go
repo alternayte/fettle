@@ -81,6 +81,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerScreens(api)
 	a.registerBotLife(api)
 	a.registerGroups(api)
+	a.registerDesktop(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)

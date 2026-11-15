@@ -47,6 +47,10 @@ func prepareMachine(ctx context.Context, cfg Config, logger *slog.Logger) (Netwo
 	if uid == 0 || gid == 0 {
 		return state, fmt.Errorf("user %q has uid or gid 0; agentd refuses to run tools as root", cfg.User)
 	}
+	// Providers without a hosts option (Apple container) pass test DNS entries here.
+	if err := addHosts(os.Getenv("FETTLE_AGENTD_HOSTS")); err != nil {
+		return state, err
+	}
 	if cfg.Network.Mode == NetworkAllowlist {
 		ruleset, err := buildRuleset(ctx, cfg.Network, systemLookup, logger)
 		if err != nil {
@@ -133,4 +137,27 @@ func systemLookup(ctx context.Context, host string) ([]netip.Addr, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	return net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+}
+
+// addHosts appends "name=ip,name=ip" entries to /etc/hosts.
+func addHosts(spec string) error {
+	if strings.TrimSpace(spec) == "" {
+		return nil
+	}
+	var b strings.Builder
+	for _, kv := range strings.Split(spec, ",") {
+		name, ip, ok := strings.Cut(strings.TrimSpace(kv), "=")
+		addr, err := netip.ParseAddr(ip)
+		if !ok || err != nil || name == "" || strings.ContainsAny(name, " \t\n#") {
+			return fmt.Errorf("FETTLE_AGENTD_HOSTS entry %q is not name=ip", kv)
+		}
+		fmt.Fprintf(&b, "%s\t%s\n", addr, name)
+	}
+	f, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(b.String())
+	return err
 }
