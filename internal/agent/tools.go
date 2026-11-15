@@ -30,6 +30,10 @@ type Tool struct {
 	// Screen marks tools that act on the bot's screen. They wait while a person controls
 	// the screen (§10.8).
 	Screen bool
+	// NoSubagent marks tools that sub-agents never get: handoff, takeover and proposals (§9.4).
+	NoSubagent bool
+	// SubagentOnly marks report_result, the structured end of a sub-agent run.
+	SubagentOnly bool
 	// MemoryWrite marks remember and forget (§11.3).
 	MemoryWrite bool
 	// Connector names the connector of a connector tool, for rules (§11.2).
@@ -70,6 +74,8 @@ type ToolEnv struct {
 	// Checked holds what ClassOf saw (for example the element of a browser action), so that
 	// Run acts only on the same thing and the card shows it.
 	Checked map[string]string
+	// Subagent is set for a sub-agent run, which has its own ephemeral browser context.
+	Subagent bool
 }
 
 // Registry holds the built-in tools.

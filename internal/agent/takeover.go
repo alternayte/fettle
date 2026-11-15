@@ -23,6 +23,7 @@ func (a *Agent) registerTakeover() {
 		Name:        "request_takeover",
 		Description: "Ask a person to take over your screen, for example to solve a CAPTCHA or to sign in with a passkey. Your work waits until the person presses Done. Then take a new snapshot, because the page changed.",
 		Class:       envelopes.ClassRead,
+		NoSubagent:  true,
 		Schema:      schema(`{"type":"object","properties":{"reason":{"type":"string","description":"What the person must do, in one sentence."}},"required":["reason"],"additionalProperties":false}`),
 		// The run loop handles request_takeover, because it parks the run.
 		Run: func(context.Context, *ToolEnv, json.RawMessage) (ToolOutput, error) {

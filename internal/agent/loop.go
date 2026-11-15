@@ -156,6 +156,11 @@ func (x *exec) loop(ctx context.Context) error {
 			step := "single"
 			if x.env.Step != nil {
 				step = *x.env.Step
+			} else if x.run.Kind == "owner" {
+				// Envelopes with a fixed step skip the router (§9.3).
+				if step, err = x.route(ctx); err != nil {
+					return err
+				}
 			}
 			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvRunStarted, Data: evRunStarted{Step: step, Goal: x.env.Goal}}); err != nil {
 				return err
@@ -324,7 +329,7 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 		skills = a.SkillIndex(ctx, x.run.SpaceID, x.bot.ID())
 	}
 	loaded := ""
-	if name, ok := x.env.Decision["skill"].(string); ok && name != "" && a.LoadSkill != nil {
+	if name := x.env.Decision.Skill; name != "" && a.LoadSkill != nil {
 		env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), Seq: st.lastSeq}
 		if text, err := a.LoadSkill(ctx, env, name); err == nil {
 			loaded = text
@@ -528,7 +533,13 @@ func (x *exec) fail(ctx context.Context, st *state, userText string, cause error
 // filtered by the envelope's capabilities and the step (REQ-AGT-004).
 func (x *exec) tools(ctx context.Context) []Tool {
 	sub := x.run.Kind == "subagent"
-	out := x.a.Tools.For(x.env.Capabilities, sub)
+	var out []Tool
+	for _, t := range x.a.Tools.For(x.env.Capabilities, sub) {
+		if (sub && t.NoSubagent) || (!sub && t.SubagentOnly) {
+			continue
+		}
+		out = append(out, t)
+	}
 	if x.a.Dynamic != nil {
 		dyn, err := x.a.Dynamic(ctx, x.run.SpaceID, x.run.BotID)
 		if err != nil {
@@ -563,7 +574,7 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "request_takeover" {
 		return x.requestTakeover(ctx, st, call)
 	}
-	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}}
+	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}, Subagent: x.run.Kind == "subagent"}
 	// The computer comes first: a full host makes the run wait before any card, and
 	// ClassOf may need the computer to see what the call touches.
 	if tool.NeedsComputer && a.Computer != nil {

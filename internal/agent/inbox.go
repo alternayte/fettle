@@ -96,7 +96,7 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 		if name := slashSkill(body); name != "" && a.SkillIndex != nil {
 			for _, sk := range a.SkillIndex(ctx, spaceID, owner) {
 				if sk.Name == name {
-					env.Decision = map[string]any{"skill": name}
+					env.Decision.Skill = name
 				}
 			}
 		}

@@ -4,7 +4,6 @@ package envelopes
 
 import (
 	"context"
-	"maps"
 	"slices"
 	"time"
 
@@ -32,7 +31,7 @@ var Envelopes = struct {
 	IdempotencyKey drel.StringColumn
 	Deadline       drel.ComparableColumn[*time.Time]
 	Status         drel.StringColumn
-	Decision       drel.ComparableColumn[map[string]any]
+	Decision       drel.ComparableColumn[Decision]
 	Result         drel.ComparableColumn[*Result]
 	CreatedAt      drel.TimeColumn
 	UpdatedAt      drel.TimeColumn
@@ -56,7 +55,7 @@ var Envelopes = struct {
 	IdempotencyKey: drel.NewStringCol("idempotency_key"),
 	Deadline:       drel.NewComparableCol[*time.Time]("deadline"),
 	Status:         drel.NewStringCol("status"),
-	Decision:       drel.NewComparableCol[map[string]any]("decision"),
+	Decision:       drel.NewComparableCol[Decision]("decision"),
 	Result:         drel.NewComparableCol[*Result]("result"),
 	CreatedAt:      drel.NewTimeCol("created_at"),
 	UpdatedAt:      drel.NewTimeCol("updated_at"),
@@ -65,7 +64,7 @@ var Envelopes = struct {
 func scanEnvelope(row drel.Row) (*Envelope, error) {
 	p := &Envelope{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.ParentID, &p.RootID, &p.SpaceID, &p.Kind, &p.Origin, drel.JSON[Requester]{V: &p.Requester}, &p.OwnerBotID, &p.ChatID, &p.MessageID, &p.Goal, drel.JSON[[]Check]{V: &p.Acceptance}, drel.JSON[[]ContextRef]{V: &p.ContextRefs}, drel.JSON[[]string]{V: &p.Capabilities}, drel.JSON[Budget]{V: &p.Budget}, &p.Step, &p.IdempotencyKey, &p.Deadline, &p.Status, drel.JSON[map[string]any]{V: &p.Decision}, drel.JSON[*Result]{V: &p.Result}, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.ParentID, &p.RootID, &p.SpaceID, &p.Kind, &p.Origin, drel.JSON[Requester]{V: &p.Requester}, &p.OwnerBotID, &p.ChatID, &p.MessageID, &p.Goal, drel.JSON[[]Check]{V: &p.Acceptance}, drel.JSON[[]ContextRef]{V: &p.ContextRefs}, drel.JSON[[]string]{V: &p.Capabilities}, drel.JSON[Budget]{V: &p.Budget}, &p.Step, &p.IdempotencyKey, &p.Deadline, &p.Status, drel.JSON[Decision]{V: &p.Decision}, drel.JSON[*Result]{V: &p.Result}, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +90,7 @@ type envelopeSnapshot struct {
 	IdempotencyKey string
 	Deadline       *time.Time
 	Status         string
-	Decision       map[string]any
+	Decision       Decision
 	Result         *Result
 }
 
@@ -156,8 +155,8 @@ func diffEnvelope(p *Envelope, snap any) []drel.FieldChange {
 	if p.Status != s.Status {
 		changes = append(changes, drel.FieldChange{Column: "status", Value: p.Status})
 	}
-	if !maps.Equal(p.Decision, s.Decision) {
-		changes = append(changes, drel.FieldChange{Column: "decision", Value: drel.JSON[map[string]any]{V: &p.Decision}})
+	if !drel.JSONEqual(p.Decision, s.Decision) {
+		changes = append(changes, drel.FieldChange{Column: "decision", Value: drel.JSON[Decision]{V: &p.Decision}})
 	}
 	if !drel.JSONEqual(p.Result, s.Result) {
 		changes = append(changes, drel.FieldChange{Column: "result", Value: drel.JSON[*Result]{V: &p.Result}})
@@ -210,7 +209,7 @@ func envelopeColumnValue(p *Envelope, idx int) any {
 	case 18:
 		return p.Status
 	case 19:
-		return drel.JSON[map[string]any]{V: &p.Decision}
+		return drel.JSON[Decision]{V: &p.Decision}
 	case 20:
 		return drel.JSON[*Result]{V: &p.Result}
 	case 21:
@@ -222,7 +221,7 @@ func envelopeColumnValue(p *Envelope, idx int) any {
 }
 
 func envelopeInsertColumns(p *Envelope) ([]string, []any) {
-	return []string{"parent_id", "root_id", "space_id", "kind", "origin", "requester", "owner_bot_id", "chat_id", "message_id", "goal", "acceptance", "context_refs", "capabilities", "budget", "step", "idempotency_key", "deadline", "status", "decision", "result"}, []any{p.ParentID, p.RootID, p.SpaceID, p.Kind, p.Origin, drel.JSON[Requester]{V: &p.Requester}, p.OwnerBotID, p.ChatID, p.MessageID, p.Goal, drel.JSON[[]Check]{V: &p.Acceptance}, drel.JSON[[]ContextRef]{V: &p.ContextRefs}, drel.JSON[[]string]{V: &p.Capabilities}, drel.JSON[Budget]{V: &p.Budget}, p.Step, p.IdempotencyKey, p.Deadline, p.Status, drel.JSON[map[string]any]{V: &p.Decision}, drel.JSON[*Result]{V: &p.Result}}
+	return []string{"parent_id", "root_id", "space_id", "kind", "origin", "requester", "owner_bot_id", "chat_id", "message_id", "goal", "acceptance", "context_refs", "capabilities", "budget", "step", "idempotency_key", "deadline", "status", "decision", "result"}, []any{p.ParentID, p.RootID, p.SpaceID, p.Kind, p.Origin, drel.JSON[Requester]{V: &p.Requester}, p.OwnerBotID, p.ChatID, p.MessageID, p.Goal, drel.JSON[[]Check]{V: &p.Acceptance}, drel.JSON[[]ContextRef]{V: &p.ContextRefs}, drel.JSON[[]string]{V: &p.Capabilities}, drel.JSON[Budget]{V: &p.Budget}, p.Step, p.IdempotencyKey, p.Deadline, p.Status, drel.JSON[Decision]{V: &p.Decision}, drel.JSON[*Result]{V: &p.Result}}
 }
 
 func envelopeScanReturning(p *Envelope, row drel.Row) error {

@@ -41,6 +41,9 @@ type Agent struct {
 	Vault     *vault.Vault
 	Tools     *Registry
 	Policy    *policy.Service
+	// CanFork reports whether the zone of a bot can fork: native fork support or a
+	// workspace small enough to copy (rule R3).
+	CanFork func(ctx context.Context, spaceID, botID uuid.UUID) bool
 	// ScreenUse takes the bot's screen for one action and returns the release function.
 	// ErrScreenControlled means a person controls the screen, so the run waits.
 	ScreenUse func(ctx context.Context, spaceID, botID uuid.UUID) (func(), error)

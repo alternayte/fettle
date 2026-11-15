@@ -93,8 +93,9 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 			t.Fatal(err)
 		}
 		before, _ := e.App.Journal.Load(ctx, id)
-		if len(before) != 20 {
-			t.Fatalf("the first attempt stopped after %d steps, want 20", len(before))
+		// route_decision, then run_started and 19 tool steps (§9.3 puts the router first).
+		if len(before) != 21 {
+			t.Fatalf("the first attempt stopped after %d steps, want 21", len(before))
 		}
 		if err := e.App.Runs.Wake(ctx, id, "interactive"); err != nil {
 			t.Fatal(err)
@@ -108,8 +109,8 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(evs) != 41 {
-			t.Fatalf("journal has %d steps, want 41: %s", len(evs), r.EventTypes())
+		if len(evs) != 42 {
+			t.Fatalf("journal has %d steps, want 42: %s", len(evs), r.EventTypes())
 		}
 		var s21 struct {
 			Tool string `json:"tool"`
@@ -117,9 +118,9 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 				N int `json:"n"`
 			} `json:"args"`
 		}
-		_ = json.Unmarshal([]byte(evs[20].Data), &s21)
-		if evs[20].Seq != 21 || evs[20].Type != runs.EvToolCall || s21.Tool != "report" || s21.Args.N != 9 {
-			t.Fatalf("step 21 is %s %s", evs[20].Type, evs[20].Data)
+		_ = json.Unmarshal([]byte(evs[21].Data), &s21)
+		if evs[21].Seq != 22 || evs[21].Type != runs.EvToolCall || s21.Tool != "report" || s21.Args.N != 9 {
+			t.Fatalf("step 22 is %s %s", evs[21].Type, evs[21].Data)
 		}
 		// The fake model got 20 requests: one per model turn, none repeated.
 		reqs := requestsFor(e, "[[script:")

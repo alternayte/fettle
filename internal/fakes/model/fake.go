@@ -442,6 +442,10 @@ func (s *Server) fill(st Step, req nreq) Step {
 }
 
 func (s *Server) builtin(req nreq) Step {
+	// An unscripted router call picks single, so a scenario script runs as written.
+	if strings.HasPrefix(req.system, "You route one piece of work") {
+		return Step{JSON: map[string]any{"step": "single", "owner_bot_id": "", "parts": []any{}, "rationale": "The fake model routes to single.", "confidence": 0.5}}
+	}
 	if req.schema != nil {
 		return Step{JSON: synth(req.schema)}
 	}

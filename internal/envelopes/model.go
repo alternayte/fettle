@@ -43,6 +43,31 @@ type Result struct {
 	NextOwner string   `json:"next_owner,omitempty"`
 }
 
+// Part is one part of a fanout or forked step (§9.3).
+type Part struct {
+	Goal       string `json:"goal"`
+	Acceptance string `json:"acceptance"`
+	// Needs is the highest class that the part needs (rule R1).
+	Needs string `json:"needs"`
+}
+
+// Route is the router's decision for an envelope.
+type Route struct {
+	Step       string   `json:"step"`
+	Parts      []Part   `json:"parts,omitempty"`
+	Rules      []string `json:"rules"`
+	OwnerBotID string   `json:"owner_bot_id,omitempty"`
+}
+
+// Decision holds what was decided about the work: the router's route and the skill that
+// the work started with.
+type Decision struct {
+	Skill string `json:"skill,omitempty"`
+	Route *Route `json:"route,omitempty"`
+	// Brief is the context brief that the owner wrote for a sub-agent part (§9.4).
+	Brief string `json:"brief,omitempty"`
+}
+
 // Envelope is one unit of work (Appendix C).
 type Envelope struct {
 	drel.Model[uuid.UUID] `db:"unique_index=uq_envelopes_idem[space_id,idempotency_key]"`
@@ -64,6 +89,6 @@ type Envelope struct {
 	IdempotencyKey        string         `db:"idempotency_key"`
 	Deadline              *time.Time     `db:"deadline"`
 	Status                string         `db:"status,check=status IN ('created','routed','running','verifying','done','failed','escalated','cancelled')"`
-	Decision              map[string]any `db:"decision"`
+	Decision              Decision       `db:"decision"`
 	Result                *Result        `db:"result"`
 }

@@ -158,9 +158,6 @@ func (s *Service) Create(ctx context.Context, env *Envelope, parent *Remainder) 
 	if env.Capabilities == nil {
 		env.Capabilities = []string{}
 	}
-	if env.Decision == nil {
-		env.Decision = map[string]any{}
-	}
 	if env.Status == "" {
 		env.Status = "created"
 	}
@@ -220,6 +217,33 @@ func (s *Service) AddBudget(ctx context.Context, id uuid.UUID, usd float64) erro
 		b := env.Budget
 		b.USD += usd
 		env.Budget = b
+		return nil
+	})
+}
+
+// SetRoute records the router's step and decision (§9.3).
+func (s *Service) SetRoute(ctx context.Context, id uuid.UUID, route Route) error {
+	step := route.Step
+	if !slices.Contains(Steps, step) {
+		return fmt.Errorf("unknown step %q", step)
+	}
+	return s.e.WithTx(ctx, func(ctx context.Context) error {
+		env, err := drel.Repo(drel.MustFromContext(ctx), EnvelopeMeta).Where(Envelopes.ID.Eq(id)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if env == nil {
+			return ErrNotFound
+		}
+		st := step
+		env.Step = &st
+		d := env.Decision
+		r := route
+		d.Route = &r
+		env.Decision = d
+		if env.Status == "created" {
+			env.Status = "routed"
+		}
 		return nil
 	})
 }

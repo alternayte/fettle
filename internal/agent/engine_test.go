@@ -199,7 +199,7 @@ func TestSCN_MOD_007_CostRecordedAndViewsSum(t *testing.T) {
 		e.WaitRun(run2, "done")
 
 		ctx := context.Background()
-		rows, err := e.App.DB.Engine.Query(ctx, "SELECT run_id, tokens_in, tokens_out, cost_usd, reported FROM usage_events WHERE space_id = $1", uuid.MustParse(e.Space))
+		rows, err := e.App.DB.Engine.Query(ctx, "SELECT run_id, tokens_in, tokens_out, cost_usd, reported, role FROM usage_events WHERE space_id = $1", uuid.MustParse(e.Space))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,11 +210,15 @@ func TestSCN_MOD_007_CostRecordedAndViewsSum(t *testing.T) {
 			var in, out int64
 			var cost float64
 			var reported bool
-			if err := rows.Scan(&rid, &in, &out, &cost, &reported); err != nil {
+			var role string
+			if err := rows.Scan(&rid, &in, &out, &cost, &reported, &role); err != nil {
 				t.Fatal(err)
 			}
-			n++
 			total += cost
+			if role != "owner" {
+				continue // the router call of each run (§9.3)
+			}
+			n++
 			switch rid.String() {
 			case run:
 				if !reported || cost != 0.0123 {
