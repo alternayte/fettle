@@ -314,12 +314,17 @@ func TestSCN_EE_005_AuditExportToBucketAndWebhook(t *testing.T) {
 		if len(got) == 0 {
 			t.Fatal("no audit file in the bucket")
 		}
-		rc, err := store.Get(ctx, got[0])
-		if err != nil {
-			t.Fatal(err)
+		// The maintenance tick can export earlier rows into their own file first.
+		var file []byte
+		for _, k := range got {
+			rc, err := store.Get(ctx, k)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, _ := io.ReadAll(rc)
+			_ = rc.Close()
+			file = append(file, b...)
 		}
-		file, _ := io.ReadAll(rc)
-		_ = rc.Close()
 		if !strings.Contains(string(file), `"action":"acme.test_event"`) {
 			t.Fatalf("the audit file misses the event: %s", file)
 		}
