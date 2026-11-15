@@ -49,7 +49,11 @@ func startPostgres() {
 		tcpostgres.WithDatabase("postgres"),
 		tcpostgres.WithUsername("postgres"),
 		tcpostgres.WithPassword("postgres"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(60*time.Second)),
+		// The log line can come before Docker Desktop forwards the host port, so both wait.
+		testcontainers.WithWaitStrategy(wait.ForAll(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort("5432/tcp"),
+		).WithDeadline(90*time.Second)),
 		testcontainers.WithCmd("postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off", "-c", "max_connections=500"),
 	)
 	if err != nil {
@@ -87,6 +91,16 @@ func PostgresURL(t testing.TB) string {
 	}
 	ctx := context.Background()
 	tmplOnce.Do(func() {
+		// The first connection can meet a port that the host forwards a moment late.
+		for i := 0; i < 30; i++ {
+			if tmplErr = adminExec(ctx, "SELECT 1"); tmplErr == nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+		if tmplErr != nil {
+			return
+		}
 		_ = adminExec(ctx, "DROP DATABASE IF EXISTS "+templateDB)
 		if tmplErr = adminExec(ctx, "CREATE DATABASE "+templateDB); tmplErr != nil {
 			return
