@@ -113,6 +113,7 @@ func New(a Agent) *Agent {
 	ag.registerSubagentTools()
 	ag.registerHandoff()
 	ag.registerPropose()
+	ag.registerSuggest()
 	ag.registerAskUser()
 	ag.registerTeamTools()
 	return ag

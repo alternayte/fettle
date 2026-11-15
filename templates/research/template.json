@@ -1,0 +1,12 @@
+{
+  "name": "Research",
+  "job": "Finds sources and writes short summaries",
+  "public_desc": "Researches questions on the web and writes summaries with sources",
+  "zone": "browsing",
+  "skill": "source-summary",
+  "routine": {
+    "name": "Weekly scan",
+    "cron": "0 9 * * 1",
+    "prompt": "Find the news of the week about the topics in your memory. Write five points with sources."
+  }
+}

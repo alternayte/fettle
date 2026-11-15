@@ -1,0 +1,14 @@
+{
+  "skill_name": "weekly-report",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Notes: Shop site: new checkout live. Stock: count done, two items short. Write the weekly report.",
+      "expected_output": "A report with the projects Shop site and Stock, each with done, next and risks.",
+      "expectations": [
+        "The report has a section for Shop site.",
+        "The report names the two short items as a risk."
+      ]
+    }
+  ]
+}

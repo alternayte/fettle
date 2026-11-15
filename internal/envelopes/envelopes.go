@@ -175,8 +175,15 @@ func (s *Service) Create(ctx context.Context, env *Envelope, parent *Remainder) 
 }
 
 // Get returns an envelope of a space.
+// Inside a transaction it reads on the transaction's connection.
 func (s *Service) Get(ctx context.Context, spaceID, id uuid.UUID) (*Envelope, error) {
-	e, err := drel.NewRepository(s.e, EnvelopeMeta).Where(Envelopes.ID.Eq(id)).Where(Envelopes.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+	var e *Envelope
+	var err error
+	if tx, ok := drel.FromContext(ctx); ok {
+		e, err = drel.Repo(tx, EnvelopeMeta).AsNoTracking().Where(Envelopes.ID.Eq(id)).Where(Envelopes.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+	} else {
+		e, err = drel.NewRepository(s.e, EnvelopeMeta).Where(Envelopes.ID.Eq(id)).Where(Envelopes.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

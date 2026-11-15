@@ -152,7 +152,16 @@ func TestSCN_TEAM_009_ProposalsCreateOnlyOnCreate(t *testing.T) {
 		} `json:"routines"`
 	}
 	e.MustDo("GET", e.SP("/routines"), nil, &rs)
-	if len(rs.Routines) != 1 || rs.Routines[0].BotID != writer.ID || rs.Routines[0].Enabled {
+	var mine int
+	for _, r := range rs.Routines {
+		if r.BotID == writer.ID {
+			mine++
+			if r.Enabled {
+				t.Fatalf("the routine of Writer is not paused: %+v", rs.Routines)
+			}
+		}
+	}
+	if mine != 1 {
 		t.Fatalf("routines %+v", rs.Routines)
 	}
 

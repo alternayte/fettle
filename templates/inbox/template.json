@@ -1,0 +1,12 @@
+{
+  "name": "Inbox",
+  "job": "Sorts mail and writes reply drafts",
+  "public_desc": "Sorts the inbox by urgency and drafts replies for the user to send",
+  "zone": "personal",
+  "skill": "inbox-triage",
+  "routine": {
+    "name": "Morning triage",
+    "cron": "0 8 * * 1-5",
+    "prompt": "Sort the new mail since yesterday. List what needs an answer today, with a draft for each."
+  }
+}

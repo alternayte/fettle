@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/alternayte/fettle/templates"
 	"log/slog"
 	"net"
 	"net/http"
@@ -266,23 +267,16 @@ func (a *App) CreateSpace(ctx context.Context, actor audit.Actor, name, tz strin
 		if err != nil {
 			return err
 		}
-		pid := personal.ID()
-		chief, err := a.Bots.Create(ctx, actor, sp.ID(), bots.Input{Name: "Chief", Job: "Chief of Staff: routes work, answers questions and reports back", Instructions: ChiefInstructions, IsPrimary: true, ZoneID: &pid})
+		_ = personal
+		t, err := templates.Get("chief-of-staff")
 		if err != nil {
 			return err
 		}
-		_, err = a.Chats.CreateDirect(ctx, sp.ID(), chief.ID(), chief.Name)
+		_, err = a.fromTemplate(ctx, actor, sp.ID(), tz, t, true)
 		return err
 	})
 	return sp, err
 }
-
-// ChiefInstructions are the default instructions of the primary bot.
-const ChiefInstructions = `You are the Chief of Staff of this space.
-- Answer questions directly when you can.
-- Ask one short question when the request is not clear.
-- Save stable facts about the user in memory.
-- Report results in a few lines. Put details in lists or tables.`
 
 // Start starts the job workers and the HTTP server. It returns when the listener is ready.
 func (a *App) Start(ctx context.Context, handler http.Handler) error {

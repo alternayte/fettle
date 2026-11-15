@@ -1,0 +1,12 @@
+{
+  "name": "Reviewer",
+  "job": "Reviews pull requests",
+  "public_desc": "Reviews code changes and writes clear review comments",
+  "zone": "personal",
+  "skill": "pr-review",
+  "routine": {
+    "name": "Review queue",
+    "cron": "0 10 * * 1-5",
+    "prompt": "Review the open pull requests that wait for a review. Draft the comments for the user to post."
+  }
+}

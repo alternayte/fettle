@@ -18,6 +18,7 @@ import (
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/computers"
 	"github.com/alternayte/fettle/internal/jobs"
+	"github.com/alternayte/fettle/internal/providers/applecontainer"
 	"github.com/alternayte/fettle/internal/providers/docker"
 	"github.com/alternayte/fettle/internal/providers/host"
 	"github.com/alternayte/fettle/internal/settings"
@@ -79,6 +80,18 @@ func defaultMaxRunning() int {
 	return max(1, n)
 }
 
+// DefaultProvider picks the default computer provider (D-15): applecontainer on macOS 26
+// on Apple silicon, local kiln on Linux with /dev/kvm, docker elsewhere. host is never a
+// default.
+func DefaultProvider(provs map[string]computers.Provider) string {
+	for _, k := range []string{"applecontainer", "kiln", "docker"} {
+		if _, ok := provs[k]; ok {
+			return k
+		}
+	}
+	return "docker"
+}
+
 func (a *App) setupComputers(ctx context.Context) {
 	provs := map[string]computers.Provider{}
 	image := ComputerImage(a.Cfg.Version)
@@ -86,9 +99,12 @@ func (a *App) setupComputers(ctx context.Context) {
 		provs["docker"] = d
 	}
 	provs["host"] = host.New(agentdBinary(), filepath.Join(a.Cfg.Data, "runtime", "host"))
+	if applecontainer.Supported() == nil {
+		provs["applecontainer"] = applecontainer.New(filepath.Join(a.Cfg.Data, "runtime", "applecontainer"), image)
+	}
 	def := os.Getenv("FETTLE_DEFAULT_PROVIDER")
 	if def == "" {
-		def = "docker"
+		def = DefaultProvider(provs)
 	}
 	a.Computers = computers.NewManager(&computers.Manager{
 		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log, Audit: a.Audit,
@@ -119,6 +135,10 @@ func (a *App) setupComputers(ctx context.Context) {
 		l, err := a.Computers.Acquire(ctx, *b.ZoneID)
 		if errors.Is(err, computers.ErrNoCapacity) {
 			return agent.ErrNoComputer
+		}
+		var pe *computers.PreparingError
+		if errors.As(err, &pe) {
+			return &agent.ComputerWait{Reason: "Preparing the computer (" + pe.Detail + ")"}
 		}
 		if err != nil {
 			return err

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
-import { errorText } from "@/api/client";
+import { api, errorText } from "@/api/client";
 import {
   keys,
   usePresets,
@@ -23,10 +23,11 @@ import { TimeZoneInput } from "@/features/settings/TimeZoneInput";
 import { targetFor } from "@/features/settings/models";
 import { t } from "@/lib/copy";
 import { browserTimeZone } from "@/lib/tz";
+import { ComputerStep } from "./ComputerStep";
+import { WhereStep, useWhere, type Where } from "./WhereStep";
 import { WizardFrame } from "./Wizard";
 
-const STEPS = ["you", "model", "owner"] as const;
-type Step = (typeof STEPS)[number];
+type Step = "where" | "computer" | "model" | "owner" | "you";
 
 function NextButton({ last, ...rest }: React.ComponentProps<typeof Btn> & { last?: boolean }) {
   return (
@@ -41,7 +42,22 @@ export function SetupPage() {
   const { me, space } = useSession();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>(me.setup.needs_name ? "you" : "model");
+  const instance = useQuery({ queryKey: ["instance"], queryFn: async () => (await api.GET("/api/v1/instance")).data });
+  // §15.3: where (desktop first run), the computer, the model, then the name and time zone.
+  const STEPS: Step[] = [
+    ...(instance.data?.desktop_first_run ? (["where"] as Step[]) : []),
+    "computer",
+    "model",
+    "owner",
+    ...(me.setup.needs_name ? (["you"] as Step[]) : []),
+  ];
+  const [stepState, setStep] = useState<Step | null>(null);
+  const step: Step = stepState ?? STEPS[0];
+  const [where, setWhere] = useState<Where>("local");
+  const [serverUrl, setServerUrl] = useState("");
+  const [whereError, setWhereError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const whereApi = useWhere();
   const [name, setName] = useState(me.name);
   const [tz, setTz] = useState(space.time_zone && space.time_zone !== "UTC" ? space.time_zone : browserTimeZone());
   const [formOpen, setFormOpen] = useState(false);
@@ -63,30 +79,51 @@ export function SetupPage() {
   const owner = ownerModel || provider?.smoke.model || presetModel || provider?.models?.[0]?.id || "";
   const idx = STEPS.indexOf(step);
 
+  // §15.3 step 5: the primary bot's chat opens and the interview starts, once per space.
+  const done = async () => {
+    const ob = await api.POST("/api/v1/spaces/{space}/onboarding/start", { params: { path: { space: space.id } } });
+    await qc.refetchQueries({ queryKey: keys.me });
+    if (ob.data?.chat_id) void navigate({ to: "/chat/$chatId", params: { chatId: ob.data.chat_id }, replace: true });
+    else void navigate({ to: "/", replace: true });
+  };
+
   const saveYou = () => {
     if (!name.trim()) return setNameError(t("setup.you.needName"));
     setNameError(null);
     const jobs: Promise<unknown>[] = [];
     if (name.trim() !== me.name) jobs.push(updateMe.mutateAsync(name.trim()));
     if (tz.trim() && tz.trim() !== space.time_zone) jobs.push(updateSpace.mutateAsync({ time_zone: tz.trim() }));
-    Promise.all(jobs).then(
-      () => setStep("model"),
-      (err) => toast.error(t("setup.saveFailed"), { description: errorText(err) }),
-    );
+    Promise.all(jobs).then(done, (err) => toast.error(t("setup.saveFailed"), { description: errorText(err) }));
   };
 
-  const finish = () => {
+  const saveOwner = () => {
     if (!provider || !owner) return;
     setRole.mutate(
       { role: "owner", targets: [targetFor(provider, owner)] },
       {
-        onSuccess: async () => {
-          await qc.refetchQueries({ queryKey: keys.me });
-          void navigate({ to: "/", replace: true });
-        },
+        onSuccess: () => (STEPS.includes("you") ? setStep("you") : void done()),
         onError: (err) => toast.error(t("setup.saveFailed"), { description: errorText(err) }),
       },
     );
+  };
+
+  const saveWhere = () => {
+    setWhereError(null);
+    if (where === "local") {
+      whereApi.local.mutate(undefined, {
+        onSuccess: () => {
+          void instance.refetch();
+          setStep("computer");
+        },
+        onError: (err) => setWhereError(errorText(err)),
+      });
+      return;
+    }
+    if (!serverUrl.trim()) return setWhereError(t("setup.where.needUrl"));
+    whereApi.remote.mutate(serverUrl.trim(), {
+      onSuccess: () => setConnecting(true),
+      onError: (err) => setWhereError(errorText(err)),
+    });
   };
 
   const back =
@@ -101,7 +138,25 @@ export function SetupPage() {
     ) : null;
 
   let footer: React.ReactNode;
-  if (step === "you") footer = <NextButton onClick={saveYou} busy={updateMe.isPending || updateSpace.isPending} />;
+  const last = STEPS[STEPS.length - 1] === step;
+  if (step === "where")
+    footer = (
+      <NextButton onClick={saveWhere} busy={whereApi.local.isPending || whereApi.remote.isPending || connecting} />
+    );
+  else if (step === "computer")
+    footer = (
+      <>
+        {back}
+        <NextButton onClick={() => setStep("model")} />
+      </>
+    );
+  else if (step === "you")
+    footer = (
+      <>
+        {back}
+        <NextButton last onClick={saveYou} busy={updateMe.isPending || updateSpace.isPending} />
+      </>
+    );
   else if (step === "model")
     footer = (
       <>
@@ -113,7 +168,7 @@ export function SetupPage() {
     footer = (
       <>
         {back}
-        <NextButton last onClick={finish} disabled={!owner} busy={setRole.isPending} />
+        <NextButton last={last} onClick={saveOwner} disabled={!owner} busy={setRole.isPending} />
       </>
     );
 
@@ -125,6 +180,15 @@ export function SetupPage() {
       body={t(`setup.real.${step}.body`)}
       footer={footer}
     >
+      {step === "where" &&
+        (connecting ? (
+          <p role="status" className="text-sm text-ink-soft">
+            {t("setup.where.connecting", { url: serverUrl.trim() })}
+          </p>
+        ) : (
+          <WhereStep where={where} onWhere={setWhere} url={serverUrl} onUrl={setServerUrl} error={whereError} />
+        ))}
+      {step === "computer" && <ComputerStep />}
       {step === "you" && (
         <form
           className="grid gap-4 sm:grid-cols-2"

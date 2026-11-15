@@ -92,9 +92,16 @@ func (s *Service) Get(ctx context.Context, spaceID, id uuid.UUID) (*Run, error) 
 	return r, nil
 }
 
-// Find returns a run by ID in any space (workers only).
+// Find returns a run by ID in any space (workers only). Inside a transaction it reads on
+// the transaction's connection, so a busy pool cannot block the transaction that holds one.
 func (s *Service) Find(ctx context.Context, id uuid.UUID) (*Run, error) {
-	r, err := drel.NewRepository(s.e, RunMeta).Where(Runs.ID.Eq(id)).FirstOrNil(ctx)
+	var r *Run
+	var err error
+	if tx, ok := drel.FromContext(ctx); ok {
+		r, err = drel.Repo(tx, RunMeta).AsNoTracking().Where(Runs.ID.Eq(id)).FirstOrNil(ctx)
+	} else {
+		r, err = drel.NewRepository(s.e, RunMeta).Where(Runs.ID.Eq(id)).FirstOrNil(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

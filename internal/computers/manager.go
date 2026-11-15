@@ -70,6 +70,7 @@ type Manager struct {
 	live     map[uuid.UUID]*live // by computer ID; tokens live only in memory (SI-02)
 	creating map[uuid.UUID]chan struct{}
 	forks    map[uuid.UUID]*Fork // by sub-agent run ID
+	preps    *preparer
 }
 
 type live struct {
@@ -308,6 +309,9 @@ func (m *Manager) bringUp(ctx context.Context, z *zones.Zone, c *Computer) (*liv
 		if err := m.setState(ctx, c.ID(), StateNone, "replaced"); err != nil {
 			return nil, nil, err
 		}
+	}
+	if err := m.ensurePrepared(row.Kind); err != nil {
+		return nil, nil, err
 	}
 	token := newToken()
 	certPEM, keyPEM, err := agentd.GenerateCert([]string{"fettle-computer"})

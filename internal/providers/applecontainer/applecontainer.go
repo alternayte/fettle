@@ -38,7 +38,7 @@ const (
 const agentdPort = 7421
 
 // ErrHost means this computer cannot run Apple container.
-var ErrHost = errors.New("Apple container needs macOS 26 on Apple silicon")
+var ErrHost = errors.New("apple container needs macOS 26 on Apple silicon")
 
 // Provider is the applecontainer provider.
 type Provider struct {
@@ -171,8 +171,8 @@ func (p *Provider) loadImage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	tmp.Close()
-	defer os.Remove(tmp.Name())
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if out, err := exec.CommandContext(ctx, "docker", "save", p.Image, "-o", tmp.Name()).CombinedOutput(); err != nil {
 		return fmt.Errorf("docker save: %s", strings.TrimSpace(string(out)))
 	}
@@ -190,7 +190,7 @@ func (p *Provider) installRuntime(ctx context.Context, report func(computers.Pro
 	if err := p.download(ctx, pkg, report); err != nil {
 		return err
 	}
-	defer os.Remove(pkg)
+	defer func() { _ = os.Remove(pkg) }()
 	out, err := exec.CommandContext(ctx, "pkgutil", "--check-signature", pkg).CombinedOutput()
 	if err != nil || !strings.Contains(string(out), "Developer ID Installer: Apple Inc.") || !strings.Contains(string(out), "("+TeamID+")") {
 		return errors.New("the Apple container package is not signed by Apple")
@@ -199,7 +199,7 @@ func (p *Provider) installRuntime(ctx context.Context, report func(computers.Pro
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	x := filepath.Join(tmp, "x")
 	if out, err := exec.CommandContext(ctx, "pkgutil", "--expand-full", pkg, x).CombinedOutput(); err != nil {
 		return fmt.Errorf("unpack the package: %s", strings.TrimSpace(string(out)))
@@ -225,7 +225,7 @@ func (p *Provider) download(ctx context.Context, dst string, report func(compute
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	h := sha256.New()
 	pr := &progressReader{r: resp.Body, total: resp.ContentLength, report: report}
 	if _, err := io.Copy(io.MultiWriter(f, h), pr); err != nil {
@@ -401,7 +401,9 @@ func (m *machine) Resume(ctx context.Context) error {
 }
 
 // Fork is a copy fork, which the computer manager does (§10.4).
-func (m *machine) Fork(context.Context) (computers.Machine, error) { return nil, computers.ErrUnsupported }
+func (m *machine) Fork(context.Context) (computers.Machine, error) {
+	return nil, computers.ErrUnsupported
+}
 
 // Destroy removes the VM.
 func (m *machine) Destroy(ctx context.Context) error {

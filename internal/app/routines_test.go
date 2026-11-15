@@ -228,8 +228,20 @@ func TestSCN_SKL_007_NotificationsLimitAndMissedTicks(t *testing.T) {
 		t.Fatalf("push payload %s", ds[0].Payload)
 	}
 
-	// A bot has at most 50 routines.
-	for i := 1; i < 50; i++ {
+	// A bot has at most 50 routines; Chief has its template routine and the one above.
+	var have struct {
+		Routines []struct {
+			BotID string `json:"bot_id"`
+		} `json:"routines"`
+	}
+	e.MustDo("GET", e.SP("/routines"), nil, &have)
+	own := 0
+	for _, r := range have.Routines {
+		if r.BotID == chief.ID {
+			own++
+		}
+	}
+	for i := own; i < 50; i++ {
 		e.MustDo("POST", e.SP("/routines"), map[string]any{"bot_id": chief.ID, "name": fmt.Sprintf("R%d", i), "prompt": "Check.", "trigger": "webhook", "enabled": false}, nil)
 	}
 	if code, _ := e.Do("POST", e.SP("/routines"), map[string]any{"bot_id": chief.ID, "name": "R51", "prompt": "Check.", "trigger": "webhook", "enabled": false}, nil); code != 409 {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,10 @@ type Option func(*app.Config)
 func Start(t testing.TB, dialect string, opts ...Option) *Env {
 	t.Helper()
 	t.Setenv("FETTLE_NO_KEYCHAIN", "1")
+	// Tests pick their provider; the host's default (D-15) must not change their result.
+	if os.Getenv("FETTLE_DEFAULT_PROVIDER") == "" {
+		t.Setenv("FETTLE_DEFAULT_PROVIDER", "docker")
+	}
 	models.RetryBackoff = func(int) time.Duration { return time.Millisecond }
 	fake, err := fakemodel.New()
 	if err != nil {

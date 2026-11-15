@@ -648,6 +648,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "propose_bot" || call.Name == "propose_team" {
 		return x.propose(ctx, call)
 	}
+	if call.Name == "suggest_connectors" {
+		return x.suggestConnectors(ctx, call)
+	}
 	if call.Name == "handoff" {
 		return x.handoff(ctx, st, call)
 	}
@@ -665,8 +668,12 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	// ClassOf may need the computer to see what the call touches.
 	if tool.NeedsComputer && a.Computer != nil && !x.forkRun() {
 		if err := a.Computer(ctx, x.run.SpaceID, x.run.BotID); err != nil {
+			var cw *ComputerWait
+			if errors.As(err, &cw) {
+				return x.waitForComputer(ctx, st, cw.Reason)
+			}
 			if errors.Is(err, ErrNoComputer) {
-				return x.waitForComputer(ctx, st)
+				return x.waitForComputer(ctx, st, "Waiting for a free computer")
 			}
 			_, aerr := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: tool.Class, Error: "The computer could not start: " + a.Vault.Redactor.String(ctx, x.run.SpaceID, err.Error())}})
 			return aerr
@@ -771,12 +778,18 @@ func (x *exec) sleepUntil(ctx context.Context, call models.ToolCall) error {
 	return x.park(ctx, runs.StatusWaiting, "timer")
 }
 
+// ComputerWait makes a run wait for its computer with a reason, for example while the
+// provider downloads the computer image (§15.3).
+type ComputerWait struct{ Reason string }
+
+func (e *ComputerWait) Error() string { return e.Reason }
+
 // waitForComputer parks the run until a computer is free. A sleeping computer wakes the
 // oldest waiting run; a timer retries after 30 s as well.
-func (x *exec) waitForComputer(ctx context.Context, st *state) error {
+func (x *exec) waitForComputer(ctx context.Context, st *state, reason string) error {
 	a := x.a
 	if !st.computerWait {
-		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerWait, Data: map[string]string{"reason": "Waiting for a free computer"}}); err != nil {
+		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvComputerWait, Data: map[string]string{"reason": reason}}); err != nil {
 			return err
 		}
 	}

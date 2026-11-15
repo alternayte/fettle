@@ -1,0 +1,23 @@
+{
+  "skill_name": "onboarding-interview",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Start the onboarding interview.",
+      "expected_output": "A greeting and one question about the user's work.",
+      "expectations": [
+        "The reply asks what the user's work is.",
+        "The reply asks only one question."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I run a small shop. I use Gmail and Notion. My chores: answer customer mail, update the stock sheet, write the weekly report.",
+      "expected_output": "Connect cards for Gmail and Notion, then a team proposal of 3 bots.",
+      "expectations": [
+        "The reply proposes at most 3 bots.",
+        "Each proposed bot has a first task."
+      ]
+    }
+  ]
+}

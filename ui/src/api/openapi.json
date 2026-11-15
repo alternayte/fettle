@@ -135,7 +135,8 @@
               "pass",
               "fail",
               "create",
-              "decline"
+              "decline",
+              "skip"
             ],
             "type": "string"
           },
@@ -607,6 +608,32 @@
         ],
         "type": "object"
       },
+      "ComputerSetup": {
+        "additionalProperties": false,
+        "properties": {
+          "default": {
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderAvailability"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/PrepareStatus"
+          }
+        },
+        "required": [
+          "default",
+          "providers",
+          "status"
+        ],
+        "type": "object"
+      },
       "Connector-catalogResponse": {
         "additionalProperties": false,
         "properties": {
@@ -788,6 +815,62 @@
         ],
         "type": "object"
       },
+      "Desktop-connectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "maxLength": 2000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "Desktop-connectResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "Desktop-openRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "Desktop-windowRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "A UI path that starts with /screen/.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
       "DiagnosticsResponse": {
         "additionalProperties": false,
         "properties": {
@@ -922,6 +1005,100 @@
         },
         "type": "object"
       },
+      "EvalReport": {
+        "additionalProperties": false,
+        "properties": {
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/EvalResult"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "cost_usd": {
+            "format": "double",
+            "type": "number"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "skill",
+          "version",
+          "score",
+          "pass",
+          "cost_usd",
+          "cases"
+        ],
+        "type": "object"
+      },
+      "EvalResult": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "expectations": {
+            "items": {
+              "$ref": "#/components/schemas/Expectation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "output": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "passed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          },
+          "trials": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "prompt",
+          "output",
+          "trials",
+          "passed",
+          "pass",
+          "score",
+          "expectations"
+        ],
+        "type": "object"
+      },
       "EventView": {
         "additionalProperties": false,
         "properties": {
@@ -950,23 +1127,23 @@
         ],
         "type": "object"
       },
-      "Get-instanceResponse": {
+      "Expectation": {
         "additionalProperties": false,
         "properties": {
-          "mode": {
-            "enum": [
-              "local",
-              "server"
-            ],
+          "pass": {
+            "type": "boolean"
+          },
+          "reason": {
             "type": "string"
           },
-          "version": {
+          "text": {
             "type": "string"
           }
         },
         "required": [
-          "mode",
-          "version"
+          "text",
+          "pass",
+          "reason"
         ],
         "type": "object"
       },
@@ -1051,6 +1228,35 @@
           "new_value",
           "updated_by",
           "at"
+        ],
+        "type": "object"
+      },
+      "InstanceView": {
+        "additionalProperties": false,
+        "properties": {
+          "desktop": {
+            "description": "The server runs inside the desktop app.",
+            "type": "boolean"
+          },
+          "desktop_first_run": {
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "local",
+              "server"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "version",
+          "desktop",
+          "desktop_first_run"
         ],
         "type": "object"
       },
@@ -1195,6 +1401,24 @@
         },
         "required": [
           "settings"
+        ],
+        "type": "object"
+      },
+      "List-templatesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "templates"
         ],
         "type": "object"
       },
@@ -1487,6 +1711,24 @@
         ],
         "type": "object"
       },
+      "OnboardingView": {
+        "additionalProperties": false,
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "started": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "started"
+        ],
+        "type": "object"
+      },
       "Post-messageRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1540,6 +1782,35 @@
         ],
         "type": "object"
       },
+      "PrepareStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/Progress"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "state",
+          "steps"
+        ],
+        "type": "object"
+      },
       "Preset": {
         "additionalProperties": false,
         "properties": {
@@ -1578,6 +1849,29 @@
         ],
         "type": "object"
       },
+      "Progress": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "percent": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "state"
+        ],
+        "type": "object"
+      },
       "ProvOutBody": {
         "additionalProperties": false,
         "properties": {
@@ -1593,6 +1887,25 @@
         },
         "required": [
           "providers"
+        ],
+        "type": "object"
+      },
+      "ProviderAvailability": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "available"
         ],
         "type": "object"
       },
@@ -2112,6 +2425,28 @@
         "required": [
           "envelope_id"
         ],
+        "type": "object"
+      },
+      "Run-skill-evalsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_id": {
+            "description": "The bot whose profile runs the cases. Default: a bot with the skill, else the primary bot.",
+            "type": "string"
+          },
+          "trials": {
+            "description": "Trials per case. Default 1.",
+            "format": "int64",
+            "maximum": 5,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "version": {
+            "description": "The skill version. Default: the current version.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "RunLine": {
@@ -2772,6 +3107,42 @@
         ],
         "type": "object"
       },
+      "TemplateView": {
+        "additionalProperties": false,
+        "properties": {
+          "job": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "public_desc": {
+            "type": "string"
+          },
+          "routine": {
+            "type": "string"
+          },
+          "skill": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "job",
+          "public_desc",
+          "zone",
+          "skill",
+          "routine"
+        ],
+        "type": "object"
+      },
       "Test-connectorRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3299,6 +3670,68 @@
         ]
       }
     },
+    "/api/v1/computer-setup": {
+      "get": {
+        "operationId": "get-computer-setup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerSetup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The default computer provider, what works on this server, and the preparation progress",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/computer-setup/prepare": {
+      "post": {
+        "operationId": "prepare-computers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerSetup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Prepare the default provider in the background: its runtime and the computer image",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
     "/api/v1/connectors/catalog": {
       "get": {
         "operationId": "connector-catalog",
@@ -3330,6 +3763,139 @@
         ]
       }
     },
+    "/api/v1/desktop/connect": {
+      "post": {
+        "operationId": "desktop-connect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Desktop-connectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Desktop-connectResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Use a remote Fettle server instead of this computer (desktop app only)",
+        "tags": [
+          "desktop"
+        ]
+      }
+    },
+    "/api/v1/desktop/local": {
+      "post": {
+        "operationId": "desktop-local",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Use this computer: the app runs Fettle here (desktop app only)",
+        "tags": [
+          "desktop"
+        ]
+      }
+    },
+    "/api/v1/desktop/open": {
+      "post": {
+        "operationId": "desktop-open",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Desktop-openRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Open a link of another origin in the system browser (desktop app only)",
+        "tags": [
+          "desktop"
+        ]
+      }
+    },
+    "/api/v1/desktop/window": {
+      "post": {
+        "operationId": "desktop-window",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Desktop-windowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Open a screen of a bot in a window of its own (desktop app only)",
+        "tags": [
+          "desktop"
+        ]
+      }
+    },
     "/api/v1/instance": {
       "get": {
         "operationId": "get-instance",
@@ -3338,7 +3904,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Get-instanceResponse"
+                  "$ref": "#/components/schemas/InstanceView"
                 }
               }
             },
@@ -6346,6 +6912,49 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/onboarding/start": {
+      "post": {
+        "operationId": "start-onboarding",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start the onboarding interview of the primary bot, once per space",
+        "tags": [
+          "bots"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/policy": {
       "get": {
         "operationId": "list-policy",
@@ -7515,6 +8124,67 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/skills/{skill}/evals": {
+      "post": {
+        "operationId": "run-skill-evals",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "skill",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Run-skill-evalsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run the evals.json of a skill version, graded by the verifier role",
+        "tags": [
+          "skills"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/skills/{skill}/export": {
       "get": {
         "operationId": "export-skill",
@@ -7794,6 +8464,57 @@
         "summary": "Server-sent events of a space: run lines and bot activity",
         "tags": [
           "chats"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/templates/{template}": {
+      "post": {
+        "operationId": "create-from-template",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a bot from a template, with its skill and its routine paused",
+        "tags": [
+          "bots"
         ]
       }
     },
@@ -8280,6 +9001,37 @@
         "summary": "Ask to give a zone a vault item or a connector account. The grant exists after a person allows the card.",
         "tags": [
           "computers"
+        ]
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "operationId": "list-templates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-templatesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The bot templates that ship with Fettle",
+        "tags": [
+          "bots"
         ]
       }
     }

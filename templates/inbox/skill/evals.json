@@ -1,0 +1,14 @@
+{
+  "skill_name": "inbox-triage",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Sort these: 1. Ana: invoice due Friday. 2. Shop: your order shipped. 3. Ben: can we meet today?",
+      "expected_output": "A table with Ana and Ben in answer today and the shop mail in no action.",
+      "expectations": [
+        "Ben's mail is in answer today.",
+        "The shop mail is in no action."
+      ]
+    }
+  ]
+}

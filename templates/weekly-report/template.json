@@ -1,0 +1,12 @@
+{
+  "name": "Reporter",
+  "job": "Writes the weekly report",
+  "public_desc": "Writes the weekly report from the week's work and notes",
+  "zone": "personal",
+  "skill": "weekly-report",
+  "routine": {
+    "name": "Friday report",
+    "cron": "0 16 * * 5",
+    "prompt": "Write the weekly report for this week."
+  }
+}

@@ -10,6 +10,7 @@ import {
   ListChecks,
   ListX,
   Monitor,
+  Plug,
   ShieldQuestion,
   TriangleAlert,
   UserPlus,
@@ -33,6 +34,7 @@ const icons = {
   verification: ListX,
   check: ListChecks,
   proposal: UserPlus,
+  connect: Plug,
 } as const;
 
 type Proposed = { name: string; job: string; instructions: string; [k: string]: unknown };
@@ -313,6 +315,21 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
               {t("card.check.pass")}
             </ActionButton>
             <ActionButton onClick={() => onAnswer({ action: "fail" })}>{t("card.check.fail")}</ActionButton>
+          </>
+        )}
+        {card.kind === "connect" && (
+          <>
+            <Link
+              to="/settings/connectors"
+              className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-glaze px-3 text-sm font-[var(--weight-medium)] text-glaze-ink hover:brightness-105"
+            >
+              <Plug aria-hidden className="size-3.5" />
+              {t("card.connect.open")}
+            </Link>
+            <ActionButton onClick={() => onAnswer({ action: "done" })}>{t("card.connect.done")}</ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "skip" })}>
+              {t("card.connect.skip")}
+            </ActionButton>
           </>
         )}
         {card.kind === "takeover" && card.data?.bot_id && (

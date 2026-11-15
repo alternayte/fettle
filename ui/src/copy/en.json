@@ -110,7 +110,13 @@
       "warning": "Warning",
       "verification": "Failed checks",
       "check": "Your check",
-      "proposal": "Proposal"
+      "proposal": "Proposal",
+      "connect": "Connect"
+    },
+    "connect": {
+      "open": "Open Connectors",
+      "done": "It is connected",
+      "skip": "Skip"
     },
     "approval": {
       "tool": "Tool",
@@ -415,18 +421,47 @@
       "idle": "Not started"
     },
     "where": {
-      "title": "Where does Fettle run?",
-      "body": "You can change this later.",
-      "local": "This computer",
-      "localBody": "Bots work on this computer. Routines run while the app is open.",
-      "server": "Connect to a server",
-      "serverBody": "Bots keep working on a server when this computer sleeps."
+      "local": {
+        "title": "This computer",
+        "body": "Fettle runs here. Your bots work in computers on this Mac."
+      },
+      "remote": {
+        "title": "Connect to a server",
+        "body": "The app opens a Fettle server. Nothing runs on this computer."
+      },
+      "url": "Server address",
+      "needUrl": "Give the address of the server.",
+      "connecting": "Opening {url}."
     },
     "computer": {
-      "title": "Prepare a computer for your bots",
-      "body": "Bots work in their own computers with a browser, a terminal and files.",
-      "detected": "Found",
-      "background": "This continues in the background. You can chat now."
+      "detecting": "Fettle looks for a way to run computers here.",
+      "using": "Fettle uses {name}.",
+      "progress": "Preparation",
+      "done": "Done",
+      "failed": "Failed",
+      "working": "Working",
+      "starting": "Fettle starts the preparation.",
+      "ready": "The computer is ready.",
+      "background": "This continues in the background. You can chat now; work that needs a computer waits for it.",
+      "error": "The preparation failed: {error}. Fettle tries again when a bot needs a computer.",
+      "none": "Fettle found no way to run computers here. Bots can chat, but they cannot use a browser, a terminal or files until you add one of these:",
+      "getDocker": "Get Docker Desktop",
+      "later": "You can add a computer later in Settings, Computers.",
+      "kinds": {
+        "applecontainer": "Apple container",
+        "docker": "Docker",
+        "kiln": "Kiln",
+        "host": "this computer without isolation",
+        "e2b": "E2B"
+      },
+      "steps": {
+        "runtime": "Container runtime",
+        "service": "Container service",
+        "image": "Computer image",
+        "docker": "Docker",
+        "kvm": "Virtualization",
+        "kiln": "Kiln"
+      }
     },
     "model": {
       "title": "Add a model key",
@@ -449,7 +484,9 @@
       "steps": {
         "you": "You",
         "model": "Model",
-        "owner": "Owner model"
+        "owner": "Owner model",
+        "where": "Where",
+        "computer": "Computer"
       },
       "you": {
         "title": "Tell your bots about you",
@@ -467,6 +504,14 @@
         "body": "The owner model does the work of each run. You can change it later in Settings.",
         "label": "Owner model",
         "hint": "The list shows the models of {name}."
+      },
+      "where": {
+        "title": "Where does Fettle run?",
+        "body": "Fettle can run on this computer, or the app can open a Fettle server that you or your team runs."
+      },
+      "computer": {
+        "title": "A computer for your bots",
+        "body": "Your bots work on their own computers, apart from your files. Fettle prepares them now. You can go on while it works."
       }
     }
   },

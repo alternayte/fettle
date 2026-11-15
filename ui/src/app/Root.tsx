@@ -1,3 +1,4 @@
+import { useDesktopLinks } from "@/lib/desktop";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, Outlet, useRouterState } from "@tanstack/react-router";
@@ -112,6 +113,7 @@ function Failed({ error, onRetry }: { error: unknown; onRetry: () => void }) {
 /** Root loads the caller and provides the session to every route. */
 export function Root() {
   useTheme();
+  useDesktopLinks();
   const me = useMe();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const session = useMemo(() => {

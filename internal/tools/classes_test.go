@@ -25,6 +25,8 @@ var appendixE = map[string]string{
 	"sleep_until": envelopes.ClassWriteLocal, "add_open_work": envelopes.ClassWriteLocal, "complete_open_work": envelopes.ClassWriteLocal,
 	// report_result is the structured end of a helper run (§9.4, D-151); only helpers get it.
 	"report_result": envelopes.ClassRead,
+	// suggest_connectors posts Connect cards in the interview (§15.4, D-152).
+	"suggest_connectors": envelopes.ClassRead,
 }
 
 // registry holds every built-in tool that this build has.

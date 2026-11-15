@@ -56,6 +56,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/computer-setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The default computer provider, what works on this server, and the preparation progress */
+    get: operations["get-computer-setup"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/computer-setup/prepare": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Prepare the default provider in the background: its runtime and the computer image */
+    post: operations["prepare-computers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/connectors/catalog": {
     parameters: {
       query?: never;
@@ -67,6 +101,74 @@ export interface paths {
     get: operations["connector-catalog"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/desktop/connect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Use a remote Fettle server instead of this computer (desktop app only) */
+    post: operations["desktop-connect"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/desktop/local": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Use this computer: the app runs Fettle here (desktop app only) */
+    post: operations["desktop-local"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/desktop/open": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Open a link of another origin in the system browser (desktop app only) */
+    post: operations["desktop-open"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/desktop/window": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Open a screen of a bot in a window of its own (desktop app only) */
+    post: operations["desktop-window"];
     delete?: never;
     options?: never;
     head?: never;
@@ -816,6 +918,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/onboarding/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start the onboarding interview of the primary bot, once per space */
+    post: operations["start-onboarding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/policy": {
     parameters: {
       query?: never;
@@ -1143,6 +1262,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/skills/{skill}/evals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run the evals.json of a skill version, graded by the verifier role */
+    post: operations["run-skill-evals"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/skills/{skill}/export": {
     parameters: {
       query?: never;
@@ -1171,6 +1307,23 @@ export interface paths {
     get: operations["space-stream"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/templates/{template}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a bot from a template, with its skill and its routine paused */
+    post: operations["create-from-template"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1282,6 +1435,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The bot templates that ship with Fettle */
+    get: operations["list-templates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1332,7 +1502,8 @@ export interface components {
         | "pass"
         | "fail"
         | "create"
-        | "decline";
+        | "decline"
+        | "skip";
       value?: string;
     };
     "Assign-skillRequest": {
@@ -1458,6 +1629,11 @@ export interface components {
       kind: string;
       name: string;
     };
+    ComputerSetup: {
+      default: string;
+      providers: components["schemas"]["ProviderAvailability"][] | null;
+      status: components["schemas"]["PrepareStatus"];
+    };
     "Connector-catalogResponse": {
       connectors: components["schemas"]["Entry"][] | null;
     };
@@ -1495,6 +1671,20 @@ export interface components {
     CreateOutBody: {
       routine: components["schemas"]["RoutineView"];
       secret?: string;
+    };
+    "Desktop-connectRequest": {
+      url: string;
+    };
+    "Desktop-connectResponse": {
+      url: string;
+    };
+    "Desktop-openRequest": {
+      url: string;
+    };
+    "Desktop-windowRequest": {
+      /** @description A UI path that starts with /screen/. */
+      path: string;
+      title?: string;
     };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
@@ -1551,6 +1741,32 @@ export interface components {
        */
       type: string;
     };
+    EvalReport: {
+      cases: components["schemas"]["EvalResult"][] | null;
+      /** Format: double */
+      cost_usd: number;
+      pass: boolean;
+      /** Format: double */
+      score: number;
+      skill: string;
+      /** Format: int64 */
+      version: number;
+    };
+    EvalResult: {
+      error?: string;
+      expectations: components["schemas"]["Expectation"][] | null;
+      /** Format: int64 */
+      id: number;
+      output: string;
+      pass: boolean;
+      /** Format: int64 */
+      passed: number;
+      prompt: string;
+      /** Format: double */
+      score: number;
+      /** Format: int64 */
+      trials: number;
+    };
     EventView: {
       /** Format: date-time */
       at: string;
@@ -1560,10 +1776,10 @@ export interface components {
       truncated: boolean;
       type: string;
     };
-    "Get-instanceResponse": {
-      /** @enum {string} */
-      mode: "local" | "server";
-      version: string;
+    Expectation: {
+      pass: boolean;
+      reason: string;
+      text: string;
     };
     "Get-skillResponse": {
       skill: components["schemas"]["SkillView"];
@@ -1582,6 +1798,14 @@ export interface components {
       /** Format: int64 */
       revision: number;
       updated_by: string;
+    };
+    InstanceView: {
+      /** @description The server runs inside the desktop app. */
+      desktop: boolean;
+      desktop_first_run: boolean;
+      /** @enum {string} */
+      mode: "local" | "server";
+      version: string;
     };
     "List-auditResponse": {
       entries: components["schemas"]["AuditView"][] | null;
@@ -1606,6 +1830,9 @@ export interface components {
     };
     "List-settingsResponse": {
       settings: components["schemas"]["SettingView"][] | null;
+    };
+    "List-templatesResponse": {
+      templates: components["schemas"]["TemplateView"][] | null;
     };
     "List-vault-itemsResponse": {
       items: components["schemas"]["VaultItemView"][] | null;
@@ -1676,6 +1903,11 @@ export interface components {
       /** Format: double */
       price_out?: number;
     };
+    OnboardingView: {
+      chat_id?: string;
+      run_id?: string;
+      started: boolean;
+    };
     "Post-messageRequest": {
       /** @description IDs from upload-attachment. */
       attachments?: string[] | null;
@@ -1690,6 +1922,12 @@ export interface components {
       run_id?: string;
       steered: boolean;
     };
+    PrepareStatus: {
+      error?: string;
+      provider: string;
+      state: string;
+      steps: components["schemas"]["Progress"][] | null;
+    };
     Preset: {
       api_type: string;
       auth_header?: string;
@@ -1700,8 +1938,20 @@ export interface components {
       name: string;
       needs_key: boolean;
     };
+    Progress: {
+      detail?: string;
+      /** Format: int64 */
+      percent?: number;
+      state: string;
+      step: string;
+    };
     ProvOutBody: {
       providers: components["schemas"]["ComputerProviderView"][] | null;
+    };
+    ProviderAvailability: {
+      available: boolean;
+      kind: string;
+      reason?: string;
     };
     ProviderBody: {
       /** @enum {string} */
@@ -1837,6 +2087,20 @@ export interface components {
     };
     "Run-routineResponse": {
       envelope_id: string;
+    };
+    "Run-skill-evalsRequest": {
+      /** @description The bot whose profile runs the cases. Default: a bot with the skill, else the primary bot. */
+      bot_id?: string;
+      /**
+       * Format: int64
+       * @description Trials per case. Default 1.
+       */
+      trials?: number;
+      /**
+       * Format: int64
+       * @description The skill version. Default: the current version.
+       */
+      version?: number;
     };
     RunLine: {
       bot_id: string;
@@ -2013,6 +2277,15 @@ export interface components {
       fields: string[] | null;
       preview: components["schemas"]["TelemetryCounts"];
     };
+    TemplateView: {
+      job: string;
+      name: string;
+      public_desc: string;
+      routine: string;
+      skill: string;
+      slug: string;
+      zone: string;
+    };
     "Test-connectorRequest": {
       account_id: string;
       /** @description For a stdio connector: the bot whose zone computer runs it. Default: the primary bot. */
@@ -2134,21 +2407,29 @@ export type SchemaChatView = components["schemas"]["ChatView"];
 export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
 export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
+export type SchemaComputerSetup = components["schemas"]["ComputerSetup"];
 export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-catalogResponse"];
 export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
 export type SchemaCreateGroupRequest = components["schemas"]["Create-groupRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
+export type SchemaDesktopConnectRequest = components["schemas"]["Desktop-connectRequest"];
+export type SchemaDesktopConnectResponse = components["schemas"]["Desktop-connectResponse"];
+export type SchemaDesktopOpenRequest = components["schemas"]["Desktop-openRequest"];
+export type SchemaDesktopWindowRequest = components["schemas"]["Desktop-windowRequest"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaDraftSkillResponse = components["schemas"]["Draft-skillResponse"];
 export type SchemaEntry = components["schemas"]["Entry"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
+export type SchemaEvalReport = components["schemas"]["EvalReport"];
+export type SchemaEvalResult = components["schemas"]["EvalResult"];
 export type SchemaEventView = components["schemas"]["EventView"];
-export type SchemaGetInstanceResponse = components["schemas"]["Get-instanceResponse"];
+export type SchemaExpectation = components["schemas"]["Expectation"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
+export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
 export type SchemaListInstructionVersionsResponse = components["schemas"]["List-instruction-versionsResponse"];
@@ -2157,6 +2438,7 @@ export type SchemaListModelProvidersResponse = components["schemas"]["List-model
 export type SchemaListModelRolesResponse = components["schemas"]["List-model-rolesResponse"];
 export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
+export type SchemaListTemplatesResponse = components["schemas"]["List-templatesResponse"];
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
 export type SchemaListOutBody1 = components["schemas"]["ListOutBody1"];
@@ -2168,10 +2450,14 @@ export type SchemaMemoryView = components["schemas"]["MemoryView"];
 export type SchemaMessagePage = components["schemas"]["MessagePage"];
 export type SchemaMessageView = components["schemas"]["MessageView"];
 export type SchemaModelInfo = components["schemas"]["ModelInfo"];
+export type SchemaOnboardingView = components["schemas"]["OnboardingView"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
 export type SchemaPostMessageResponse = components["schemas"]["Post-messageResponse"];
+export type SchemaPrepareStatus = components["schemas"]["PrepareStatus"];
 export type SchemaPreset = components["schemas"]["Preset"];
+export type SchemaProgress = components["schemas"]["Progress"];
 export type SchemaProvOutBody = components["schemas"]["ProvOutBody"];
+export type SchemaProviderAvailability = components["schemas"]["ProviderAvailability"];
 export type SchemaProviderBody = components["schemas"]["ProviderBody"];
 export type SchemaProviderView = components["schemas"]["ProviderView"];
 export type SchemaPushKeyResponse = components["schemas"]["Push-keyResponse"];
@@ -2189,6 +2475,7 @@ export type SchemaRow = components["schemas"]["Row"];
 export type SchemaRuleView = components["schemas"]["RuleView"];
 export type SchemaRulesOutBody = components["schemas"]["RulesOutBody"];
 export type SchemaRunRoutineResponse = components["schemas"]["Run-routineResponse"];
+export type SchemaRunSkillEvalsRequest = components["schemas"]["Run-skill-evalsRequest"];
 export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
 export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
@@ -2213,6 +2500,7 @@ export type SchemaSyncResult = components["schemas"]["SyncResult"];
 export type SchemaTarget = components["schemas"]["Target"];
 export type SchemaTelemetryCounts = components["schemas"]["TelemetryCounts"];
 export type SchemaTelemetryView = components["schemas"]["TelemetryView"];
+export type SchemaTemplateView = components["schemas"]["TemplateView"];
 export type SchemaTestConnectorRequest = components["schemas"]["Test-connectorRequest"];
 export type SchemaTestConnectorResponse = components["schemas"]["Test-connectorResponse"];
 export type SchemaTestModelProviderRequest = components["schemas"]["Test-model-providerRequest"];
@@ -2353,6 +2641,64 @@ export interface operations {
       };
     };
   };
+  "get-computer-setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ComputerSetup"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "prepare-computers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ComputerSetup"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "connector-catalog": {
     parameters: {
       query?: never;
@@ -2382,6 +2728,128 @@ export interface operations {
       };
     };
   };
+  "desktop-connect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Desktop-connectRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Desktop-connectResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "desktop-local": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "desktop-open": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Desktop-openRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "desktop-window": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Desktop-windowRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-instance": {
     parameters: {
       query?: never;
@@ -2397,7 +2865,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Get-instanceResponse"];
+          "application/json": components["schemas"]["InstanceView"];
         };
       };
       /** @description Error */
@@ -4322,6 +4790,38 @@ export interface operations {
       };
     };
   };
+  "start-onboarding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OnboardingView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "list-policy": {
     parameters: {
       query?: never;
@@ -5098,6 +5598,43 @@ export interface operations {
       };
     };
   };
+  "run-skill-evals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        skill: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Run-skill-evalsRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EvalReport"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "export-skill": {
     parameters: {
       query?: never;
@@ -5213,6 +5750,39 @@ export interface operations {
                 retry?: number;
               }
           )[];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-from-template": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        template: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BotView"];
         };
       };
       /** @description Error */
@@ -5526,6 +6096,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CardReply"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-templatesResponse"];
         };
       };
       /** @description Error */

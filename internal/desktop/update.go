@@ -169,13 +169,15 @@ func (u *Updater) Download(ctx context.Context, m *Manifest, p *Package, dir str
 	}
 	h := sha256.New()
 	if _, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(resp.Body, 2<<30)); err != nil {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 		return "", err
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		return "", err
+	}
 	if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)), p.SHA256) {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 		return "", ErrChecksum
 	}
 	return f.Name(), nil
@@ -193,13 +195,13 @@ func Install(pkg, target string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
 	if err != nil {
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		_ = out.Close()
 		return err
 	}
 	if err := out.Close(); err != nil {
@@ -242,7 +244,7 @@ func untar(pkg, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return err
@@ -275,10 +277,12 @@ func untar(pkg, dir string) error {
 				return err
 			}
 			if _, err := io.Copy(out, io.LimitReader(tr, 2<<30)); err != nil {
-				out.Close()
+				_ = out.Close()
 				return err
 			}
-			out.Close()
+			if err := out.Close(); err != nil {
+				return err
+			}
 		case tar.TypeSymlink:
 			if filepath.IsAbs(h.Linkname) || strings.Contains(h.Linkname, "..") {
 				return errors.New("the update package has a link outside its folder")

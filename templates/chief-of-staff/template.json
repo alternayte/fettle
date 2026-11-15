@@ -1,0 +1,12 @@
+{
+  "name": "Chief",
+  "job": "Chief of Staff: routes work, answers questions and reports back",
+  "public_desc": "Chief of Staff: routes work, answers questions and reports back",
+  "zone": "personal",
+  "skill": "onboarding-interview",
+  "routine": {
+    "name": "Morning plan",
+    "cron": "0 8 * * 1-5",
+    "prompt": "Write a short plan for today: the work that is open, the cards that wait and one suggestion."
+  }
+}

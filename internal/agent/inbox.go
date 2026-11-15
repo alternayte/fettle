@@ -183,6 +183,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"verification": {"accept", "retry", "stop"},
 		"check":        {"pass", "fail"},
 		"proposal":     {"create", "decline"},
+		"connect":      {"done", "skip"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -206,7 +207,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 	if card.RunID != "" {
 		runID, _ = uuid.Parse(card.RunID)
 	}
-	var out *chats.Message
+	var out, tasks *chats.Message
 	err = a.E.WithTx(ctx, func(ctx context.Context) error {
 		m, err := a.Chats.SetCard(ctx, msg.ID(), &card)
 		if err != nil {
@@ -217,7 +218,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 			return err
 		}
 		if card.Kind == "proposal" && action == "create" {
-			if err := a.applyProposal(ctx, user, spaceID, card, value); err != nil {
+			if tasks, err = a.applyProposal(ctx, user, spaceID, msg, card, value); err != nil {
 				return err
 			}
 		}
@@ -286,6 +287,9 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		return nil, err
 	}
 	a.Chats.Publish(out.ChatID, "message", a.MessageView(ctx, out))
+	if tasks != nil {
+		a.Chats.Publish(tasks.ChatID, "message", a.MessageView(ctx, tasks))
+	}
 	if runID != uuid.Nil {
 		a.publishRun(ctx, runID)
 	}
@@ -314,6 +318,10 @@ func cardAnswerText(kind, action, value string) string {
 		return "Continue"
 	case action == "stop":
 		return "Stop"
+	case kind == "connect" && action == "done":
+		return "Connected"
+	case action == "skip":
+		return "Skipped"
 	case kind == "takeover" && action == "done":
 		return "Control returned"
 	case action == "done":

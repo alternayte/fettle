@@ -34,6 +34,9 @@ type Proposal struct {
 	Skills       []string          `json:"skills,omitempty"`
 	Routines     []ProposedRoutine `json:"routines,omitempty"`
 	ModelRoles   map[string]string `json:"model_roles,omitempty"`
+	// FirstTask is one suggested first piece of work. After Create the primary bot posts it;
+	// nothing runs until the user sends it (§15.4).
+	FirstTask string `json:"first_task,omitempty"`
 }
 
 // ErrNotPrimary means a bot that is not primary tried to propose bots.
@@ -45,7 +48,8 @@ const proposalSchema = `{"type":"object","properties":{
 "grants":{"type":"array","items":{"type":"string"},"description":"Names of vault items or connector accounts the bot needs."},
 "skills":{"type":"array","items":{"type":"string"}},
 "routines":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"cron":{"type":"string"},"tz":{"type":"string"},"prompt":{"type":"string"}},"required":["name","cron","prompt"],"additionalProperties":false}},
-"model_roles":{"type":"object","additionalProperties":{"type":"string"}}},
+"model_roles":{"type":"object","additionalProperties":{"type":"string"}},
+"first_task":{"type":"string","description":"One first task for the bot, as a message the user can send to it."}},
 "required":["name","job","instructions"],"additionalProperties":false}`
 
 func (a *Agent) registerPropose() {
@@ -147,6 +151,9 @@ func (x *exec) propose(ctx context.Context, call models.ToolCall) error {
 		case n > 1:
 			line += fmt.Sprintf(" · %d routines (paused)", n)
 		}
+		if t := strings.TrimSpace(p.FirstTask); t != "" {
+			line += " · first task: " + t
+		}
 		preview[p.Name] = line
 	}
 	chatID := x.env.ChatID
@@ -180,22 +187,50 @@ func (x *exec) propose(ctx context.Context, call models.ToolCall) error {
 
 // applyProposal creates the bots of an allowed proposal card. value, when set, is the
 // proposal list after the user edited it.
-func (a *Agent) applyProposal(ctx context.Context, user audit.Actor, spaceID uuid.UUID, card chats.Card, value string) error {
+// It returns the message with the first tasks, which the caller publishes after the
+// transaction, or nil.
+func (a *Agent) applyProposal(ctx context.Context, user audit.Actor, spaceID uuid.UUID, msg *chats.Message, card chats.Card, value string) (*chats.Message, error) {
 	raw := card.Data["proposal"]
 	if strings.TrimSpace(value) != "" {
 		raw = value
 	}
 	var list []Proposal
 	if err := json.Unmarshal([]byte(raw), &list); err != nil || len(list) == 0 || len(list) > 3 {
-		return fmt.Errorf("%w: the proposal is not valid", ErrBadAction)
+		return nil, fmt.Errorf("%w: the proposal is not valid", ErrBadAction)
 	}
 	for i := range list {
 		if err := list[i].Validate(); err != nil {
-			return fmt.Errorf("%w: %w", ErrBadAction, err)
+			return nil, fmt.Errorf("%w: %w", ErrBadAction, err)
 		}
 	}
 	if a.Hire == nil {
-		return errors.New("this server cannot create bots from proposals")
+		return nil, errors.New("this server cannot create bots from proposals")
 	}
-	return a.Hire(ctx, user, spaceID, list)
+	if err := a.Hire(ctx, user, spaceID, list); err != nil {
+		return nil, err
+	}
+	return a.postFirstTasks(ctx, spaceID, msg, list)
+}
+
+// postFirstTasks posts one first task per created bot in the chat of the proposal, from
+// the bot that proposed them (§15.4). The user sends each task to its bot.
+func (a *Agent) postFirstTasks(ctx context.Context, spaceID uuid.UUID, msg *chats.Message, list []Proposal) (*chats.Message, error) {
+	var b strings.Builder
+	for _, p := range list {
+		if t := strings.TrimSpace(p.FirstTask); t != "" {
+			if b.Len() == 0 {
+				b.WriteString("Your new bots are ready. A first task for each:\n")
+			}
+			fmt.Fprintf(&b, "\n- **%s**: %s", p.Name, t)
+		}
+	}
+	if b.Len() == 0 {
+		return nil, nil
+	}
+	b.WriteString("\n\nOpen a bot's chat and send its task when you want it to start.")
+	out := &chats.Message{SpaceID: spaceID, ChatID: msg.ChatID, AuthorKind: msg.AuthorKind, AuthorID: msg.AuthorID, Body: b.String(), EnvelopeID: msg.EnvelopeID}
+	if err := a.Chats.Insert(ctx, out, nil); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
