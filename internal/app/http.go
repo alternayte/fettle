@@ -50,6 +50,7 @@ func (a *App) Handler() http.Handler {
 		} else {
 			g.Use(a.SignIn.Middleware(publicAPIPath))
 		}
+		g.Use(a.spaceGuard)
 		a.registerAPI(humachi.New(g, apiConfig(a.Cfg.Version)))
 	})
 	r.Handle("/*", spa())

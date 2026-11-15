@@ -157,7 +157,7 @@ func (a *App) registerLearning(api huma.API) {
 		SpacePath
 		Days int `query:"days" minimum:"1" maximum:"365" default:"30"`
 	}) (*struct{ Body ScoreReport }, error) {
-		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
 		rep, err := a.scoreReport(ctx, in.Space, in.Days)

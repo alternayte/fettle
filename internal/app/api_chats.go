@@ -13,6 +13,7 @@ import (
 
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/chats"
+	"github.com/alternayte/fettle/internal/spaces"
 )
 
 // ChatView is a chat with its bots.
@@ -255,9 +256,15 @@ func (a *App) registerChats(api huma.API) {
 			Value  string `json:"value,omitempty" maxLength:"20000"`
 		}
 	}) (*struct{ Body agent.MessageView }, error) {
-		p, _, err := a.ctxSpace(ctx, in.Space, false)
+		p, role, err := a.ctxSpace(ctx, in.Space, false)
 		if err != nil {
 			return nil, err
+		}
+		// Cards that change settings, skills, bots or budgets are for owners (§16).
+		if role != spaces.RoleOwner {
+			if msg, err := a.Chats.FindCard(ctx, in.Space, in.Card); err == nil && ownerCard(msg.Card.Kind) {
+				return nil, huma.Error403Forbidden("Only an owner of this space can answer this card.")
+			}
 		}
 		m, err := a.Agent.AnswerCard(ctx, actorOf(p), in.Space, in.Card, in.Body.Action, in.Body.Value)
 		if err != nil {
@@ -265,4 +272,10 @@ func (a *App) registerChats(api huma.API) {
 		}
 		return &struct{ Body agent.MessageView }{Body: a.Agent.MessageView(ctx, m)}, nil
 	})
+}
+
+// ownerCard reports whether a card kind changes what only owners change (§16): a change
+// of zones, grants or modes, a skill patch, new bots, or more budget.
+func ownerCard(kind string) bool {
+	return kind == "change" || kind == "patch" || kind == "proposal" || kind == "budget"
 }

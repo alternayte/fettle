@@ -34,7 +34,7 @@ var errorMap = []struct {
 	errs []error
 }{
 	{http.StatusNotFound, []error{routines.ErrNotFound, bots.ErrNotFound, chats.ErrNotFound, chats.ErrMsgNotFound, chats.ErrCardNotFound, vault.ErrNotFound, models.ErrNotFound, runs.ErrNotFound, envelopes.ErrNotFound, spaces.ErrNotMember, bots.ErrNoVersion}},
-	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit, bots.ErrPrimaryLast}},
+	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit, bots.ErrPrimaryLast, models.ErrRoleNoTargets}},
 	{http.StatusUnprocessableEntity, []error{bots.ErrBadName, bots.ErrMemoryFull, bots.ErrFactNotFound, bots.ErrFactAmbiguous, chats.ErrEmptyMessage, chats.ErrMessageLength, models.ErrNoToolsOwner, models.ErrUntestedOwner, models.ErrUnknownRole, models.ErrInvalidBaseURL, settings.ErrUnknown, agent.ErrBadAction}},
 }
 

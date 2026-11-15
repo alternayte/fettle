@@ -151,7 +151,7 @@ func (a *App) registerZones(api huma.API) {
 		}
 	}
 	huma.Register(api, op("list-zones", http.MethodGet, "/spaces/{space}/zones", "List zones with their computers", "computers"), func(ctx context.Context, in *SpacePath) (*zonesOut, error) {
-		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
 		zs, err := a.Zones.List(ctx, in.Space)

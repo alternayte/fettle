@@ -234,6 +234,7 @@ type maintenanceWorker struct {
 }
 
 func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceArgs]) error {
+	ctx = context.WithValue(ctx, maintenanceKey{}, true)
 	if _, err := w.a.Computers.SleepIdle(ctx); err != nil {
 		w.a.Log.Warn("idle sleep failed", "error", err)
 	}

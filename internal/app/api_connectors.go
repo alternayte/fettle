@@ -110,7 +110,7 @@ func (a *App) registerConnectors(api huma.API) {
 		}
 	}
 	huma.Register(api, op("list-connectors", http.MethodGet, "/spaces/{space}/connectors", "List the connectors of a space", "connectors"), func(ctx context.Context, in *SpacePath) (*listOut, error) {
-		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
 		cs, err := a.Connectors.List(ctx, in.Space)

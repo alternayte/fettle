@@ -11,6 +11,7 @@ import (
 
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/bots"
+	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/skills"
 )
 
@@ -73,7 +74,7 @@ func (a *App) registerEvals(api huma.API) {
 		switch {
 		case errors.Is(err, skills.ErrBadEvals):
 			return nil, huma.Error422UnprocessableEntity(err.Error())
-		case errors.Is(err, bots.ErrNotFound):
+		case errors.Is(err, bots.ErrNotFound), errors.Is(err, models.ErrRoleNoTargets):
 			return nil, apiError(err)
 		case err != nil:
 			return nil, skillError(err)

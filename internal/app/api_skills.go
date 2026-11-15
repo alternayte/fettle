@@ -233,7 +233,7 @@ func (a *App) registerSkills(api huma.API) {
 			SkillMD string `json:"skill_md"`
 		}
 	}, error) {
-		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
 		md, err := a.DraftSkill(ctx, in.Space, in.Run)

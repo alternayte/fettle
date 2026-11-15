@@ -186,7 +186,7 @@ func (a *App) registerModels(api huma.API) {
 			Roles []RoleView `json:"roles"`
 		}
 	}, error) {
-		if _, _, err := a.ctxSpace(ctx, in.Space, false); err != nil {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
 		var bot *uuid.UUID
