@@ -14,6 +14,17 @@ A second binary, `fettle-agentd`, runs inside each computer.
 
 Demo: a 2-minute demo GIF comes with the first release.
 
+## Quickstart
+
+1. Install Docker Desktop, Docker Engine or Podman.
+2. Download `fettle_<os>_<arch>.tar.gz` from the [latest release](https://github.com/alternayte/fettle/releases/latest) and put `fettle` on your `PATH`.
+3. Run `fettle up` and open the URL that it prints.
+4. Complete the setup: a computer, a model provider with its key, and the owner model.
+5. Write your first request to Chief, the primary bot.
+
+The [walkthrough](docs/walkthrough.md) continues from here. It builds a team of bots for an office move: sources, approvals, a group chat, a screen takeover, a skill and a weekly routine.
+Read the [documentation index](docs/README.md) for all pages.
+
 ## Screens
 
 The screenshots show the synthetic Acme space with the fake model of the tests.
@@ -208,6 +219,8 @@ Read [docs/enterprise.md](docs/enterprise.md).
 
 ## Documentation
 
+- [Documentation index](docs/README.md)
+- [Walkthrough](docs/walkthrough.md)
 - [Install](docs/install.md)
 - [Desktop app](docs/desktop.md)
 - [Server](docs/server.md)
