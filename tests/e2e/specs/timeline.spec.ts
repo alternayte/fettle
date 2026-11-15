@@ -12,8 +12,12 @@ test("SCN-UX-011 a timeline of 5,000 events shows in 2 seconds and renders only 
   await set("budget.envelope_usd", 1000);
   await set("budget.bot_day_usd", 1000);
   await set("budget.space_month_usd", 10000);
-  const bots = await api("GET", `/spaces/${s.space}/bots`);
-  const chief = bots.bots.find((b: { is_primary: boolean }) => b.is_primary);
+  // A bot of its own, so no run of another spec takes this message as a note.
+  const made = await api("POST", `/spaces/${s.space}/bots`, {
+    name: "Archivist",
+    job: "Reads history",
+  });
+  const chief = await api("GET", `/spaces/${s.space}/bots/${made.id}`);
   const posted = await api(
     "POST",
     `/spaces/${s.space}/chats/${chief.chat_id}/messages`,
