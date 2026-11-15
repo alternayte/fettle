@@ -264,11 +264,13 @@ func TestSCN_OPS_001_ReleaseSnapshot(t *testing.T) {
 		if len(f) != 2 {
 			continue
 		}
-		path := filepath.Join(dist, f[1])
-		data, err := os.ReadFile(path)
-		if err != nil {
-			path = filepath.Join(root(), f[1])
-			data, err = os.ReadFile(path)
+		// Archives are in dist; the extra release files keep their base name (.goreleaser.yaml).
+		var data []byte
+		var err error
+		for _, dir := range []string{dist, root(), filepath.Join(root(), "deploy"), filepath.Join(root(), "image", "e2b")} {
+			if data, err = os.ReadFile(filepath.Join(dir, f[1])); err == nil {
+				break
+			}
 		}
 		if err != nil {
 			problems = append(problems, "SHA256SUMS names a missing file "+f[1])
