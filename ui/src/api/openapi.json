@@ -3799,6 +3799,58 @@
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}": {
+      "delete": {
+        "operationId": "delete-bot",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The bot's name, typed by the user.",
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "schema": {
+              "description": "The bot's name, typed by the user.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a bot with its chats, memory, routines and home workspace. Type the bot's name to confirm.",
+        "tags": [
+          "bots"
+        ]
+      },
       "get": {
         "operationId": "get-bot",
         "parameters": [
@@ -3903,6 +3955,108 @@
           }
         },
         "summary": "Change a bot. Changed instructions become a new version.",
+        "tags": [
+          "bots"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/archive": {
+      "post": {
+        "operationId": "archive-bot",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Archive a bot. It keeps everything; its routines stop.",
+        "tags": [
+          "bots"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/duplicate": {
+      "post": {
+        "operationId": "duplicate-bot",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Copy a bot: profile, instructions, zone, model roles, skills and paused routines. Memory, chats and workspace stay with the original.",
         "tags": [
           "bots"
         ]
@@ -4127,6 +4281,108 @@
         "summary": "Replace the MEMORY.md of a bot (at most 4 KB)",
         "tags": [
           "memory"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/primary": {
+      "post": {
+        "operationId": "make-primary",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardReply"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ask to make a bot the primary bot. The change needs a card in the primary bot's chat.",
+        "tags": [
+          "bots"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/restore": {
+      "post": {
+        "operationId": "restore-bot",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Bring an archived bot back. Its routines stay paused.",
+        "tags": [
+          "bots"
         ]
       }
     },

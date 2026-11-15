@@ -160,6 +160,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupSkills()
 	a.setupScreens()
 	a.registerChanges()
+	a.registerPrimaryChange()
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})
 	river.AddWorker(workers, &maintenanceWorker{a: a})

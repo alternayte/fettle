@@ -346,3 +346,27 @@ func (s *Service) Search(ctx context.Context, botID uuid.UUID, query string, cur
 	}
 	return hits, next, rows.Err()
 }
+
+// PendingCards returns the cards of a space that wait for a person, oldest first.
+func (s *Service) PendingCards(ctx context.Context, spaceID uuid.UUID) ([]*Message, error) {
+	q := "SELECT id FROM messages WHERE space_id = $1 AND json_extract(card, '$.status') = 'pending' ORDER BY sent_at"
+	if s.pg {
+		q = "SELECT id FROM messages WHERE space_id = $1 AND card->>'status' = 'pending' ORDER BY sent_at"
+	}
+	rows, err := s.e.Query(ctx, q, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return drel.NewRepository(s.e, MessageMeta).Where(Messages.ID.In(ids...)).OrderBy(Messages.SentAt.Asc()).All(ctx)
+}

@@ -238,3 +238,89 @@ func (s *Service) Find(ctx context.Context, id uuid.UUID) (*Bot, error) {
 	}
 	return b, nil
 }
+
+// SetPrimary makes a bot the primary bot of its space and takes the role from the
+// others: a space has exactly one (§9.8).
+func (s *Service) SetPrimary(ctx context.Context, actor audit.Actor, spaceID, id uuid.UUID) error {
+	return s.e.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		b, err := drel.Repo(tx, BotMeta).Where(Bots.ID.Eq(id)).Where(Bots.SpaceID.Eq(spaceID)).Where(Bots.Status.Eq("active")).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if b == nil {
+			return ErrNotFound
+		}
+		if _, err := tx.Exec(ctx, "UPDATE bots SET is_primary = $1 WHERE space_id = $2 AND id <> $3", false, spaceID, id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, "UPDATE bots SET is_primary = $1 WHERE id = $2", true, id); err != nil {
+			return err
+		}
+		return s.audit.Record(ctx, actor, &spaceID, "bot.primary", "bot:"+id.String(), map[string]string{"name": b.Name})
+	})
+}
+
+// SetArchived archives or restores a bot. The primary bot cannot be archived.
+func (s *Service) SetArchived(ctx context.Context, actor audit.Actor, spaceID, id uuid.UUID, archived bool) (*Bot, error) {
+	var out *Bot
+	err := s.e.WithTx(ctx, func(ctx context.Context) error {
+		repo := drel.Repo(drel.MustFromContext(ctx), BotMeta)
+		b, err := repo.Where(Bots.ID.Eq(id)).Where(Bots.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if b == nil {
+			return ErrNotFound
+		}
+		if archived && b.IsPrimary {
+			return ErrPrimaryLast
+		}
+		if !archived {
+			taken, err := repo.Where(Bots.SpaceID.Eq(spaceID)).Where(Bots.Name.Eq(b.Name)).Where(Bots.Status.Eq("active")).Where(Bots.ID.NEQ(id)).Exists(ctx)
+			if err != nil {
+				return err
+			}
+			if taken {
+				return ErrNameTaken
+			}
+		}
+		b.Status = "active"
+		action := "bot.restore"
+		if archived {
+			b.Status, action = "archived", "bot.archive"
+		}
+		out = b
+		return s.audit.Record(ctx, actor, &spaceID, action, "bot:"+id.String(), map[string]string{"name": b.Name})
+	})
+	return out, err
+}
+
+// Delete removes a bot with its memory, open work and instruction history, in the
+// transaction in ctx. The caller removes chats, routines and the workspace (§6.1).
+func (s *Service) Delete(ctx context.Context, actor audit.Actor, spaceID, id uuid.UUID) error {
+	return s.e.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		b, err := drel.Repo(tx, BotMeta).Where(Bots.ID.Eq(id)).Where(Bots.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if b == nil {
+			return ErrNotFound
+		}
+		if b.IsPrimary {
+			return ErrPrimaryLast
+		}
+		for _, q := range []string{
+			"DELETE FROM bot_memory WHERE bot_id = $1",
+			"DELETE FROM open_work WHERE bot_id = $1",
+			"DELETE FROM bot_instructions WHERE bot_id = $1",
+			"DELETE FROM bots WHERE id = $1",
+		} {
+			if _, err := tx.Exec(ctx, q, id); err != nil {
+				return err
+			}
+		}
+		return s.audit.Record(ctx, actor, &spaceID, "bot.delete", "bot:"+id.String(), map[string]string{"name": b.Name})
+	})
+}

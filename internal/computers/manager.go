@@ -899,3 +899,54 @@ func (m *Manager) CanFork(ctx context.Context, zoneID uuid.UUID) bool {
 	}
 	return size <= 1<<30
 }
+
+// DeleteBotHome removes a bot's home workspace: its stored revisions and, when the zone's
+// computer runs, the folder on the computer (bot delete, §6.1).
+func (m *Manager) DeleteBotHome(ctx context.Context, botID uuid.UUID, zoneID *uuid.UUID) error {
+	rows, err := m.E.Query(ctx, "SELECT id FROM workspaces WHERE bot_id = $1", botID)
+	if err != nil {
+		return err
+	}
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	for _, id := range ids {
+		keys, err := m.Objects.List(ctx, fmt.Sprintf("workspaces/%s/", id))
+		if err != nil {
+			return err
+		}
+		for _, k := range keys {
+			if err := m.Objects.Delete(ctx, k); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := m.E.Exec(ctx, "DELETE FROM workspaces WHERE bot_id = $1", botID); err != nil {
+		return err
+	}
+	if zoneID == nil {
+		return nil
+	}
+	c, err := m.Current(ctx, *zoneID)
+	if err != nil || c == nil {
+		return nil
+	}
+	m.mu.Lock()
+	lv := m.live[c.ID()]
+	m.mu.Unlock()
+	if lv == nil {
+		return nil // the computer sleeps; it imports only stored workspaces when it wakes
+	}
+	l, err := m.Acquire(ctx, *zoneID)
+	if err != nil {
+		return err
+	}
+	defer l.Release()
+	_, err = l.Client.Exec(ctx, client.ExecRequest{Argv: []string{"rm", "-rf", BotHome(botID)}, TimeoutMS: 60000}, func(string, string) {})
+	return err
+}

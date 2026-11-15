@@ -34,7 +34,7 @@ var errorMap = []struct {
 	errs []error
 }{
 	{http.StatusNotFound, []error{routines.ErrNotFound, bots.ErrNotFound, chats.ErrNotFound, chats.ErrMsgNotFound, chats.ErrCardNotFound, vault.ErrNotFound, models.ErrNotFound, runs.ErrNotFound, envelopes.ErrNotFound, spaces.ErrNotMember, bots.ErrNoVersion}},
-	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit}},
+	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit, bots.ErrPrimaryLast}},
 	{http.StatusUnprocessableEntity, []error{bots.ErrBadName, bots.ErrMemoryFull, bots.ErrFactNotFound, bots.ErrFactAmbiguous, chats.ErrEmptyMessage, chats.ErrMessageLength, models.ErrNoToolsOwner, models.ErrUntestedOwner, models.ErrUnknownRole, models.ErrInvalidBaseURL, settings.ErrUnknown, agent.ErrBadAction}},
 }
 
@@ -79,6 +79,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerConnectors(api)
 	a.registerSkills(api)
 	a.registerScreens(api)
+	a.registerBotLife(api)
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)
