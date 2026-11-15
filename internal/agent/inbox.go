@@ -140,14 +140,16 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		return nil, chats.ErrCardAnswered
 	}
 	valid := map[string][]string{
-		"turn_limit": {"continue", "stop"},
-		"budget":     {"add_budget", "stop"},
-		"uncertain":  {"done", "not_done", "stop"},
-		"approval":   {"allow", "always", "deny"},
-		"question":   {"answer"},
-		"takeover":   {"done"},
-		"change":     {"allow", "deny"},
-		"warning":    {"dismiss"},
+		"turn_limit":   {"continue", "stop"},
+		"budget":       {"add_budget", "stop"},
+		"uncertain":    {"done", "not_done", "stop"},
+		"approval":     {"allow", "always", "deny"},
+		"question":     {"answer"},
+		"takeover":     {"done"},
+		"change":       {"allow", "deny"},
+		"warning":      {"dismiss"},
+		"verification": {"accept", "retry", "stop"},
+		"check":        {"pass", "fail"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -258,6 +260,14 @@ func cardAnswerText(kind, action, value string) string {
 		return "Added $" + value
 	case action == "answer":
 		return value
+	case action == "accept":
+		return "Accepted anyway"
+	case action == "retry":
+		return "Retry"
+	case action == "pass":
+		return "Passes"
+	case action == "fail":
+		return "Fails"
 	case action == "continue":
 		return "Continue"
 	case action == "stop":

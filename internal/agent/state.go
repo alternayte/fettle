@@ -2,6 +2,8 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alternayte/fettle/internal/models"
@@ -88,38 +90,44 @@ type (
 
 // state is the run rebuilt from its journal.
 type state struct {
-	events       []*runs.RunEvent
-	started      bool
-	step         string
-	turns        []TurnRecord
-	modelTurns   int
-	extraTurns   int
-	lastSeq      int64
-	lastModel    *evModelTurn
-	pending      []models.ToolCall // calls of the last model turn without a result
-	uncertain    []evTool          // intents without results
-	steers       []string          // steer texts after the last model turn
-	cancelled    bool
-	finished     bool
-	openCard     *evCard // a posted card without an answer
-	answers      []evCard
-	readData     bool
-	summarySeq   int64
-	finalText    string
-	lastMsgID    string
-	budgetHalts  int
-	approvals    map[string]string // call ID -> requested, allowed, denied
-	approvedAs   map[string]string // call ID -> the class that the decision saw
-	intent       []string          // user items of this run: the goal and steer texts
-	sleepUntil   *time.Time        // the last sleep_until time
-	subStarted   bool
-	subRuns      []evSubStart
-	subResults   map[string]evSubResult
-	reported     *PartResult        // the report_result of a sub-agent run
-	takeoverCard map[string]string  // call ID of request_takeover to its card ID
-	takeoverDone map[string]*evCard // card ID to the answer that returned control
-	computer     bool               // a computer_acquired event exists
-	computerWait bool               // the last computer event is a wait
+	events         []*runs.RunEvent
+	started        bool
+	step           string
+	turns          []TurnRecord
+	modelTurns     int
+	extraTurns     int
+	lastSeq        int64
+	lastModel      *evModelTurn
+	pending        []models.ToolCall // calls of the last model turn without a result
+	uncertain      []evTool          // intents without results
+	steers         []string          // steer texts after the last model turn
+	cancelled      bool
+	finished       bool
+	openCard       *evCard // a posted card without an answer
+	answers        []evCard
+	readData       bool
+	summarySeq     int64
+	finalText      string
+	lastMsgID      string
+	budgetHalts    int
+	approvals      map[string]string // call ID -> requested, allowed, denied
+	approvedAs     map[string]string // call ID -> the class that the decision saw
+	intent         []string          // user items of this run: the goal and steer texts
+	sleepUntil     *time.Time        // the last sleep_until time
+	verifyStarted  int
+	verifyResults  []evVerifyResult
+	verifyAccepted bool
+	verifyRetries  int
+	humanAnswers   []string
+	lastModelSeq   int64
+	subStarted     bool
+	subRuns        []evSubStart
+	subResults     map[string]evSubResult
+	reported       *PartResult        // the report_result of a sub-agent run
+	takeoverCard   map[string]string  // call ID of request_takeover to its card ID
+	takeoverDone   map[string]*evCard // card ID to the answer that returned control
+	computer       bool               // a computer_acquired event exists
+	computerWait   bool               // the last computer event is a wait
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
@@ -140,6 +148,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.modelTurns++
 			st.lastModel = &d
+			st.lastModelSeq = ev.Seq
 			st.steers = nil
 			st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "model", Text: d.Text, ToolCalls: d.ToolCalls})
 			if d.Text != "" {
@@ -193,6 +202,14 @@ func rebuild(evs []*runs.RunEvent) *state {
 			if d.Kind == "takeover" {
 				st.takeoverDone[d.CardID] = &d
 			}
+			switch {
+			case d.Kind == "verification" && d.Action == "accept":
+				st.verifyAccepted = true
+			case d.Kind == "verification" && d.Action == "retry":
+				st.verifyRetries++
+			case d.Kind == "check":
+				st.humanAnswers = append(st.humanAnswers, d.Action)
+			}
 			if d.Kind == "turn_limit" && d.Action == "continue" {
 				st.extraTurns++
 			}
@@ -215,6 +232,22 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			u := d.Until
 			st.sleepUntil = &u
+		case runs.EvVerifyStarted:
+			st.verifyStarted++
+		case runs.EvVerifyResult:
+			var d evVerifyResult
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			d.Seq = ev.Seq
+			st.verifyResults = append(st.verifyResults, d)
+			if !d.Pass {
+				var b strings.Builder
+				for _, c := range d.Checks {
+					if !c.Pass {
+						fmt.Fprintf(&b, "- %s check %q failed: %s\n", c.Kind, c.Spec, c.Reason)
+					}
+				}
+				st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "verify", Text: b.String()})
+			}
 		case runs.EvSubagentsStarted:
 			var d evSubStarted
 			_ = json.Unmarshal([]byte(ev.Data), &d)

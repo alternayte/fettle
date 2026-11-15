@@ -241,6 +241,9 @@ func (s *Service) SetRoute(ctx context.Context, id uuid.UUID, route Route) error
 		r := route
 		d.Route = &r
 		env.Decision = d
+		if step == "fanout" && !slices.Contains(env.Acceptance, CitationsCheck) {
+			env.Acceptance = append(append([]Check{}, env.Acceptance...), CitationsCheck)
+		}
 		if env.Status == "created" {
 			env.Status = "routed"
 		}

@@ -71,7 +71,7 @@ func TestSCN_TEAM_002_RouterRulesAndCostCap(t *testing.T) {
 	}
 	for _, c := range cases {
 		run, _ := e.Post(chief.ChatID, c.msg)
-		r := e.WaitRun(run, "done", "failed")
+		r := e.WaitRun(run, "done", "failed", "escalated")
 		d := routeOf(t, r)
 		if d.Step != c.step {
 			t.Fatalf("%s: step %s, want %s (rules %v)", c.msg, d.Step, c.step, d.Rules)
@@ -82,7 +82,9 @@ func TestSCN_TEAM_002_RouterRulesAndCostCap(t *testing.T) {
 			}
 		}
 		if c.step == "fanout" {
-			if r.Line.State != "done" || len(d.Parts) != 3 {
+			// The fanout result gets a citations check; the fake reply cites nothing, so the
+			// verifier may escalate it. This test is about the route.
+			if len(d.Parts) != 3 {
 				t.Fatalf("fanout run %s with %d parts: %s", r.Line.State, len(d.Parts), r.EventTypes())
 			}
 			if !strings.Contains(r.EventTypes(), "subagents_started") || strings.Count(r.EventTypes(), "subagent_result") != 3 {

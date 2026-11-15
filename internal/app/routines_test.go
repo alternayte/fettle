@@ -83,7 +83,7 @@ func TestSCN_SKL_006_DowntimeCoalescesTicks(t *testing.T) {
 		found := false
 		for _, q := range e.Fake.Requests() {
 			if strings.Contains(q.System, "Hourly check") || strings.Contains(q.LastUser, "Hourly check") {
-				found = strings.Contains(q.System, "was due at 09:00") && strings.Contains(q.System, "started at 13:30")
+				found = found || (strings.Contains(q.System, "was due at 09:00") && strings.Contains(q.System, "started at 13:30"))
 			}
 		}
 		if !found {

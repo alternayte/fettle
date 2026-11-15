@@ -129,7 +129,11 @@
               "add_budget",
               "done",
               "not_done",
-              "dismiss"
+              "dismiss",
+              "accept",
+              "retry",
+              "pass",
+              "fail"
             ],
             "type": "string"
           },

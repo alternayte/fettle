@@ -125,6 +125,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		l.Release()
 		return nil
 	}
+	a.Agent.Checker = a.checker
 	a.Agent.CanFork = func(ctx context.Context, spaceID, botID uuid.UUID) bool {
 		b, err := a.Bots.Get(ctx, spaceID, botID)
 		return err == nil && b.ZoneID != nil && a.Computers.CanFork(ctx, *b.ZoneID)

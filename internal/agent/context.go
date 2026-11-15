@@ -136,6 +136,9 @@ func Assemble(in Input) Context {
 		loc, tz = time.UTC, "UTC"
 	}
 	add(Item{Section: SecSystem, Name: "base_rules", Origin: OriginSystem, Role: "system", Text: fmt.Sprintf(baseRules, in.BotName, in.BotJob)})
+	if in.Helper {
+		add(Item{Section: SecSystem, Name: "helper_rules", Origin: OriginSystem, Role: "system", Text: "You are a helper. Do only the part in the envelope. You cannot ask the user, hand off or start helpers. When you are done, call report_result with your summary, your findings and their sources."})
+	}
 	if strings.TrimSpace(in.Instructions) != "" {
 		add(Item{Section: SecSystem, Name: "instructions", Origin: OriginUser, Role: "system", Text: "Your instructions from the user:\n" + in.Instructions})
 	}
@@ -173,7 +176,7 @@ func Assemble(in Input) Context {
 		origin = OriginUser
 	}
 	if in.Helper {
-		add(Item{Section: SecEnvelope, Name: "brief", Origin: OriginBot, Role: "user", Text: "You are a helper. Do only the part in the envelope. You cannot ask the user, hand off or start helpers. When you are done, call report_result with your summary, your findings and their sources.\nContext brief from the owner of the work:\n" + dataTag(OriginBot, "brief", in.Brief)})
+		add(Item{Section: SecEnvelope, Name: "brief", Origin: OriginBot, Role: "user", Text: "Context brief from the owner of the work:\n" + dataTag(OriginBot, "brief", in.Brief)})
 	}
 	add(Item{Section: SecEnvelope, Name: "envelope", Origin: origin, Role: "user", Text: env})
 
@@ -218,6 +221,8 @@ func Assemble(in Input) Context {
 		switch t.Kind {
 		case "summary":
 			add(Item{Section: SecRunEvents, Name: "summary", Origin: OriginSystem, Role: "user", Text: "Summary of your earlier steps in this run:\n" + t.Text})
+		case "verify":
+			add(Item{Section: SecRunEvents, Name: "verify", Origin: OriginSystem, Role: "user", Text: "The verifier did not accept your result. Fix these problems, then give the whole result again:\n" + t.Text})
 		case "helper":
 			add(Item{Section: SecRunEvents, Name: "helper", Origin: OriginWeb, Role: "user", Text: "Result from one of your helpers:\n" + dataTag(OriginWeb, "helper", t.Text)})
 		case "model":

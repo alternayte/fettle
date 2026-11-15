@@ -59,6 +59,10 @@ type Route struct {
 	OwnerBotID string   `json:"owner_bot_id,omitempty"`
 }
 
+// CitationsCheck is the check that a fanout result gets: helpers return findings with
+// sources, so the synthesis cites them.
+var CitationsCheck = Check{Kind: "citations", Spec: "Each fact of the result links to the page it comes from."}
+
 // Decision holds what was decided about the work: the router's route and the skill that
 // the work started with.
 type Decision struct {
@@ -66,6 +70,10 @@ type Decision struct {
 	Route *Route `json:"route,omitempty"`
 	// Brief is the context brief that the owner wrote for a sub-agent part (§9.4).
 	Brief string `json:"brief,omitempty"`
+	// Result and Evidence are what a verification checks: the owner's result and the
+	// outputs of its tools, never its reasoning (§9.5).
+	Result   string   `json:"result,omitempty"`
+	Evidence []string `json:"evidence,omitempty"`
 }
 
 // Envelope is one unit of work (Appendix C).

@@ -85,6 +85,9 @@ func (x *exec) route(ctx context.Context) (string, error) {
 	}
 	x.env.Step = &step
 	x.env.Decision.Route = &route
+	if step == "fanout" && !slices.Contains(x.env.Acceptance, envelopes.CitationsCheck) {
+		x.env.Acceptance = append(x.env.Acceptance, envelopes.CitationsCheck)
+	}
 	return step, nil
 }
 

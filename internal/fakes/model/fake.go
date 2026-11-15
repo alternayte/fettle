@@ -412,6 +412,11 @@ func (s *Server) reply(req nreq) Step {
 			continue
 		}
 		i := req.stepIndex()
+		// A structured request (router, verifier, checks) takes only a step written for
+		// it, so a chat script that matches the same text does not answer it.
+		if req.schema != nil && (i >= len(sc.Steps) || (sc.Steps[i].JSON == nil && !sc.Steps[i].Plain)) {
+			continue
+		}
 		if i < len(sc.Steps) {
 			return s.fill(sc.Steps[i], req)
 		}
@@ -448,6 +453,10 @@ func (s *Server) builtin(req nreq) Step {
 	// An unscripted router call picks single, so a scenario script runs as written.
 	if strings.HasPrefix(req.system, "You route one piece of work") {
 		return Step{JSON: map[string]any{"step": "single", "owner_bot_id": "", "parts": []any{}, "rationale": "The fake model routes to single.", "confidence": 0.5}}
+	}
+	// An unscripted verifier call passes, so a scenario script finishes as written.
+	if strings.HasPrefix(req.system, "You verify a result of a bot") {
+		return Step{JSON: map[string]any{"pass": true, "reason": "The fake model accepts the result."}}
 	}
 	if req.schema != nil {
 		return Step{JSON: synth(req.schema)}

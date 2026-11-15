@@ -41,6 +41,8 @@ type Agent struct {
 	Vault     *vault.Vault
 	Tools     *Registry
 	Policy    *policy.Service
+	// Checker opens the zone computer of a bot for file, command and citations checks.
+	Checker func(ctx context.Context, spaceID, botID uuid.UUID) (Checker, error)
 	// SubagentEnded frees what a sub-agent run used on the computer (its browser context).
 	SubagentEnded func(ctx context.Context, spaceID, botID, runID uuid.UUID)
 	// CanFork reports whether the zone of a bot can fork: native fork support or a

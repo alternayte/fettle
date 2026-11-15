@@ -1196,7 +1196,20 @@ export interface components {
     "Answer-cardRequest": {
       /** @enum {string} */
       action:
-        "allow" | "always" | "deny" | "answer" | "continue" | "stop" | "add_budget" | "done" | "not_done" | "dismiss";
+        | "allow"
+        | "always"
+        | "deny"
+        | "answer"
+        | "continue"
+        | "stop"
+        | "add_budget"
+        | "done"
+        | "not_done"
+        | "dismiss"
+        | "accept"
+        | "retry"
+        | "pass"
+        | "fail";
       value?: string;
     };
     "Assign-skillRequest": {

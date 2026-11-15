@@ -268,12 +268,14 @@ func TestSCN_RUN_008_TimerWakesRunAndStatesLateStart(t *testing.T) {
 		late := due.Add(20 * time.Minute)
 		e.App.Agent.SetClock(func() time.Time { return late.Add(time.Since(due.Add(-time.Second))) })
 		e.WaitRun(run, "done")
-		var last fakemodel.Recorded
+		// The bot's turn after the late wake states both times (the router and the
+		// verifier make their own requests).
+		stated := false
 		for _, req := range e.Fake.Requests() {
-			last = req
+			stated = stated || (strings.Contains(req.System, "was due at "+due.In(time.UTC).Format("15:04")) && strings.Contains(req.System, "started at"))
 		}
-		if !strings.Contains(last.System, "was due at "+due.In(time.UTC).Format("15:04")) || !strings.Contains(last.System, "started at") {
-			t.Fatalf("context does not state the times: %s", last.System)
+		if !stated {
+			t.Fatal("context does not state the times")
 		}
 	})
 }

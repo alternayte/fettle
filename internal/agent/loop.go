@@ -181,6 +181,9 @@ func (x *exec) loop(ctx context.Context) error {
 			return x.wait(ctx, "card")
 		}
 		x.st = st
+		if x.run.Kind == "verifier" {
+			return x.runVerifier(ctx, st)
+		}
 		if x.run.Kind == "owner" && st.step == "fanout" && !st.subStarted {
 			if err := x.startFanout(ctx, st); err != nil {
 				return err
@@ -203,6 +206,13 @@ func (x *exec) loop(ctx context.Context) error {
 			continue
 		}
 		if !st.needsModel() {
+			handled, err := x.settle(ctx, st)
+			if err != nil {
+				return err
+			}
+			if handled {
+				continue
+			}
 			return x.finish(ctx, st, runs.StatusDone, st.finalText)
 		}
 		maxTurns := a.Settings.Int(ctx, &x.run.SpaceID, "agent.max_turns")

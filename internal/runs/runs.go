@@ -159,7 +159,7 @@ func (s *Service) Wake(ctx context.Context, id uuid.UUID, queue string) error {
 			return nil
 		}
 		// A running attempt sees queued when it ends and stops; the new job continues.
-		if status != StatusWaiting && status != StatusEscalated && status != StatusRunning {
+		if status != StatusWaiting && status != StatusEscalated && status != StatusRunning && status != StatusVerifying {
 			return nil // already queued: its job is pending
 		}
 		if _, err := tx.Exec(ctx, "UPDATE runs SET status = $1, wait_reason = '', wake_at = NULL, updated_at = $2 WHERE id = $3", StatusQueued, s.now(), id); err != nil {
