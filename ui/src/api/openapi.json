@@ -15,10 +15,17 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["id", "label", "zones"],
+        "required": [
+          "id",
+          "label",
+          "zones"
+        ],
         "type": "object"
       },
       "Add-composioRequest": {
@@ -30,7 +37,9 @@
             "type": "string"
           }
         },
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "type": "object"
       },
       "Add-connector-accountRequest": {
@@ -47,7 +56,9 @@
             "type": "string"
           }
         },
-        "required": ["label"],
+        "required": [
+          "label"
+        ],
         "type": "object"
       },
       "Add-policy-ruleRequest": {
@@ -58,7 +69,11 @@
             "type": "string"
           },
           "effect": {
-            "enum": ["allow", "ask", "block"],
+            "enum": [
+              "allow",
+              "ask",
+              "block"
+            ],
             "type": "string"
           },
           "recipient_pattern": {
@@ -75,21 +90,29 @@
             "type": "string"
           }
         },
-        "required": ["effect"],
+        "required": [
+          "effect"
+        ],
         "type": "object"
       },
       "Add-zone-grantRequest": {
         "additionalProperties": false,
         "properties": {
           "kind": {
-            "enum": ["vault_item", "connector_account"],
+            "enum": [
+              "vault_item",
+              "connector_account"
+            ],
             "type": "string"
           },
           "target_id": {
             "type": "string"
           }
         },
-        "required": ["kind", "target_id"],
+        "required": [
+          "kind",
+          "target_id"
+        ],
         "type": "object"
       },
       "Answer-cardRequest": {
@@ -115,7 +138,9 @@
             "type": "string"
           }
         },
-        "required": ["action"],
+        "required": [
+          "action"
+        ],
         "type": "object"
       },
       "Assign-skillRequest": {
@@ -125,7 +150,9 @@
             "type": "boolean"
           }
         },
-        "required": ["on"],
+        "required": [
+          "on"
+        ],
         "type": "object"
       },
       "Attachment": {
@@ -148,7 +175,13 @@
             "type": "string"
           }
         },
-        "required": ["id", "name", "size", "type", "object_key"],
+        "required": [
+          "id",
+          "name",
+          "size",
+          "type",
+          "object_key"
+        ],
         "type": "object"
       },
       "AuditView": {
@@ -177,7 +210,14 @@
             "type": "string"
           }
         },
-        "required": ["at", "actor_kind", "actor_id", "action", "target", "details"],
+        "required": [
+          "at",
+          "actor_kind",
+          "actor_id",
+          "action",
+          "target",
+          "details"
+        ],
         "type": "object"
       },
       "Authorize-connectorRequest": {
@@ -189,7 +229,9 @@
             "type": "string"
           }
         },
-        "required": ["label"],
+        "required": [
+          "label"
+        ],
         "type": "object"
       },
       "Authorize-connectorResponse": {
@@ -199,7 +241,9 @@
             "type": "string"
           }
         },
-        "required": ["url"],
+        "required": [
+          "url"
+        ],
         "type": "object"
       },
       "BotBody": {
@@ -231,7 +275,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "BotView": {
@@ -239,7 +285,11 @@
         "properties": {
           "activity": {
             "description": "What the bot does now.",
-            "enum": ["idle", "working", "waiting"],
+            "enum": [
+              "idle",
+              "working",
+              "waiting"
+            ],
             "type": "string"
           },
           "avatar": {
@@ -274,7 +324,10 @@
             "type": "string"
           },
           "zone_id": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "zone_name": {
             "type": "string"
@@ -304,10 +357,15 @@
             "items": {
               "$ref": "#/components/schemas/BotView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["bots"],
+        "required": [
+          "bots"
+        ],
         "type": "object"
       },
       "Caps": {
@@ -337,7 +395,15 @@
             "type": "boolean"
           }
         },
-        "required": ["snapshot", "native_fork", "network_allowlist", "screen", "persistent", "max_vcpu", "max_mem_mib"],
+        "required": [
+          "snapshot",
+          "native_fork",
+          "network_allowlist",
+          "screen",
+          "persistent",
+          "max_vcpu",
+          "max_mem_mib"
+        ],
         "type": "object"
       },
       "Card": {
@@ -368,7 +434,10 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "preview": {
             "additionalProperties": {
@@ -389,7 +458,12 @@
             "type": "string"
           }
         },
-        "required": ["id", "kind", "status", "title"],
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "title"
+        ],
         "type": "object"
       },
       "CardReply": {
@@ -405,7 +479,11 @@
             "type": "string"
           }
         },
-        "required": ["card_id", "chat_id", "message_id"],
+        "required": [
+          "card_id",
+          "chat_id",
+          "message_id"
+        ],
         "type": "object"
       },
       "ChatView": {
@@ -415,20 +493,31 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "id": {
             "type": "string"
           },
           "kind": {
-            "enum": ["direct", "group"],
+            "enum": [
+              "direct",
+              "group"
+            ],
             "type": "string"
           },
           "name": {
             "type": "string"
           }
         },
-        "required": ["id", "kind", "name", "bot_ids"],
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "bot_ids"
+        ],
         "type": "object"
       },
       "Check": {
@@ -444,7 +533,11 @@
             "type": "string"
           }
         },
-        "required": ["name", "pass", "reason"],
+        "required": [
+          "name",
+          "pass",
+          "reason"
+        ],
         "type": "object"
       },
       "CheckResult": {
@@ -464,7 +557,11 @@
             "type": "boolean"
           }
         },
-        "required": ["key", "pass", "ms"],
+        "required": [
+          "key",
+          "pass",
+          "ms"
+        ],
         "type": "object"
       },
       "ComputerProviderView": {
@@ -493,7 +590,15 @@
             "type": "string"
           }
         },
-        "required": ["id", "kind", "name", "enabled", "available", "default", "caps"],
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "enabled",
+          "available",
+          "default",
+          "caps"
+        ],
         "type": "object"
       },
       "Connector-catalogResponse": {
@@ -503,10 +608,15 @@
             "items": {
               "$ref": "#/components/schemas/Entry"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["connectors"],
+        "required": [
+          "connectors"
+        ],
         "type": "object"
       },
       "ConnectorView": {
@@ -516,17 +626,27 @@
             "items": {
               "$ref": "#/components/schemas/AccountView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "auth": {
-            "enum": ["none", "oauth", "header"],
+            "enum": [
+              "none",
+              "oauth",
+              "header"
+            ],
             "type": "string"
           },
           "command": {
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "header_name": {
             "type": "string"
@@ -538,7 +658,11 @@
             "type": "string"
           },
           "kind": {
-            "enum": ["mcp_remote", "mcp_stdio", "composio"],
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio",
+              "composio"
+            ],
             "type": "string"
           },
           "name": {
@@ -554,14 +678,27 @@
             "type": "string"
           }
         },
-        "required": ["id", "name", "kind", "command", "auth", "icon", "tools", "accounts"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "command",
+          "auth",
+          "icon",
+          "tools",
+          "accounts"
+        ],
         "type": "object"
       },
       "Create-connectorRequest": {
         "additionalProperties": false,
         "properties": {
           "auth": {
-            "enum": ["none", "oauth", "header"],
+            "enum": [
+              "none",
+              "oauth",
+              "header"
+            ],
             "type": "string"
           },
           "command": {
@@ -569,7 +706,10 @@
               "type": "string"
             },
             "maxItems": 40,
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "header_name": {
             "maxLength": 100,
@@ -580,7 +720,10 @@
             "type": "string"
           },
           "kind": {
-            "enum": ["mcp_remote", "mcp_stdio"],
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio"
+            ],
             "type": "string"
           },
           "name": {
@@ -593,7 +736,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "CreateOutBody": {
@@ -606,7 +751,9 @@
             "type": "string"
           }
         },
-        "required": ["routine"],
+        "required": [
+          "routine"
+        ],
         "type": "object"
       },
       "DiagnosticsResponse": {
@@ -616,10 +763,15 @@
             "items": {
               "$ref": "#/components/schemas/Check"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["checks"],
+        "required": [
+          "checks"
+        ],
         "type": "object"
       },
       "Draft-skillResponse": {
@@ -629,14 +781,20 @@
             "type": "string"
           }
         },
-        "required": ["skill_md"],
+        "required": [
+          "skill_md"
+        ],
         "type": "object"
       },
       "Entry": {
         "additionalProperties": false,
         "properties": {
           "auth": {
-            "enum": ["oauth", "header", "none"],
+            "enum": [
+              "oauth",
+              "header",
+              "none"
+            ],
             "type": "string"
           },
           "header_name": {
@@ -652,7 +810,12 @@
             "type": "string"
           }
         },
-        "required": ["name", "url", "auth", "icon"],
+        "required": [
+          "name",
+          "url",
+          "auth",
+          "icon"
+        ],
         "type": "object"
       },
       "ErrorDetail": {
@@ -677,7 +840,9 @@
         "properties": {
           "detail": {
             "description": "A human-readable explanation specific to this occurrence of the problem.",
-            "examples": ["Property foo is required but is missing."],
+            "examples": [
+              "Property foo is required but is missing."
+            ],
             "type": "string"
           },
           "errors": {
@@ -685,29 +850,40 @@
             "items": {
               "$ref": "#/components/schemas/ErrorDetail"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "instance": {
             "description": "A URI reference that identifies the specific occurrence of the problem.",
-            "examples": ["https://example.com/error-log/abc123"],
+            "examples": [
+              "https://example.com/error-log/abc123"
+            ],
             "format": "uri",
             "type": "string"
           },
           "status": {
             "description": "HTTP status code",
-            "examples": [400],
+            "examples": [
+              400
+            ],
             "format": "int64",
             "type": "integer"
           },
           "title": {
             "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
-            "examples": ["Bad Request"],
+            "examples": [
+              "Bad Request"
+            ],
             "type": "string"
           },
           "type": {
             "default": "about:blank",
             "description": "A URI reference to human-readable documentation for the error.",
-            "examples": ["https://example.com/errors/example"],
+            "examples": [
+              "https://example.com/errors/example"
+            ],
             "format": "uri",
             "type": "string"
           }
@@ -733,21 +909,33 @@
             "type": "string"
           }
         },
-        "required": ["seq", "at", "type", "data", "truncated"],
+        "required": [
+          "seq",
+          "at",
+          "type",
+          "data",
+          "truncated"
+        ],
         "type": "object"
       },
       "Get-instanceResponse": {
         "additionalProperties": false,
         "properties": {
           "mode": {
-            "enum": ["local", "server"],
+            "enum": [
+              "local",
+              "server"
+            ],
             "type": "string"
           },
           "version": {
             "type": "string"
           }
         },
-        "required": ["mode", "version"],
+        "required": [
+          "mode",
+          "version"
+        ],
         "type": "object"
       },
       "Get-skillResponse": {
@@ -760,10 +948,16 @@
             "items": {
               "$ref": "#/components/schemas/SkillVersionView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["skill", "versions"],
+        "required": [
+          "skill",
+          "versions"
+        ],
         "type": "object"
       },
       "HistoryRow": {
@@ -776,7 +970,10 @@
             "type": "string"
           },
           "old_value": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "revision": {
             "format": "int64",
@@ -786,7 +983,13 @@
             "type": "string"
           }
         },
-        "required": ["revision", "old_value", "new_value", "updated_by", "at"],
+        "required": [
+          "revision",
+          "old_value",
+          "new_value",
+          "updated_by",
+          "at"
+        ],
         "type": "object"
       },
       "List-auditResponse": {
@@ -796,10 +999,15 @@
             "items": {
               "$ref": "#/components/schemas/AuditView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["entries"],
+        "required": [
+          "entries"
+        ],
         "type": "object"
       },
       "List-chatsResponse": {
@@ -809,10 +1017,15 @@
             "items": {
               "$ref": "#/components/schemas/ChatView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["chats"],
+        "required": [
+          "chats"
+        ],
         "type": "object"
       },
       "List-instruction-versionsResponse": {
@@ -822,10 +1035,15 @@
             "items": {
               "$ref": "#/components/schemas/VersionView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["versions"],
+        "required": [
+          "versions"
+        ],
         "type": "object"
       },
       "List-model-presetsResponse": {
@@ -835,10 +1053,15 @@
             "items": {
               "$ref": "#/components/schemas/Preset"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["presets"],
+        "required": [
+          "presets"
+        ],
         "type": "object"
       },
       "List-model-providersResponse": {
@@ -848,10 +1071,15 @@
             "items": {
               "$ref": "#/components/schemas/ProviderView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["providers"],
+        "required": [
+          "providers"
+        ],
         "type": "object"
       },
       "List-model-rolesResponse": {
@@ -861,10 +1089,15 @@
             "items": {
               "$ref": "#/components/schemas/RoleView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["roles"],
+        "required": [
+          "roles"
+        ],
         "type": "object"
       },
       "List-runsResponse": {
@@ -874,10 +1107,15 @@
             "items": {
               "$ref": "#/components/schemas/RunView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["runs"],
+        "required": [
+          "runs"
+        ],
         "type": "object"
       },
       "List-settingsResponse": {
@@ -887,10 +1125,15 @@
             "items": {
               "$ref": "#/components/schemas/SettingView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["settings"],
+        "required": [
+          "settings"
+        ],
         "type": "object"
       },
       "List-vault-itemsResponse": {
@@ -900,10 +1143,15 @@
             "items": {
               "$ref": "#/components/schemas/VaultItemView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "type": "object"
       },
       "ListOutBody": {
@@ -913,10 +1161,15 @@
             "items": {
               "$ref": "#/components/schemas/RoutineView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["routines"],
+        "required": [
+          "routines"
+        ],
         "type": "object"
       },
       "ListOutBody1": {
@@ -926,10 +1179,15 @@
             "items": {
               "$ref": "#/components/schemas/ConnectorView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["connectors"],
+        "required": [
+          "connectors"
+        ],
         "type": "object"
       },
       "ListOutBody2": {
@@ -939,10 +1197,15 @@
             "items": {
               "$ref": "#/components/schemas/SkillView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["skills"],
+        "required": [
+          "skills"
+        ],
         "type": "object"
       },
       "LocalAuthInBody": {
@@ -953,7 +1216,9 @@
             "type": "string"
           }
         },
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "type": "object"
       },
       "LocalAuthOutBody": {
@@ -963,7 +1228,9 @@
             "type": "boolean"
           }
         },
-        "required": ["ok"],
+        "required": [
+          "ok"
+        ],
         "type": "object"
       },
       "MeView": {
@@ -991,13 +1258,25 @@
             "items": {
               "$ref": "#/components/schemas/SpaceView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "version": {
             "type": "string"
           }
         },
-        "required": ["id", "email", "name", "is_admin", "mode", "version", "spaces", "setup"],
+        "required": [
+          "id",
+          "email",
+          "name",
+          "is_admin",
+          "mode",
+          "version",
+          "spaces",
+          "setup"
+        ],
         "type": "object"
       },
       "MemoryView": {
@@ -1019,7 +1298,12 @@
             "type": "integer"
           }
         },
-        "required": ["content", "bytes", "limit", "rev"],
+        "required": [
+          "content",
+          "bytes",
+          "limit",
+          "rev"
+        ],
         "type": "object"
       },
       "MessagePage": {
@@ -1029,7 +1313,10 @@
             "items": {
               "$ref": "#/components/schemas/MessageView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "next": {
             "description": "Cursor of the next older page, or empty.",
@@ -1039,10 +1326,17 @@
             "items": {
               "$ref": "#/components/schemas/RunLine"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["messages", "runs", "next"],
+        "required": [
+          "messages",
+          "runs",
+          "next"
+        ],
         "type": "object"
       },
       "MessageView": {
@@ -1052,7 +1346,10 @@
             "items": {
               "$ref": "#/components/schemas/Attachment"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "author_id": {
             "type": "string"
@@ -1092,7 +1389,16 @@
             "type": "boolean"
           }
         },
-        "required": ["id", "chat_id", "author_kind", "author_id", "body", "created_at", "attachments", "reactions"],
+        "required": [
+          "id",
+          "chat_id",
+          "author_kind",
+          "author_id",
+          "body",
+          "created_at",
+          "attachments",
+          "reactions"
+        ],
         "type": "object"
       },
       "ModelInfo": {
@@ -1114,7 +1420,9 @@
             "type": "number"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "type": "object"
       },
       "Post-messageRequest": {
@@ -1128,7 +1436,9 @@
             "type": "string"
           }
         },
-        "required": ["body"],
+        "required": [
+          "body"
+        ],
         "type": "object"
       },
       "Post-messageResponse": {
@@ -1147,7 +1457,10 @@
             "type": "boolean"
           }
         },
-        "required": ["message", "steered"],
+        "required": [
+          "message",
+          "steered"
+        ],
         "type": "object"
       },
       "Preset": {
@@ -1178,7 +1491,14 @@
             "type": "boolean"
           }
         },
-        "required": ["id", "name", "api_type", "base_url", "auth_style", "needs_key"],
+        "required": [
+          "id",
+          "name",
+          "api_type",
+          "base_url",
+          "auth_style",
+          "needs_key"
+        ],
         "type": "object"
       },
       "ProvOutBody": {
@@ -1188,17 +1508,26 @@
             "items": {
               "$ref": "#/components/schemas/ComputerProviderView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["providers"],
+        "required": [
+          "providers"
+        ],
         "type": "object"
       },
       "ProviderBody": {
         "additionalProperties": false,
         "properties": {
           "api_type": {
-            "enum": ["openai-chat", "openai-responses", "anthropic-messages"],
+            "enum": [
+              "openai-chat",
+              "openai-responses",
+              "anthropic-messages"
+            ],
             "type": "string"
           },
           "auth_header": {
@@ -1206,7 +1535,12 @@
             "type": "string"
           },
           "auth_style": {
-            "enum": ["bearer", "x_api_key", "header", "none"],
+            "enum": [
+              "bearer",
+              "x_api_key",
+              "header",
+              "none"
+            ],
             "type": "string"
           },
           "base_url": {
@@ -1268,7 +1602,10 @@
             "items": {
               "$ref": "#/components/schemas/ModelInfo"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "name": {
             "type": "string"
@@ -1281,7 +1618,10 @@
           },
           "tested_at": {
             "format": "date-time",
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1312,7 +1652,10 @@
             "type": "integer"
           }
         },
-        "required": ["public_key", "subscriptions"],
+        "required": [
+          "public_key",
+          "subscriptions"
+        ],
         "type": "object"
       },
       "Push-unsubscribeRequest": {
@@ -1324,7 +1667,9 @@
             "type": "string"
           }
         },
-        "required": ["endpoint"],
+        "required": [
+          "endpoint"
+        ],
         "type": "object"
       },
       "PushSubBody": {
@@ -1339,7 +1684,10 @@
             "$ref": "#/components/schemas/PushSubBodyKeysStruct"
           }
         },
-        "required": ["endpoint", "keys"],
+        "required": [
+          "endpoint",
+          "keys"
+        ],
         "type": "object"
       },
       "PushSubBodyKeysStruct": {
@@ -1356,7 +1704,10 @@
             "type": "string"
           }
         },
-        "required": ["p256dh", "auth"],
+        "required": [
+          "p256dh",
+          "auth"
+        ],
         "type": "object"
       },
       "Put-bot-memoryRequest": {
@@ -1367,7 +1718,9 @@
             "type": "string"
           }
         },
-        "required": ["content"],
+        "required": [
+          "content"
+        ],
         "type": "object"
       },
       "Put-shared-memoryRequest": {
@@ -1378,7 +1731,9 @@
             "type": "string"
           }
         },
-        "required": ["content"],
+        "required": [
+          "content"
+        ],
         "type": "object"
       },
       "RoleView": {
@@ -1394,10 +1749,16 @@
             "items": {
               "$ref": "#/components/schemas/Target"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["role", "targets"],
+        "required": [
+          "role",
+          "targets"
+        ],
         "type": "object"
       },
       "RoutineBody": {
@@ -1419,7 +1780,11 @@
             "type": "string"
           },
           "notify": {
-            "enum": ["always", "on_failure", "never"],
+            "enum": [
+              "always",
+              "on_failure",
+              "never"
+            ],
             "type": "string"
           },
           "prompt": {
@@ -1428,7 +1793,10 @@
             "type": "string"
           },
           "trigger": {
-            "enum": ["cron", "webhook"],
+            "enum": [
+              "cron",
+              "webhook"
+            ],
             "type": "string"
           },
           "tz": {
@@ -1436,7 +1804,13 @@
             "type": "string"
           }
         },
-        "required": ["bot_id", "name", "prompt", "trigger", "enabled"],
+        "required": [
+          "bot_id",
+          "name",
+          "prompt",
+          "trigger",
+          "enabled"
+        ],
         "type": "object"
       },
       "RoutineRunView": {
@@ -1470,7 +1844,12 @@
             "type": "string"
           }
         },
-        "required": ["due_at", "coalesced", "missed", "source"],
+        "required": [
+          "due_at",
+          "coalesced",
+          "missed",
+          "source"
+        ],
         "type": "object"
       },
       "RoutineView": {
@@ -1496,14 +1875,21 @@
             "type": "string"
           },
           "notify": {
-            "enum": ["always", "on_failure", "never"],
+            "enum": [
+              "always",
+              "on_failure",
+              "never"
+            ],
             "type": "string"
           },
           "prompt": {
             "type": "string"
           },
           "trigger": {
-            "enum": ["cron", "webhook"],
+            "enum": [
+              "cron",
+              "webhook"
+            ],
             "type": "string"
           },
           "tz": {
@@ -1513,7 +1899,17 @@
             "type": "string"
           }
         },
-        "required": ["id", "bot_id", "name", "prompt", "trigger", "cron", "tz", "notify", "enabled"],
+        "required": [
+          "id",
+          "bot_id",
+          "name",
+          "prompt",
+          "trigger",
+          "cron",
+          "tz",
+          "notify",
+          "enabled"
+        ],
         "type": "object"
       },
       "Row": {
@@ -1543,7 +1939,14 @@
             "type": "integer"
           }
         },
-        "required": ["key", "tokens_in", "tokens_out", "seconds", "cost_usd", "calls"],
+        "required": [
+          "key",
+          "tokens_in",
+          "tokens_out",
+          "seconds",
+          "cost_usd",
+          "calls"
+        ],
         "type": "object"
       },
       "RuleView": {
@@ -1597,10 +2000,16 @@
             "items": {
               "$ref": "#/components/schemas/RuleView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["mode", "rules"],
+        "required": [
+          "mode",
+          "rules"
+        ],
         "type": "object"
       },
       "Run-routineResponse": {
@@ -1610,7 +2019,9 @@
             "type": "string"
           }
         },
-        "required": ["envelope_id"],
+        "required": [
+          "envelope_id"
+        ],
         "type": "object"
       },
       "RunLine": {
@@ -1651,7 +2062,10 @@
             "type": "integer"
           },
           "verified": {
-            "type": ["boolean", "null"]
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1682,17 +2096,26 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "events": {
             "items": {
               "$ref": "#/components/schemas/EventView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "finished_at": {
             "format": "date-time",
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "goal": {
             "type": "string"
@@ -1708,7 +2131,10 @@
           },
           "started_at": {
             "format": "date-time",
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "tokens_in": {
             "format": "int64",
@@ -1740,10 +2166,15 @@
             "items": {
               "$ref": "#/components/schemas/RoutineRunView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["runs"],
+        "required": [
+          "runs"
+        ],
         "type": "object"
       },
       "Save-skill-mdRequest": {
@@ -1755,7 +2186,9 @@
             "type": "string"
           }
         },
-        "required": ["skill_md"],
+        "required": [
+          "skill_md"
+        ],
         "type": "object"
       },
       "Screen-doneRequest": {
@@ -1784,7 +2217,10 @@
             "type": "string"
           }
         },
-        "required": ["token", "expires_at"],
+        "required": [
+          "token",
+          "expires_at"
+        ],
         "type": "object"
       },
       "ScreenView": {
@@ -1795,7 +2231,12 @@
           },
           "controller": {
             "description": "Who uses the screen now.",
-            "enum": ["none", "you", "person", "bot"],
+            "enum": [
+              "none",
+              "you",
+              "person",
+              "bot"
+            ],
             "type": "string"
           },
           "view_expires_at": {
@@ -1807,32 +2248,51 @@
             "type": "string"
           }
         },
-        "required": ["bot_id", "view_token", "view_expires_at", "controller"],
+        "required": [
+          "bot_id",
+          "view_token",
+          "view_expires_at",
+          "controller"
+        ],
         "type": "object"
       },
       "Set-approval-modeRequest": {
         "additionalProperties": false,
         "properties": {
           "mode": {
-            "enum": ["ask", "auto", "never"],
+            "enum": [
+              "ask",
+              "auto",
+              "never"
+            ],
             "type": "string"
           }
         },
-        "required": ["mode"],
+        "required": [
+          "mode"
+        ],
         "type": "object"
       },
       "Set-connector-toolRequest": {
         "additionalProperties": false,
         "properties": {
           "class": {
-            "enum": ["read", "write_local", "write_external", "send", "admin"],
+            "enum": [
+              "read",
+              "write_local",
+              "write_external",
+              "send",
+              "admin"
+            ],
             "type": "string"
           },
           "disabled": {
             "type": "boolean"
           }
         },
-        "required": ["disabled"],
+        "required": [
+          "disabled"
+        ],
         "type": "object"
       },
       "Set-model-roleRequest": {
@@ -1845,10 +2305,15 @@
             "items": {
               "$ref": "#/components/schemas/Target"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["targets"],
+        "required": [
+          "targets"
+        ],
         "type": "object"
       },
       "Set-settingRequest": {
@@ -1856,7 +2321,9 @@
         "properties": {
           "value": {}
         },
-        "required": ["value"],
+        "required": [
+          "value"
+        ],
         "type": "object"
       },
       "Set-telemetryRequest": {
@@ -1866,7 +2333,9 @@
             "type": "boolean"
           }
         },
-        "required": ["enabled"],
+        "required": [
+          "enabled"
+        ],
         "type": "object"
       },
       "Setting-historyResponse": {
@@ -1876,10 +2345,15 @@
             "items": {
               "$ref": "#/components/schemas/HistoryRow"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["history"],
+        "required": [
+          "history"
+        ],
         "type": "object"
       },
       "SettingView": {
@@ -1900,7 +2374,13 @@
           },
           "value": {}
         },
-        "required": ["key", "value", "revision", "is_default", "doc"],
+        "required": [
+          "key",
+          "value",
+          "revision",
+          "is_default",
+          "doc"
+        ],
         "type": "object"
       },
       "SetupState": {
@@ -1913,7 +2393,10 @@
             "type": "boolean"
           }
         },
-        "required": ["needs_model", "needs_name"],
+        "required": [
+          "needs_model",
+          "needs_name"
+        ],
         "type": "object"
       },
       "SkillVersionView": {
@@ -1927,7 +2410,10 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "has_evals": {
             "type": "boolean"
@@ -1947,7 +2433,14 @@
             "type": "integer"
           }
         },
-        "required": ["version", "sha256", "files", "has_evals", "created_at", "skill_md"],
+        "required": [
+          "version",
+          "sha256",
+          "files",
+          "has_evals",
+          "created_at",
+          "skill_md"
+        ],
         "type": "object"
       },
       "SkillView": {
@@ -1958,7 +2451,10 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "current_version": {
             "format": "int64",
@@ -1974,11 +2470,21 @@
             "type": "string"
           },
           "source": {
-            "enum": ["local", "skael"],
+            "enum": [
+              "local",
+              "skael"
+            ],
             "type": "string"
           }
         },
-        "required": ["id", "name", "description", "source", "current_version", "bots"],
+        "required": [
+          "id",
+          "name",
+          "description",
+          "source",
+          "current_version",
+          "bots"
+        ],
         "type": "object"
       },
       "Smoke": {
@@ -1988,7 +2494,10 @@
             "items": {
               "$ref": "#/components/schemas/CheckResult"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "model": {
             "type": "string"
@@ -2000,7 +2509,12 @@
             "type": "boolean"
           }
         },
-        "required": ["model", "checks", "vision", "tools"],
+        "required": [
+          "model",
+          "checks",
+          "vision",
+          "tools"
+        ],
         "type": "object"
       },
       "SpaceInBody": {
@@ -2033,7 +2547,12 @@
             "type": "string"
           }
         },
-        "required": ["id", "name", "time_zone", "role"],
+        "required": [
+          "id",
+          "name",
+          "time_zone",
+          "role"
+        ],
         "type": "object"
       },
       "SyncResult": {
@@ -2048,7 +2567,10 @@
             "type": "integer"
           }
         },
-        "required": ["skills", "updated"],
+        "required": [
+          "skills",
+          "updated"
+        ],
         "type": "object"
       },
       "Target": {
@@ -2076,7 +2598,10 @@
             "type": "string"
           }
         },
-        "required": ["provider_id", "model"],
+        "required": [
+          "provider_id",
+          "model"
+        ],
         "type": "object"
       },
       "TelemetryCounts": {
@@ -2114,7 +2639,17 @@
             "type": "string"
           }
         },
-        "required": ["version", "mode", "os", "arch", "database", "spaces", "bots", "runs_24h", "model_providers"],
+        "required": [
+          "version",
+          "mode",
+          "os",
+          "arch",
+          "database",
+          "spaces",
+          "bots",
+          "runs_24h",
+          "model_providers"
+        ],
         "type": "object"
       },
       "TelemetryView": {
@@ -2130,13 +2665,21 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "preview": {
             "$ref": "#/components/schemas/TelemetryCounts"
           }
         },
-        "required": ["enabled", "endpoint", "fields", "preview"],
+        "required": [
+          "enabled",
+          "endpoint",
+          "fields",
+          "preview"
+        ],
         "type": "object"
       },
       "Test-connectorRequest": {
@@ -2150,7 +2693,9 @@
             "type": "string"
           }
         },
-        "required": ["account_id"],
+        "required": [
+          "account_id"
+        ],
         "type": "object"
       },
       "Test-connectorResponse": {
@@ -2160,10 +2705,15 @@
             "items": {
               "$ref": "#/components/schemas/ToolInfo"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["tools"],
+        "required": [
+          "tools"
+        ],
         "type": "object"
       },
       "Test-model-providerRequest": {
@@ -2199,7 +2749,15 @@
           },
           "schema": {}
         },
-        "required": ["name", "description", "class", "disabled", "schema", "read_only_hint", "destructive_hint"],
+        "required": [
+          "name",
+          "description",
+          "class",
+          "disabled",
+          "schema",
+          "read_only_hint",
+          "destructive_hint"
+        ],
         "type": "object"
       },
       "ToolSetting": {
@@ -2223,7 +2781,9 @@
             "type": "string"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "Usage-viewResponse": {
@@ -2233,17 +2793,26 @@
             "items": {
               "$ref": "#/components/schemas/Row"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["rows"],
+        "required": [
+          "rows"
+        ],
         "type": "object"
       },
       "VaultBody": {
         "additionalProperties": false,
         "properties": {
           "kind": {
-            "enum": ["login", "secret", "totp"],
+            "enum": [
+              "login",
+              "secret",
+              "totp"
+            ],
             "type": "string"
           },
           "name": {
@@ -2296,7 +2865,16 @@
             "type": "string"
           }
         },
-        "required": ["id", "name", "kind", "site", "username", "last4", "created_at", "updated_at"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "site",
+          "username",
+          "last4",
+          "created_at",
+          "updated_at"
+        ],
         "type": "object"
       },
       "VersionView": {
@@ -2323,7 +2901,14 @@
             "type": "integer"
           }
         },
-        "required": ["rev", "instructions", "author_kind", "author_id", "at", "current"],
+        "required": [
+          "rev",
+          "instructions",
+          "author_kind",
+          "author_id",
+          "at",
+          "current"
+        ],
         "type": "object"
       },
       "ZoneBody": {
@@ -2334,7 +2919,10 @@
               "type": "string"
             },
             "maxItems": 100,
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "idle_minutes": {
             "format": "int64",
@@ -2348,7 +2936,10 @@
             "type": "string"
           },
           "network": {
-            "enum": ["open", "allowlist"],
+            "enum": [
+              "open",
+              "allowlist"
+            ],
             "type": "string"
           },
           "provider_id": {
@@ -2356,11 +2947,19 @@
             "type": "string"
           },
           "size": {
-            "enum": ["small", "browser", "desktop"],
+            "enum": [
+              "small",
+              "browser",
+              "desktop"
+            ],
             "type": "string"
           }
         },
-        "required": ["name", "network", "size"],
+        "required": [
+          "name",
+          "network",
+          "size"
+        ],
         "type": "object"
       },
       "ZoneView": {
@@ -2370,13 +2969,19 @@
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "bots": {
             "items": {
               "type": "string"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "computer_error": {
             "type": "string"
@@ -2427,10 +3032,15 @@
             "items": {
               "$ref": "#/components/schemas/ZoneView"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
-        "required": ["zones"],
+        "required": [
+          "zones"
+        ],
         "type": "object"
       }
     }
@@ -2468,7 +3078,9 @@
           }
         },
         "summary": "Run the doctor checks",
-        "tags": ["admin"]
+        "tags": [
+          "admin"
+        ]
       }
     },
     "/api/v1/admin/telemetry": {
@@ -2497,7 +3109,9 @@
           }
         },
         "summary": "Telemetry state and the exact counts it sends",
-        "tags": ["admin"]
+        "tags": [
+          "admin"
+        ]
       },
       "put": {
         "operationId": "set-telemetry",
@@ -2534,7 +3148,9 @@
           }
         },
         "summary": "Turn telemetry on or off",
-        "tags": ["admin"]
+        "tags": [
+          "admin"
+        ]
       }
     },
     "/api/v1/auth/local": {
@@ -2580,7 +3196,9 @@
           }
         },
         "summary": "Exchange the local token for a UI cookie",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/connectors/catalog": {
@@ -2609,7 +3227,9 @@
           }
         },
         "summary": "Known remote MCP servers for the Connect screen",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/instance": {
@@ -2638,7 +3258,9 @@
           }
         },
         "summary": "The mode and the version of this server. It needs no sign-in.",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/me": {
@@ -2667,7 +3289,9 @@
           }
         },
         "summary": "The caller, the spaces and the first-run state",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       },
       "patch": {
         "operationId": "update-me",
@@ -2704,7 +3328,9 @@
           }
         },
         "summary": "Change the caller's name",
-        "tags": ["auth"]
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/v1/model-presets": {
@@ -2733,7 +3359,9 @@
           }
         },
         "summary": "Provider presets for the form",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/push/key": {
@@ -2762,7 +3390,9 @@
           }
         },
         "summary": "The VAPID public key that browsers subscribe with",
-        "tags": ["push"]
+        "tags": [
+          "push"
+        ]
       }
     },
     "/api/v1/push/subscriptions": {
@@ -2803,7 +3433,9 @@
           }
         },
         "summary": "Store a push subscription of the caller",
-        "tags": ["push"]
+        "tags": [
+          "push"
+        ]
       }
     },
     "/api/v1/push/subscriptions/remove": {
@@ -2835,7 +3467,9 @@
           }
         },
         "summary": "Remove a push subscription of the caller",
-        "tags": ["push"]
+        "tags": [
+          "push"
+        ]
       }
     },
     "/api/v1/spaces/{space}": {
@@ -2876,7 +3510,9 @@
           }
         },
         "summary": "A space",
-        "tags": ["spaces"]
+        "tags": [
+          "spaces"
+        ]
       },
       "patch": {
         "operationId": "update-space",
@@ -2925,7 +3561,9 @@
           }
         },
         "summary": "Change the name or time zone of a space",
-        "tags": ["spaces"]
+        "tags": [
+          "spaces"
+        ]
       }
     },
     "/api/v1/spaces/{space}/approval-mode": {
@@ -2976,7 +3614,9 @@
           }
         },
         "summary": "Ask to change the approval mode. It changes after a person allows the card.",
-        "tags": ["policy"]
+        "tags": [
+          "policy"
+        ]
       }
     },
     "/api/v1/spaces/{space}/audit": {
@@ -3037,7 +3677,9 @@
           }
         },
         "summary": "The audit log of a space, newest first. The API has no route that changes it.",
-        "tags": ["audit"]
+        "tags": [
+          "audit"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots": {
@@ -3086,7 +3728,9 @@
           }
         },
         "summary": "List the bots of a space",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       },
       "post": {
         "operationId": "create-bot",
@@ -3135,7 +3779,9 @@
           }
         },
         "summary": "Create a bot with its direct chat",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}": {
@@ -3184,7 +3830,9 @@
           }
         },
         "summary": "A bot",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       },
       "patch": {
         "operationId": "update-bot",
@@ -3241,7 +3889,9 @@
           }
         },
         "summary": "Change a bot. Changed instructions become a new version.",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/instructions": {
@@ -3290,7 +3940,9 @@
           }
         },
         "summary": "The instructions history of a bot",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/instructions/{rev}/restore": {
@@ -3349,7 +4001,9 @@
           }
         },
         "summary": "Make an old instructions version current",
-        "tags": ["bots"]
+        "tags": [
+          "bots"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/memory": {
@@ -3398,7 +4052,9 @@
           }
         },
         "summary": "The MEMORY.md of a bot",
-        "tags": ["memory"]
+        "tags": [
+          "memory"
+        ]
       },
       "put": {
         "operationId": "put-bot-memory",
@@ -3455,7 +4111,9 @@
           }
         },
         "summary": "Replace the MEMORY.md of a bot (at most 4 KB)",
-        "tags": ["memory"]
+        "tags": [
+          "memory"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/screen": {
@@ -3504,7 +4162,9 @@
           }
         },
         "summary": "Open the screen of a bot read-only. It starts the screen when it is not running.",
-        "tags": ["screens"]
+        "tags": [
+          "screens"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/screen/control": {
@@ -3553,7 +4213,9 @@
           }
         },
         "summary": "Take or renew the control lease of a bot's screen (15 minutes). The bot waits while you control it.",
-        "tags": ["screens"]
+        "tags": [
+          "screens"
+        ]
       }
     },
     "/api/v1/spaces/{space}/bots/{bot}/screen/done": {
@@ -3605,7 +4267,9 @@
           }
         },
         "summary": "Return control of a bot's screen. With a takeover card, it answers the card and the bot continues.",
-        "tags": ["screens"]
+        "tags": [
+          "screens"
+        ]
       }
     },
     "/api/v1/spaces/{space}/cards/{card}/answer": {
@@ -3664,7 +4328,9 @@
           }
         },
         "summary": "Answer a card",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/chats": {
@@ -3705,7 +4371,9 @@
           }
         },
         "summary": "List the chats of a space",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/chats/{chat}/messages": {
@@ -3776,7 +4444,9 @@
           }
         },
         "summary": "One page of messages, oldest first",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       },
       "post": {
         "operationId": "post-message",
@@ -3833,7 +4503,9 @@
           }
         },
         "summary": "Send a message. It starts a run, or steers the running one.",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/chats/{chat}/stream": {
@@ -3894,7 +4566,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event bot",
                         "type": "object"
                       },
@@ -3925,7 +4600,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event delta",
                         "type": "object"
                       },
@@ -3956,7 +4634,9 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data"],
+                        "required": [
+                          "data"
+                        ],
                         "title": "Event message",
                         "type": "object"
                       },
@@ -3987,7 +4667,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event message_removed",
                         "type": "object"
                       },
@@ -4018,7 +4701,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event run",
                         "type": "object"
                       }
@@ -4043,7 +4729,9 @@
           }
         },
         "summary": "Server-sent events of a chat: messages, token deltas and run lines",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/computer-providers": {
@@ -4084,7 +4772,9 @@
           }
         },
         "summary": "List the computer providers of this server",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       }
     },
     "/api/v1/spaces/{space}/computer-providers/host/enable": {
@@ -4125,7 +4815,9 @@
           }
         },
         "summary": "Ask to turn on the host provider. It is on after a person allows the card.",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors": {
@@ -4166,7 +4858,9 @@
           }
         },
         "summary": "List the connectors of a space",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       },
       "post": {
         "operationId": "create-connector",
@@ -4215,7 +4909,9 @@
           }
         },
         "summary": "Add an MCP connector. An OAuth connector registers Fettle at its sign-in server.",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/composio": {
@@ -4266,7 +4962,9 @@
           }
         },
         "summary": "Add Composio's MCP endpoint with a Composio key",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}": {
@@ -4308,7 +5006,9 @@
           }
         },
         "summary": "Delete a connector, its accounts and their grants",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
@@ -4367,7 +5067,9 @@
           }
         },
         "summary": "Add an account with a header key, or a stdio account",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/authorize": {
@@ -4426,7 +5128,9 @@
           }
         },
         "summary": "Start an OAuth sign-in for a new account; open the returned URL",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/test": {
@@ -4485,7 +5189,9 @@
           }
         },
         "summary": "List the tools of a connector with their classes, through one account",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/tools/{tool}": {
@@ -4545,7 +5251,9 @@
           }
         },
         "summary": "Change the class of a connector tool, or turn it off. It applies to the next run.",
-        "tags": ["connectors"]
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/memory": {
@@ -4586,7 +5294,9 @@
           }
         },
         "summary": "The shared memory of a space",
-        "tags": ["memory"]
+        "tags": [
+          "memory"
+        ]
       },
       "put": {
         "operationId": "put-shared-memory",
@@ -4635,7 +5345,9 @@
           }
         },
         "summary": "Replace the shared memory (at most 4 KB)",
-        "tags": ["memory"]
+        "tags": [
+          "memory"
+        ]
       }
     },
     "/api/v1/spaces/{space}/model-providers": {
@@ -4676,7 +5388,9 @@
           }
         },
         "summary": "List model providers",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       },
       "post": {
         "operationId": "create-model-provider",
@@ -4725,7 +5439,9 @@
           }
         },
         "summary": "Add a model provider. The key goes into the vault.",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/spaces/{space}/model-providers/{provider}": {
@@ -4767,7 +5483,9 @@
           }
         },
         "summary": "Delete a model provider and its key",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       },
       "patch": {
         "operationId": "update-model-provider",
@@ -4824,7 +5542,9 @@
           }
         },
         "summary": "Change a model provider",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/spaces/{space}/model-providers/{provider}/test": {
@@ -4883,7 +5603,9 @@
           }
         },
         "summary": "Run the four provider checks",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/spaces/{space}/model-roles": {
@@ -4932,7 +5654,9 @@
           }
         },
         "summary": "Role targets of the space, or of one bot",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/spaces/{space}/model-roles/{role}": {
@@ -4954,7 +5678,13 @@
             "name": "role",
             "required": true,
             "schema": {
-              "enum": ["router", "owner", "verifier", "computer_use", "summarizer"],
+              "enum": [
+                "router",
+                "owner",
+                "verifier",
+                "computer_use",
+                "summarizer"
+              ],
               "type": "string"
             }
           }
@@ -4985,7 +5715,9 @@
           }
         },
         "summary": "Set the ordered targets of a role. An empty list removes a bot override.",
-        "tags": ["models"]
+        "tags": [
+          "models"
+        ]
       }
     },
     "/api/v1/spaces/{space}/policy": {
@@ -5026,7 +5758,9 @@
           }
         },
         "summary": "The approval mode and the rules",
-        "tags": ["policy"]
+        "tags": [
+          "policy"
+        ]
       }
     },
     "/api/v1/spaces/{space}/policy/rules": {
@@ -5077,7 +5811,9 @@
           }
         },
         "summary": "Add an allow, ask or block rule",
-        "tags": ["policy"]
+        "tags": [
+          "policy"
+        ]
       }
     },
     "/api/v1/spaces/{space}/policy/rules/{rule}": {
@@ -5119,7 +5855,9 @@
           }
         },
         "summary": "Delete a rule",
-        "tags": ["policy"]
+        "tags": [
+          "policy"
+        ]
       }
     },
     "/api/v1/spaces/{space}/routines": {
@@ -5168,7 +5906,9 @@
           }
         },
         "summary": "List the routines of a space or of one bot",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       },
       "post": {
         "operationId": "create-routine",
@@ -5217,7 +5957,9 @@
           }
         },
         "summary": "Create a routine. A webhook routine returns its secret once.",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       }
     },
     "/api/v1/spaces/{space}/routines/{routine}": {
@@ -5259,7 +6001,9 @@
           }
         },
         "summary": "Delete a routine",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       },
       "patch": {
         "operationId": "update-routine",
@@ -5316,7 +6060,9 @@
           }
         },
         "summary": "Change a routine",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       }
     },
     "/api/v1/spaces/{space}/routines/{routine}/run": {
@@ -5365,7 +6111,9 @@
           }
         },
         "summary": "Run a routine now",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       }
     },
     "/api/v1/spaces/{space}/routines/{routine}/runs": {
@@ -5414,7 +6162,9 @@
           }
         },
         "summary": "The 20 newest firings of a routine, with missed and coalesced ticks",
-        "tags": ["routines"]
+        "tags": [
+          "routines"
+        ]
       }
     },
     "/api/v1/spaces/{space}/runs": {
@@ -5475,7 +6225,9 @@
           }
         },
         "summary": "Recent owner runs of a space",
-        "tags": ["runs"]
+        "tags": [
+          "runs"
+        ]
       }
     },
     "/api/v1/spaces/{space}/runs/{run}": {
@@ -5535,7 +6287,9 @@
           }
         },
         "summary": "A run with its timeline events",
-        "tags": ["runs"]
+        "tags": [
+          "runs"
+        ]
       }
     },
     "/api/v1/spaces/{space}/runs/{run}/draft-skill": {
@@ -5584,7 +6338,9 @@
           }
         },
         "summary": "Draft a SKILL.md from a finished run (Save as skill)",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/runs/{run}/stop": {
@@ -5626,7 +6382,9 @@
           }
         },
         "summary": "Stop a run and its sub-agent runs",
-        "tags": ["runs"]
+        "tags": [
+          "runs"
+        ]
       }
     },
     "/api/v1/spaces/{space}/settings": {
@@ -5667,7 +6425,9 @@
           }
         },
         "summary": "Space settings with revisions",
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/v1/spaces/{space}/settings/{key}": {
@@ -5726,7 +6486,9 @@
           }
         },
         "summary": "Change a space setting",
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/v1/spaces/{space}/settings/{key}/history": {
@@ -5775,7 +6537,9 @@
           }
         },
         "summary": "The change history of a setting",
-        "tags": ["settings"]
+        "tags": [
+          "settings"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills": {
@@ -5816,7 +6580,9 @@
           }
         },
         "summary": "List the skill library of a space",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       },
       "post": {
         "operationId": "save-skill-md",
@@ -5865,7 +6631,9 @@
           }
         },
         "summary": "Save a skill from its SKILL.md text (Save as skill). The same name makes a new version.",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills/import": {
@@ -5918,7 +6686,9 @@
           }
         },
         "summary": "Import a skill from a zip of its folder. The same name makes a new version.",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills/sync": {
@@ -5959,7 +6729,9 @@
           }
         },
         "summary": "Pull the Skael set now",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills/{skill}": {
@@ -6001,7 +6773,9 @@
           }
         },
         "summary": "Delete a skill and its versions",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       },
       "get": {
         "operationId": "get-skill",
@@ -6048,7 +6822,9 @@
           }
         },
         "summary": "A skill with its version history",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills/{skill}/bots/{bot}": {
@@ -6108,7 +6884,9 @@
           }
         },
         "summary": "Give a bot a skill, or take it away",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/skills/{skill}/export": {
@@ -6170,7 +6948,9 @@
           }
         },
         "summary": "Export the current version of a skill as a zip",
-        "tags": ["skills"]
+        "tags": [
+          "skills"
+        ]
       }
     },
     "/api/v1/spaces/{space}/stream": {
@@ -6223,7 +7003,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event bot",
                         "type": "object"
                       },
@@ -6254,7 +7037,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event delta",
                         "type": "object"
                       },
@@ -6285,7 +7071,9 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data"],
+                        "required": [
+                          "data"
+                        ],
                         "title": "Event message",
                         "type": "object"
                       },
@@ -6316,7 +7104,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event message_removed",
                         "type": "object"
                       },
@@ -6347,7 +7138,10 @@
                             "type": "integer"
                           }
                         },
-                        "required": ["data", "event"],
+                        "required": [
+                          "data",
+                          "event"
+                        ],
                         "title": "Event run",
                         "type": "object"
                       }
@@ -6372,7 +7166,9 @@
           }
         },
         "summary": "Server-sent events of a space: run lines and bot activity",
-        "tags": ["chats"]
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/usage": {
@@ -6395,7 +7191,15 @@
             "name": "by",
             "schema": {
               "default": "day",
-              "enum": ["run", "bot", "step", "role", "model", "day", "month"],
+              "enum": [
+                "run",
+                "bot",
+                "step",
+                "role",
+                "model",
+                "day",
+                "month"
+              ],
               "type": "string"
             }
           },
@@ -6435,7 +7239,9 @@
           }
         },
         "summary": "Cost view grouped by run, bot, step, role, model, day or month",
-        "tags": ["usage"]
+        "tags": [
+          "usage"
+        ]
       }
     },
     "/api/v1/spaces/{space}/vault": {
@@ -6476,7 +7282,9 @@
           }
         },
         "summary": "List vault items without values",
-        "tags": ["vault"]
+        "tags": [
+          "vault"
+        ]
       },
       "post": {
         "operationId": "create-vault-item",
@@ -6525,7 +7333,9 @@
           }
         },
         "summary": "Store a login, a secret or a TOTP seed",
-        "tags": ["vault"]
+        "tags": [
+          "vault"
+        ]
       }
     },
     "/api/v1/spaces/{space}/vault/{item}": {
@@ -6567,7 +7377,9 @@
           }
         },
         "summary": "Delete a vault item",
-        "tags": ["vault"]
+        "tags": [
+          "vault"
+        ]
       },
       "patch": {
         "operationId": "update-vault-item",
@@ -6624,7 +7436,9 @@
           }
         },
         "summary": "Change a vault item. An empty value keeps the stored value.",
-        "tags": ["vault"]
+        "tags": [
+          "vault"
+        ]
       }
     },
     "/api/v1/spaces/{space}/zones": {
@@ -6665,7 +7479,9 @@
           }
         },
         "summary": "List zones with their computers",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       },
       "post": {
         "operationId": "create-zone",
@@ -6714,7 +7530,9 @@
           }
         },
         "summary": "Ask to create a zone. The zone exists after a person allows the card.",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       }
     },
     "/api/v1/spaces/{space}/zones/{zone}": {
@@ -6773,7 +7591,9 @@
           }
         },
         "summary": "Change a zone. A change of the provider or the network replaces its computer.",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       }
     },
     "/api/v1/spaces/{space}/zones/{zone}/grants": {
@@ -6832,7 +7652,9 @@
           }
         },
         "summary": "Ask to give a zone a vault item or a connector account. The grant exists after a person allows the card.",
-        "tags": ["computers"]
+        "tags": [
+          "computers"
+        ]
       }
     }
   }
