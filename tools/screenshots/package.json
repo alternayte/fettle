@@ -1,0 +1,11 @@
+{
+  "name": "fettle-screenshots",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "echo \"module nodemodules // keeps node_modules out of the Go module\" > node_modules/go.mod"
+  },
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}

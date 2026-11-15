@@ -1,0 +1,21 @@
+# The router splits the desk comparison into one helper per catalogue page.
+name: desks-route
+match:
+  system: "You route one piece of work"
+  user: "Compare the three desks"
+steps:
+  - json:
+      step: fanout
+      owner_bot_id: ""
+      rationale: Three independent catalogue pages.
+      confidence: 0.9
+      parts:
+        - goal: "Read http://docs.test/alpha. Give the price, the weight and the main feature of the desk."
+          acceptance: The price and the weight have a source.
+          needs: read
+        - goal: "Read http://docs.test/beta. Give the price, the weight and the main feature of the desk."
+          acceptance: The price and the weight have a source.
+          needs: read
+        - goal: "Read http://docs.test/gamma. Give the price, the weight and the main feature of the desk."
+          acceptance: The price and the weight have a source.
+          needs: read

@@ -148,6 +148,13 @@ e2e: build image
     go test -count=1 -tags 'e2e ee' -run '^TestSCN_EE_' ./tests/flows/
     cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 
+# recipe: screenshots
+# Make the product screenshots in docs/images with the fake model and the Acme seed. Docker must run.
+screenshots: build image
+    go build -tags fakes -o bin/fettle-fakes ./cmd/fettle
+    GOOS=linux GOARCH=$(docker version -f '{{{{.Server.Arch}}') CGO_ENABLED=0 go build -tags fakes -o bin/linux/fettle-fakes ./cmd/fettle
+    cd tools/screenshots && bun install --frozen-lockfile && bunx playwright install chromium && bun shoot.ts
+
 # recipe: providers
 # Provider conformance, resume times and the sleeping-bot load on this host (layer P).
 providers: image

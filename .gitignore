@@ -15,3 +15,4 @@ coverage.out
 .DS_Store
 /fettle
 sdk/typescript/node_modules/
+tools/screenshots/node_modules/

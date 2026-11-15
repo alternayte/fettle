@@ -63,6 +63,8 @@ The class comes from the name of the item and its form:
 - Another form submission is `write_external`.
 - All other browser actions are `read`.
 
+![An approval card in a chat. Chief asks to press the Send button on a shop page. The card shows the tool, the action, the element and the site, with the buttons Allow once, Edit, Always allow and Deny.](images/chat-approval.png)
+
 ### Approval modes
 
 The space setting `approval.mode` has three values. The default is `ask`.
@@ -116,6 +118,10 @@ Patterns use shell glob syntax, for example `*.acme.test`.
 - Each run keeps a journal. The journal is the append-only list of the steps of the run.
 - A tool call with side effects writes an intent event before it runs and a result event after it.
 - After a restart, Fettle marks an intent without a result as uncertain. Fettle never runs it again.
+
+The run page shows the journal of a run as a timeline.
+
+![The timeline of a verified run. It lists the route, three helper results, the model turn, the check and the finish.](images/run-timeline.png)
 
 ## Audit log
 

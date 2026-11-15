@@ -1,0 +1,14 @@
+# The owner merges the three helper results into one answer.
+name: desks-owner
+match:
+  user: "Result from one of your helpers"
+steps:
+  - delay_ms: 1500
+    text: |
+      The Gamma Desk fits the new office best: it is the lightest and the cheapest desk.
+
+      | Desk | Price | Weight | Main feature |
+      |---|---|---:|---|
+      | Alpha Desk | $420 | 31.5 kg | Bamboo top ([source](http://docs.test/alpha)) |
+      | Beta Desk | $610 | 38.0 kg | Steel frame, two motors ([source](http://docs.test/beta)) |
+      | Gamma Desk | $299 | 22.4 kg | Folds flat ([source](http://docs.test/gamma)) |

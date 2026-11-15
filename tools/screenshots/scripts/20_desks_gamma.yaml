@@ -1,0 +1,21 @@
+# A helper reads one catalogue page and reports its facts.
+name: desks-gamma
+match:
+  system: "You are a helper"
+  user: "docs.test/gamma"
+steps:
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://docs.test/gamma"
+  - delay_ms: 900
+    tool_calls:
+      - name: report_result
+        args:
+          summary: "Gamma Desk: $299, 22.4 kg, a top that folds flat for storage."
+          findings:
+            - claim: "The Gamma Desk costs $299 and weighs 22.4 kg."
+              sources: ["http://docs.test/gamma"]
+            - claim: "The Gamma Desk has a top that folds flat for storage."
+              sources: ["http://docs.test/gamma"]

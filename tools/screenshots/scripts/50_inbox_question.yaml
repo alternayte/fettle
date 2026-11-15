@@ -1,0 +1,13 @@
+# Inbox asks the user one question before it writes a draft.
+name: inbox-question
+match:
+  user: "Draft a reply to Birchline"
+steps:
+  - delay_ms: 1200
+    text: "Birchline Furniture wrote twice this week about the late chairs. Before I write the draft, I need one choice from you."
+    tool_calls:
+      - name: ask_user
+        args:
+          question: "Which tone do you want for the reply to Birchline Furniture?"
+          options: ["Firm: ask for a new delivery date", "Friendly: thank them and ask for an update", "Short and neutral"]
+  - text: "Here is the draft. I did not send it."

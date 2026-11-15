@@ -1,0 +1,23 @@
+name: group-research
+match:
+  user: "what do the desks weigh"
+steps:
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://docs.test/alpha"
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://docs.test/beta"
+  - delay_ms: 1200
+    text: |
+      Two of the three desks are under the 35 kg limit of the lift:
+
+      - Alpha Desk: 31.5 kg
+      - Beta Desk: 38.0 kg, which is **over** the 35 kg limit
+      - Gamma Desk: 22.4 kg
+
+      The Beta Desk must go up the stairs, or the movers must take its frame apart first.

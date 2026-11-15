@@ -1,0 +1,24 @@
+name: group-reporter
+match:
+  user: "add the desk plan to the weekly report"
+steps:
+  - delay_ms: 800
+    tool_calls:
+      - name: write_file
+        args:
+          path: "weekly-report-week-46.md"
+          content: |
+            # Weekly report, week 46
+
+            ## Office move
+            - The team picks the Gamma Desk: $299, 22.4 kg, folds flat.
+            - Eight desks now, four in January, to stay in the furniture budget.
+            - The Beta Desk is over the 35 kg limit of the lift.
+  - delay_ms: 800
+    tool_calls:
+      - name: attach_file
+        args:
+          path: "weekly-report-week-46.md"
+          note: "The draft of this week's report."
+  - delay_ms: 1000
+    text: "I added an **Office move** section to the report: the desk choice, the split order and the lift limit."
