@@ -332,3 +332,86 @@ func TestSCN_OPS_001_ReleaseSnapshot(t *testing.T) {
 	}
 	t.Logf("sizes %v, installers %v", sizes, installers)
 }
+
+// edition starts a local server from bin and returns its edition and the UI page HTML.
+func edition(t *testing.T, bin string) map[string]any {
+	t.Helper()
+	data := t.TempDir()
+	port := freePort(t)
+	cmd := exec.Command(bin, "serve", "--data", data, "--addr", fmt.Sprintf("127.0.0.1:%d", port))
+	cmd.Env = append(os.Environ(), "FETTLE_NO_KEYCHAIN=1", "FETTLE_DEFAULT_PROVIDER=host", "FETTLE_LOG_LEVEL=error")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+	var tok []byte
+	for deadline := time.Now().Add(60 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
+		if b, err := os.ReadFile(filepath.Join(data, "local.token")); err == nil && len(b) > 0 {
+			if resp, err := http.Get(base + "/healthz"); err == nil {
+				_ = resp.Body.Close()
+				tok = b
+				break
+			}
+		}
+	}
+	if tok == nil {
+		t.Fatal("the server did not start")
+	}
+	req, _ := http.NewRequest(http.MethodGet, base+"/api/v1/admin/edition", nil)
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(tok)))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var v map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil || resp.StatusCode != 200 {
+		t.Fatalf("edition: %d %v", resp.StatusCode, err)
+	}
+	return v
+}
+
+func TestSCN_EE_001_DefaultBuildHasNoEnterpriseCode(t *testing.T) {
+	problems := []string{}
+	deps := run(t, nil, "go", "list", "-deps", "./cmd/fettle")
+	for _, p := range strings.Fields(deps) {
+		if strings.HasPrefix(p, "github.com/alternayte/fettle/ee") {
+			problems = append(problems, "the default build links "+p)
+		}
+	}
+	if !strings.Contains(run(t, nil, "go", "list", "-tags", "ee", "-deps", "./cmd/fettle"), "github.com/alternayte/fettle/ee\n") {
+		problems = append(problems, "the ee build does not link the ee package")
+	}
+	dir := t.TempDir()
+	core, ent := filepath.Join(dir, "fettle"), filepath.Join(dir, "fettle-ee")
+	run(t, nil, "go", "build", "-o", core, "./cmd/fettle")
+	run(t, nil, "go", "build", "-tags", "ee", "-o", ent, "./cmd/fettle")
+	if out, err := exec.Command("go", "tool", "nm", core).Output(); err != nil || strings.Contains(string(out), "fettle/ee.") {
+		problems = append(problems, "the default binary has ee symbols")
+	}
+	c := edition(t, core)
+	if c["name"] != "community" {
+		problems = append(problems, fmt.Sprintf("the default build reports %v", c["name"]))
+	}
+	feats, _ := c["features"].([]any)
+	if len(feats) != 6 {
+		problems = append(problems, fmt.Sprintf("the default build lists %d Enterprise features, want 6", len(feats)))
+	}
+	for _, f := range feats {
+		if m, _ := f.(map[string]any); m["available"] != false {
+			problems = append(problems, fmt.Sprintf("the default build shows %v as available", m["key"]))
+		}
+	}
+	e := edition(t, ent)
+	if e["name"] != "enterprise" {
+		problems = append(problems, fmt.Sprintf("the ee build reports %v", e["name"]))
+	}
+	if lic, _ := e["license"].(map[string]any); lic == nil || lic["state"] != "missing" {
+		problems = append(problems, fmt.Sprintf("the ee build without a key has licence %v, want missing", e["license"]))
+	}
+	report(t, "SCN-EE-001", len(problems) == 0, nil)
+	if len(problems) > 0 {
+		t.Fatal(strings.Join(problems, "\n"))
+	}
+}
