@@ -41,6 +41,8 @@ type PostResult struct {
 	// RunIDs are all runs that the message started or steered (a group can wake several).
 	RunIDs  []uuid.UUID
 	Steered bool
+	// Status is true when a bot answered a status question from its waiting run's events.
+	Status bool
 }
 
 func (a *Agent) defaultBudget(ctx context.Context, spaceID uuid.UUID) envelopes.Budget {
@@ -85,6 +87,7 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 		}
 	}
 	var started []uuid.UUID
+	var replies []*chats.Message
 	err = a.E.WithTx(ctx, func(ctx context.Context) error {
 		first := owners[0].ID()
 		if err := a.Chats.Insert(ctx, msg, &first); err != nil {
@@ -92,6 +95,25 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 		}
 		for i, o := range owners {
 			owner := o.ID()
+			if r := active[i]; r != nil && r.Status == runs.StatusWaiting && statusWaits[r.WaitReason] && isStatusQuestion(body) {
+				// A status question during a wait gets a direct reply from the run's events
+				// and leaves the run as it is (§7.4).
+				text, err := a.statusReply(ctx, r)
+				if err != nil {
+					return err
+				}
+				reply := &chats.Message{SpaceID: spaceID, ChatID: chat.ID(), AuthorKind: "bot", AuthorID: owner.String(), Body: text, ReplyTo: ptr(msg.ID())}
+				if err := a.Chats.Insert(ctx, reply, &owner); err != nil {
+					return err
+				}
+				rid := r.ID()
+				if res.RunID == nil {
+					res.RunID, res.EnvelopeID = &rid, &r.EnvelopeID
+				}
+				res.Status = true
+				replies = append(replies, reply)
+				continue
+			}
 			if r := active[i]; r != nil {
 				res.Steered = true
 				rid := r.ID()
@@ -152,10 +174,13 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 	}
 	res.Message = msg
 	a.Chats.Publish(chatID, "message", a.MessageView(ctx, msg))
+	for _, m := range replies {
+		a.Chats.Publish(chatID, "message", a.MessageView(ctx, m))
+	}
 	for _, id := range started {
 		a.publishRun(ctx, id)
 	}
-	if !res.Steered && res.EnvelopeID != nil && a.Learning != nil {
+	if !res.Steered && !res.Status && res.EnvelopeID != nil && a.Learning != nil {
 		envID := *res.EnvelopeID
 		a.bg.Add(1)
 		go func() {
