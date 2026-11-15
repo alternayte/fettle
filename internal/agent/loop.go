@@ -560,6 +560,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
 	}
+	if call.Name == "request_takeover" {
+		return x.requestTakeover(ctx, st, call)
+	}
 	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}}
 	// The computer comes first: a full host makes the run wait before any card, and
 	// ClassOf may need the computer to see what the call touches.
@@ -576,6 +579,16 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 				return err
 			}
 		}
+	}
+	if tool.Screen && a.ScreenUse != nil {
+		release, err := a.ScreenUse(ctx, x.run.SpaceID, x.run.BotID)
+		if errors.Is(err, ErrScreenControlled) {
+			return x.waitForScreen(ctx, st)
+		}
+		if err != nil {
+			return err
+		}
+		defer release()
 	}
 	class := tool.classOf(ctx, env, call.Args)
 	if !Allowed(x.env.Capabilities, x.run.Kind == "subagent", class) {
@@ -693,7 +706,9 @@ func (x *exec) resolveUncertain(ctx context.Context, st *state) error {
 // postCard posts a card from this run and makes the run wait or escalate.
 func (x *exec) postCard(ctx context.Context, card chats.Card, status string) error {
 	a := x.a
-	card.ID = uuid.NewString()
+	if card.ID == "" {
+		card.ID = uuid.NewString()
+	}
 	card.Status = "pending"
 	card.RunID = x.run.ID().String()
 	var msg *chats.Message
@@ -708,7 +723,7 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 		if msg != nil {
 			mid = msg.ID().String()
 		}
-		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvCardPosted, Data: evCard{CardID: card.ID, Kind: card.Kind, MessageID: mid}}); err != nil {
+		if _, err := x.append(ctx, nil, runs.New{Type: runs.EvCardPosted, Data: evCard{CardID: card.ID, Kind: card.Kind, MessageID: mid, CallID: card.Data["call_id"]}}); err != nil {
 			return err
 		}
 		if status == runs.StatusEscalated {

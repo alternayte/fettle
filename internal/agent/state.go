@@ -46,6 +46,7 @@ type (
 		CardID    string `json:"card_id"`
 		Kind      string `json:"kind"`
 		MessageID string `json:"message_id,omitempty"`
+		CallID    string `json:"call_id,omitempty"`
 		Action    string `json:"action,omitempty"`
 		Value     string `json:"value,omitempty"`
 		By        string `json:"by,omitempty"`
@@ -107,16 +108,18 @@ type state struct {
 	finalText    string
 	lastMsgID    string
 	budgetHalts  int
-	approvals    map[string]string // call ID -> requested, allowed, denied
-	approvedAs   map[string]string // call ID -> the class that the decision saw
-	intent       []string          // user items of this run: the goal and steer texts
-	sleepUntil   *time.Time        // the last sleep_until time
-	computer     bool              // a computer_acquired event exists
-	computerWait bool              // the last computer event is a wait
+	approvals    map[string]string  // call ID -> requested, allowed, denied
+	approvedAs   map[string]string  // call ID -> the class that the decision saw
+	intent       []string           // user items of this run: the goal and steer texts
+	sleepUntil   *time.Time         // the last sleep_until time
+	takeoverCard map[string]string  // call ID of request_takeover to its card ID
+	takeoverDone map[string]*evCard // card ID to the answer that returned control
+	computer     bool               // a computer_acquired event exists
+	computerWait bool               // the last computer event is a wait
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}}
+	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -173,6 +176,9 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evCard
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.openCard = &d
+			if d.Kind == "takeover" && d.CallID != "" {
+				st.takeoverCard[d.CallID] = d.CardID
+			}
 		case runs.EvCardAnswered:
 			var d evCard
 			_ = json.Unmarshal([]byte(ev.Data), &d)
@@ -180,6 +186,9 @@ func rebuild(evs []*runs.RunEvent) *state {
 				st.openCard = nil
 			}
 			st.answers = append(st.answers, d)
+			if d.Kind == "takeover" {
+				st.takeoverDone[d.CardID] = &d
+			}
 			if d.Kind == "turn_limit" && d.Action == "continue" {
 				st.extraTurns++
 			}

@@ -33,6 +33,7 @@ import (
 	"github.com/alternayte/fettle/internal/push"
 	"github.com/alternayte/fettle/internal/routines"
 	"github.com/alternayte/fettle/internal/runs"
+	"github.com/alternayte/fettle/internal/screens"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/skills"
 	"github.com/alternayte/fettle/internal/spaces"
@@ -58,6 +59,7 @@ type App struct {
 	Push     *push.Service
 	Skills   *skills.Service
 	Skael    *skills.Skael
+	Screens  *screens.Service
 	// Connectors holds the MCP connectors (§12).
 	Connectors *connectors.Service
 	// SignIn is the server-mode sign-in; nil in local mode.
@@ -156,6 +158,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupPush()
 	a.setupConnectors()
 	a.setupSkills()
+	a.setupScreens()
 	a.registerChanges()
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})

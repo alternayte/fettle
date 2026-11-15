@@ -45,6 +45,7 @@ function toCard(c: NonNullable<SchemaMessageView["card"]>): Card {
     detail: c.detail || undefined,
     hard_ask: c.hard_ask,
     answer: c.answer || undefined,
+    data: c.data ?? undefined,
   };
 }
 

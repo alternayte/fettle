@@ -18,6 +18,7 @@ import (
 	push "github.com/alternayte/fettle/internal/push"
 	routines "github.com/alternayte/fettle/internal/routines"
 	runs "github.com/alternayte/fettle/internal/runs"
+	screens "github.com/alternayte/fettle/internal/screens"
 	settings "github.com/alternayte/fettle/internal/settings"
 	skills "github.com/alternayte/fettle/internal/skills"
 	spaces "github.com/alternayte/fettle/internal/spaces"
@@ -53,6 +54,7 @@ type DB struct {
 	RoutineRuns         *routines.RoutineRunRepository
 	Runs                *runs.RunRepository
 	RunEvents           *runs.RunEventRepository
+	Leases              *screens.LeaseRepository
 	Settings            *settings.SettingRepository
 	SettingHistories    *settings.SettingHistoryRepository
 	BotSkills           *skills.BotSkillRepository
@@ -101,6 +103,7 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		RoutineRuns:         &routines.RoutineRunRepository{Repository: drel.NewRepository(engine, routines.RoutineRunMeta)},
 		Runs:                &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
 		RunEvents:           &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
+		Leases:              &screens.LeaseRepository{Repository: drel.NewRepository(engine, screens.LeaseMeta)},
 		Settings:            &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
 		SettingHistories:    &settings.SettingHistoryRepository{Repository: drel.NewRepository(engine, settings.SettingHistoryMeta)},
 		BotSkills:           &skills.BotSkillRepository{Repository: drel.NewRepository(engine, skills.BotSkillMeta)},
@@ -164,6 +167,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Runs:      &runs.RunRepository{Repository: drel.NewRepository(engine, runs.RunMeta)},
 				RunEvents: &runs.RunEventRepository{Repository: drel.NewRepository(engine, runs.RunEventMeta)},
 			},
+			Screens: ScreensRepos{
+				Leases: &screens.LeaseRepository{Repository: drel.NewRepository(engine, screens.LeaseMeta)},
+			},
 			Settings: SettingsRepos{
 				Settings:         &settings.SettingRepository{Repository: drel.NewRepository(engine, settings.SettingMeta)},
 				SettingHistories: &settings.SettingHistoryRepository{Repository: drel.NewRepository(engine, settings.SettingHistoryMeta)},
@@ -221,6 +227,7 @@ type TxRepos struct {
 	RoutineRuns         *routines.TxRoutineRunRepository
 	Runs                *runs.TxRunRepository
 	RunEvents           *runs.TxRunEventRepository
+	Leases              *screens.TxLeaseRepository
 	Settings            *settings.TxSettingRepository
 	SettingHistories    *settings.TxSettingHistoryRepository
 	BotSkills           *skills.TxBotSkillRepository
@@ -267,6 +274,7 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		RoutineRuns:         &routines.TxRoutineRunRepository{TxRepository: drel.NewTxRepository(tx, routines.RoutineRunMeta)},
 		Runs:                &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
 		RunEvents:           &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
+		Leases:              &screens.TxLeaseRepository{TxRepository: drel.NewTxRepository(tx, screens.LeaseMeta)},
 		Settings:            &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
 		SettingHistories:    &settings.TxSettingHistoryRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingHistoryMeta)},
 		BotSkills:           &skills.TxBotSkillRepository{TxRepository: drel.NewTxRepository(tx, skills.BotSkillMeta)},
@@ -329,6 +337,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 			Runs: RunsTxRepos{
 				Runs:      &runs.TxRunRepository{TxRepository: drel.NewTxRepository(tx, runs.RunMeta)},
 				RunEvents: &runs.TxRunEventRepository{TxRepository: drel.NewTxRepository(tx, runs.RunEventMeta)},
+			},
+			Screens: ScreensTxRepos{
+				Leases: &screens.TxLeaseRepository{TxRepository: drel.NewTxRepository(tx, screens.LeaseMeta)},
 			},
 			Settings: SettingsTxRepos{
 				Settings:         &settings.TxSettingRepository{TxRepository: drel.NewTxRepository(tx, settings.SettingMeta)},
@@ -505,6 +516,16 @@ type RunsTxRepos struct {
 	RunEvents *runs.TxRunEventRepository
 }
 
+// ScreensRepos holds the untracked repositories of the "screens" module.
+type ScreensRepos struct {
+	Leases *screens.LeaseRepository
+}
+
+// ScreensTxRepos holds the tracked repositories of the "screens" module.
+type ScreensTxRepos struct {
+	Leases *screens.TxLeaseRepository
+}
+
 // SettingsRepos holds the untracked repositories of the "settings" module.
 type SettingsRepos struct {
 	Settings         *settings.SettingRepository
@@ -594,6 +615,7 @@ type Modules struct {
 	Push       PushRepos
 	Routines   RoutinesRepos
 	Runs       RunsRepos
+	Screens    ScreensRepos
 	Settings   SettingsRepos
 	Skills     SkillsRepos
 	Spaces     SpacesRepos
@@ -617,6 +639,7 @@ type TxModules struct {
 	Push       PushTxRepos
 	Routines   RoutinesTxRepos
 	Runs       RunsTxRepos
+	Screens    ScreensTxRepos
 	Settings   SettingsTxRepos
 	Skills     SkillsTxRepos
 	Spaces     SpacesTxRepos

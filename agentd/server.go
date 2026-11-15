@@ -43,6 +43,7 @@ type Server struct {
 	tokenHash [32]byte
 	handler   http.Handler
 	browsers  *browsers
+	screens   *screens
 }
 
 // New returns a server for cfg. The home folder is created when missing.
@@ -72,6 +73,7 @@ func New(cfg Config, network NetworkState, logger *slog.Logger) (*Server, error)
 		network:   network,
 		tokenHash: sha256.Sum256([]byte(cfg.Token)),
 		browsers:  newBrowsers(),
+		screens:   newScreens(),
 	}
 	s.handler = s.routes()
 	return s, nil
@@ -83,6 +85,7 @@ func (s *Server) Handler() http.Handler { return s.handler }
 // Close releases the home folder handle.
 func (s *Server) Close() error {
 	s.browsers.closeAll()
+	s.screens.stopAll()
 	return s.root.Close()
 }
 
@@ -109,6 +112,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/browser/{ctx}/fill", s.browserFill)
 	// A websocket upgrade is a GET; Appendix B names this route POST /v1/mcp/stdio (D-135).
 	mux.HandleFunc("GET /v1/mcp/stdio", s.mcpStdio)
+	mux.HandleFunc("POST /v1/screen/{id}/start", s.screenStart)
+	mux.HandleFunc("POST /v1/screen/{id}/stop", s.screenStop)
+	mux.HandleFunc("GET /v1/screen/{id}/view", s.screenStream(false))
+	mux.HandleFunc("GET /v1/screen/{id}/control", s.screenStream(true))
 	for _, p := range []string{"/v1/health", "/v1/exec", "/v1/files", "/v1/files/list", "/v1/files/stat",
 		"/v1/workspace/export", "/v1/workspace/import", "/v1/workspace/manifest", "/v1/workspace/diff"} {
 		mux.HandleFunc(p, func(w http.ResponseWriter, _ *http.Request) {

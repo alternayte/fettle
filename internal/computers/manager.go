@@ -102,6 +102,8 @@ type Lease struct {
 	Computer uuid.UUID
 	ZoneID   uuid.UUID
 	SpaceID  uuid.UUID
+	// Screens reports that the zone has the desktop size, so bots have screens (§10.8).
+	Screens  bool
 	Client   *client.Client
 	released bool
 }
@@ -269,7 +271,7 @@ func (m *Manager) lease(c *Computer, z *zones.Zone, lv *live) *Lease {
 	lv.leases++
 	m.mu.Unlock()
 	_ = m.touch(context.Background(), c.ID())
-	return &Lease{m: m, Computer: c.ID(), ZoneID: z.ID(), SpaceID: z.SpaceID, Client: lv.client}
+	return &Lease{m: m, Computer: c.ID(), ZoneID: z.ID(), SpaceID: z.SpaceID, Screens: z.Size == "desktop", Client: lv.client}
 }
 
 // bringUp resumes the known machine when this process holds its token, else creates a new

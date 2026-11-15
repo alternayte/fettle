@@ -1,0 +1,61 @@
+{
+  "tables": [
+    {
+      "name": "screen_leases",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "holder_kind",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "holder_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "expires_at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_screen_leases_bot_id",
+          "columns": [
+            "bot_id"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

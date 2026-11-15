@@ -96,6 +96,7 @@ var envName = regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`)
 func (b *Broker) RegisterBroker(r *agent.Registry) {
 	r.Add(agent.Tool{
 		Name:          "fill_login",
+		Screen:        true,
 		Description:   "Fill a login from the vault into the current page: the user name into one field ref and the password into another. Fettle fills only a page on the login's site. You never see the password.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassWriteLocal,
@@ -133,6 +134,7 @@ func (b *Broker) RegisterBroker(r *agent.Registry) {
 	})
 	r.Add(agent.Tool{
 		Name:          "totp_code",
+		Screen:        true,
 		Description:   "Fill the current one-time code of a TOTP vault item into a field ref of the current page.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassWriteLocal,

@@ -212,7 +212,11 @@ function RoutineRow({ r, botName, canEdit }: { r: SchemaRoutineView; botName: st
           <span className="figures block truncate text-ink-faint">
             {botName} ·{" "}
             {r.trigger === "cron"
-              ? `${r.cron} · ${r.tz}${r.enabled && r.next_at ? ` · ${t("routines.next", { when: `${formatDay(r.next_at)} ${formatClock(r.next_at)}` })}` : ""}`
+              ? `${r.cron} · ${r.tz}${
+                  r.enabled && r.next_at
+                    ? ` · ${t("routines.next", { when: `${formatDay(r.next_at)} ${formatClock(r.next_at)}` })}`
+                    : ""
+                }`
               : r.webhook_url}
           </span>
         </button>

@@ -27,6 +27,9 @@ type Tool struct {
 	// NeedsComputer marks tools that act on the zone's computer; the run gets the computer
 	// before it writes an intent, so a full host makes the run wait instead of fail.
 	NeedsComputer bool
+	// Screen marks tools that act on the bot's screen. They wait while a person controls
+	// the screen (§10.8).
+	Screen bool
 	// MemoryWrite marks remember and forget (§11.3).
 	MemoryWrite bool
 	// Connector names the connector of a connector tool, for rules (§11.2).

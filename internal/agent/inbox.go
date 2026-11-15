@@ -262,6 +262,8 @@ func cardAnswerText(kind, action, value string) string {
 		return "Continue"
 	case action == "stop":
 		return "Stop"
+	case kind == "takeover" && action == "done":
+		return "Control returned"
 	case action == "done":
 		return "It happened"
 	case action == "not_done":

@@ -756,6 +756,37 @@ export function useDraftSkill() {
   });
 }
 
+// ---------------------------------------------------------------- screens
+
+export function useOpenScreen() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (bot: string) =>
+      must(api.POST("/api/v1/spaces/{space}/bots/{bot}/screen", { params: { path: { space, bot } } })),
+  });
+}
+
+export function useControlScreen() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (bot: string) =>
+      must(api.POST("/api/v1/spaces/{space}/bots/{bot}/screen/control", { params: { path: { space, bot } } })),
+  });
+}
+
+export function useScreenDone() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ bot, card, note }: { bot: string; card?: string; note?: string }) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/bots/{bot}/screen/done", {
+          params: { path: { space, bot } },
+          body: { card_id: card, note },
+        }),
+      ),
+  });
+}
+
 // ---------------------------------------------------------------- connectors
 
 export function useConnectors() {

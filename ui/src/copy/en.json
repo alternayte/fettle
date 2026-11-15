@@ -941,5 +941,24 @@
       "synced": "The set has {skills} skills. {updated} changed.",
       "failed": "The Skael sync failed"
     }
+  },
+  "screen": {
+    "title": "Screen of {bot}",
+    "connecting": "Fettle is opening the screen.",
+    "viewOnly": "View only",
+    "youControl": "You control the screen",
+    "botUses": "{bot} uses the screen",
+    "personUses": "Another person controls the screen",
+    "takeControl": "Take control",
+    "done": "Done",
+    "doneHint": "Done gives the screen back to the bot.",
+    "note": "Note for the bot",
+    "notePlaceholder": "What you did (optional)",
+    "close": "Close",
+    "lost": "The screen connection ended.",
+    "reconnect": "Connect again",
+    "failed": "Fettle cannot open the screen",
+    "returned": "You gave the screen back to {bot}.",
+    "request": "{bot} asks you to take over: {reason}"
   }
 }

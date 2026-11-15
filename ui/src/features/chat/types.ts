@@ -36,6 +36,8 @@ export interface Card {
   detail?: string;
   hard_ask?: boolean;
   answer?: string;
+  /** Kind-specific fields; a takeover card holds bot_id. */
+  data?: Record<string, string>;
 }
 
 export type RunState = "queued" | "running" | "waiting" | "verifying" | "done" | "failed" | "escalated" | "cancelled";

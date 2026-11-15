@@ -37,6 +37,8 @@ func (a *App) Handler() http.Handler {
 	r.Post("/hooks/{id}", a.webhook)
 	// The OAuth sign-in of a connector returns here; its state is the secret (§12.1).
 	r.Get(APIPrefix+"/oauth/callback", a.oauthCallback)
+	// A screen stream carries its own short-lived token (§10.8).
+	r.Get(APIPrefix+"/screen/stream", a.screenStream)
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}

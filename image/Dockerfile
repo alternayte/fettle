@@ -1,5 +1,5 @@
 # fettle-computer: the image of every computer (SDD §10.5). Debian slim, non-root user
-# fettle, Chromium, Xvfb, x11vnc, noVNC, git, ripgrep, curl, jq, Python 3 with uv,
+# fettle, Chromium, Xvfb, x11vnc, git, ripgrep, curl, jq, Python 3 with uv,
 # Node 22, pdftotext, pandoc and fettle-agentd.
 
 FROM golang:1.26-bookworm AS agentd
@@ -13,7 +13,6 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 FROM debian:bookworm-slim
 ARG NODE_MAJOR=22
-ARG NOVNC_VERSION=1.5.0
 ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -24,8 +23,6 @@ RUN apt-get update \
  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
  && apt-get update && apt-get install -y --no-install-recommends nodejs \
- && curl -fsSL https://github.com/novnc/noVNC/archive/refs/tags/v${NOVNC_VERSION}.tar.gz | tar -xz -C /opt \
- && mv /opt/noVNC-${NOVNC_VERSION} /opt/novnc \
  && curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh \
  && apt-get purge -y gnupg && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \

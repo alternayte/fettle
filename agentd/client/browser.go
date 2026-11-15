@@ -15,6 +15,8 @@ type BrowserContextRequest struct {
 	Profile   string `json:"profile,omitempty"`
 	Downloads string `json:"downloads,omitempty"`
 	Ephemeral bool   `json:"ephemeral,omitempty"`
+	// Screen shows the browser on this screen (desktop size, §10.8) instead of headless.
+	Screen string `json:"screen,omitempty"`
 }
 
 // Element is one interactive element of a snapshot.

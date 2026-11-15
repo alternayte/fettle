@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -189,6 +190,35 @@ func TestSCN_CMP_012_AgentdEndpointsTokenAndPinnedTLS(t *testing.T) {
 	ctx := context.Background()
 	a := startAgentd(t, "token-acme-1")
 	c := a.c
+
+	t.Run("screen", func(t *testing.T) {
+		_, errX := exec.LookPath("Xvfb")
+		_, errV := exec.LookPath("x11vnc")
+		sc, err := c.ScreenStart(ctx, "bot-1")
+		if errX != nil || errV != nil {
+			// A computer without an X server refuses screens (small and browser sizes).
+			wantStatus(t, err, http.StatusNotImplemented)
+			return
+		}
+		if err != nil || sc.Display < 10 {
+			t.Fatalf("start: %+v %v", sc, err)
+		}
+		defer func() { _ = c.ScreenStop(ctx, "bot-1") }()
+		for _, control := range []bool{false, true} {
+			conn, err := c.ScreenDial(ctx, "bot-1", control)
+			if err != nil {
+				t.Fatal(err)
+			}
+			buf := make([]byte, 12)
+			_, err = io.ReadFull(conn, buf)
+			_ = conn.Close()
+			if err != nil || !strings.HasPrefix(string(buf), "RFB 003.") {
+				t.Fatalf("greeting %q %v", buf, err)
+			}
+		}
+		_, err = c.ScreenStart(ctx, "../x")
+		wantStatus(t, err, http.StatusBadRequest)
+	})
 
 	t.Run("health", func(t *testing.T) {
 		h, err := c.Health(ctx)

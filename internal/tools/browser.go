@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/agentd/client"
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/computers"
@@ -24,13 +26,24 @@ type Browser struct {
 // browserID is the persistent browser context of a bot. Its profile lives in the bot home.
 func browserID(env *agent.ToolEnv) string { return "bot-" + env.BotID.String() }
 
+// BrowserRequest is the persistent browser context of a bot. In the desktop size, the
+// browser shows on the bot's screen, whose ID is the bot ID (§10.8).
+func BrowserRequest(l *computers.Lease, botID uuid.UUID) client.BrowserContextRequest {
+	home := computers.BotHome(botID)
+	req := client.BrowserContextRequest{ID: "bot-" + botID.String(), Profile: home + "/.browser", Downloads: home + "/Downloads"}
+	if l.Screens {
+		req.Screen = botID.String()
+	}
+	return req
+}
+
 // open leases the computer and makes sure that the bot's browser context exists.
 func (b *Browser) open(ctx context.Context, env *agent.ToolEnv) (*computers.Lease, string, error) {
 	l, home, err := b.lease(ctx, env)
 	if err != nil {
 		return nil, "", err
 	}
-	err = l.Client.BrowserOpen(ctx, client.BrowserContextRequest{ID: browserID(env), Profile: home + "/.browser", Downloads: home + "/Downloads"})
+	err = l.Client.BrowserOpen(ctx, BrowserRequest(l, env.BotID))
 	if err != nil {
 		l.Release()
 		return nil, "", err
@@ -118,6 +131,7 @@ func (b *Browser) classOfAct(ctx context.Context, env *agent.ToolEnv, args json.
 func (b *Browser) RegisterBrowser(r *agent.Registry) {
 	r.Add(agent.Tool{
 		Name:          "browser_navigate",
+		Screen:        true,
 		Description:   "Open a URL in your browser. It returns the page text and the interactive elements with refs.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassRead,
@@ -145,6 +159,7 @@ func (b *Browser) RegisterBrowser(r *agent.Registry) {
 	})
 	r.Add(agent.Tool{
 		Name:          "browser_snapshot",
+		Screen:        true,
 		Description:   "Read the current page of your browser: URL, title, text and the interactive elements with refs.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassRead,
@@ -164,6 +179,7 @@ func (b *Browser) RegisterBrowser(r *agent.Registry) {
 	})
 	r.Add(agent.Tool{
 		Name:          "browser_act",
+		Screen:        true,
 		Description:   "Act on one element of the current page by its ref from the last snapshot. Actions: click, type, select, check, scroll, hover, press. For type and select, give value. For press, give the key name in value. For check, value true or false. The action never repeats by itself.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassWriteExternal,
@@ -201,6 +217,7 @@ func (b *Browser) RegisterBrowser(r *agent.Registry) {
 	})
 	r.Add(agent.Tool{
 		Name:          "browser_screenshot",
+		Screen:        true,
 		Description:   "Take a screenshot of the current page. When your model cannot see images, use computer_mode instead.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassRead,
@@ -223,6 +240,7 @@ func (b *Browser) RegisterBrowser(r *agent.Registry) {
 	})
 	r.Add(agent.Tool{
 		Name:          "browser_downloads",
+		Screen:        true,
 		Description:   "List the files that your browser downloaded, newest first. The files are in your home under Downloads/.",
 		NeedsComputer: true,
 		Class:         envelopes.ClassRead,

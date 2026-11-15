@@ -41,6 +41,9 @@ type Agent struct {
 	Vault     *vault.Vault
 	Tools     *Registry
 	Policy    *policy.Service
+	// ScreenUse takes the bot's screen for one action and returns the release function.
+	// ErrScreenControlled means a person controls the screen, so the run waits.
+	ScreenUse func(ctx context.Context, spaceID, botID uuid.UUID) (func(), error)
 	// Computer brings up the computer of a bot's zone; ErrNoComputer means wait.
 	Computer func(ctx context.Context, spaceID, botID uuid.UUID) error
 	HTTP     *http.Client
@@ -89,6 +92,7 @@ func New(a Agent) *Agent {
 		ag.now = func() time.Time { return time.Now().UTC() }
 	}
 	ag.registerMemoryTools()
+	ag.registerTakeover()
 	return ag
 }
 

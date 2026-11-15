@@ -73,6 +73,12 @@ export async function createAppRouter() {
     path: "/skills/$skillId",
     component: lazyRouteComponent(() => import("@/features/skills/SkillsPage"), "SkillPage"),
   });
+  const screenRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/screen/$botId",
+    component: lazyRouteComponent(() => import("@/features/screen/ScreenPage"), "ScreenPage"),
+    validateSearch: (s: Record<string, unknown>): { card?: string } => ({ card: optionalString(s.card) }),
+  });
   const bot = createRoute({
     getParentRoute: () => app,
     path: "/bots/$botId",
@@ -113,6 +119,7 @@ export async function createAppRouter() {
       routinesRoute,
       skillsRoute,
       skillRoute,
+      screenRoute,
       bot,
       settings.addChildren([
         settingsIndex,

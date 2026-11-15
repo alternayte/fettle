@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -122,6 +123,15 @@ func (s *Server) openBrowser(req client.BrowserContextRequest) (*browserCtx, err
 	)
 	if s.browsers.bin != "" {
 		opts = append(opts, chromedp.ExecPath(s.browsers.bin))
+	}
+	if req.Screen != "" {
+		x, err := s.startScreen(req.Screen)
+		if err != nil {
+			return nil, err
+		}
+		// A person sees this browser, so it shows no automation bar.
+		opts = append(opts, chromedp.Flag("headless", false), chromedp.Flag("start-maximized", true), chromedp.Flag("enable-automation", false),
+			chromedp.Flag("window-position", "0,0"), chromedp.Env("DISPLAY=:"+strconv.Itoa(x.display)))
 	}
 	// Chromium's own sandbox needs privileges that a container does not give a non-root
 	// user. The computer is the sandbox; the image sets this variable.

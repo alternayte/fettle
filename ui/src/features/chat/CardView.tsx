@@ -1,5 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, CircleHelp, Coins, Hand, KeyRound, ShieldQuestion, TriangleAlert, X } from "lucide-react";
+import { Check, CircleHelp, Coins, Hand, KeyRound, Monitor, ShieldQuestion, TriangleAlert, X } from "lucide-react";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { Card } from "./types";
@@ -173,10 +174,16 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
             </ActionButton>
           </>
         )}
-        {card.kind === "takeover" && (
-          <ActionButton kind="act" onClick={() => onAnswer({ action: "open" })}>
+        {card.kind === "takeover" && card.data?.bot_id && (
+          <Link
+            to="/screen/$botId"
+            params={{ botId: card.data.bot_id }}
+            search={{ card: card.id }}
+            className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-glaze px-3 text-sm font-[var(--weight-medium)] text-glaze-ink hover:brightness-105"
+          >
+            <Monitor aria-hidden className="size-3.5" />
             {t("card.takeover.open")}
-          </ActionButton>
+          </Link>
         )}
         <span className="figures ml-auto hidden text-ink-faint sm:inline">{t("card.waits")}</span>
       </footer>

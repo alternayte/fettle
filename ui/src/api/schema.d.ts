@@ -316,6 +316,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/bots/{bot}/screen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Open the screen of a bot read-only. It starts the screen when it is not running. */
+    post: operations["open-screen"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/bots/{bot}/screen/control": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Take or renew the control lease of a bot's screen (15 minutes). The bot waits while you control it. */
+    post: operations["control-screen"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/bots/{bot}/screen/done": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Return control of a bot's screen. With a takeover card, it answers the card and the bot continues. */
+    post: operations["screen-done"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/cards/{card}/answer": {
     parameters: {
       query?: never;
@@ -1675,6 +1726,29 @@ export interface components {
     "Save-skill-mdRequest": {
       skill_md: string;
     };
+    "Screen-doneRequest": {
+      card_id?: string;
+      /** @description What you did, for the bot. */
+      note?: string;
+    };
+    ScreenControl: {
+      /** Format: date-time */
+      expires_at: string;
+      /** @description Stream token with input. Valid while you hold the lease. */
+      token: string;
+    };
+    ScreenView: {
+      bot_id: string;
+      /**
+       * @description Who uses the screen now.
+       * @enum {string}
+       */
+      controller: "none" | "you" | "person" | "bot";
+      /** Format: date-time */
+      view_expires_at: string;
+      /** @description Read-only stream token for /api/v1/screen/stream. Valid 10 minutes. */
+      view_token: string;
+    };
     "Set-approval-modeRequest": {
       /** @enum {string} */
       mode: "ask" | "auto" | "never";
@@ -1960,6 +2034,9 @@ export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
 export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
 export type SchemaSaveSkillMdRequest = components["schemas"]["Save-skill-mdRequest"];
+export type SchemaScreenDoneRequest = components["schemas"]["Screen-doneRequest"];
+export type SchemaScreenControl = components["schemas"]["ScreenControl"];
+export type SchemaScreenView = components["schemas"]["ScreenView"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
@@ -2763,6 +2840,107 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["MemoryView"];
         };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "open-screen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScreenView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "control-screen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScreenControl"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "screen-done": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Screen-doneRequest"];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Error */
       default: {

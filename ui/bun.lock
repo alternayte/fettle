@@ -5,6 +5,7 @@
     "": {
       "name": "fettle-ui",
       "dependencies": {
+        "@novnc/novnc": "1.4.0",
         "@tanstack/react-form": "^1.33.5",
         "@tanstack/react-query": "^5.107.1",
         "@tanstack/react-router": "^1.170.46",
@@ -180,6 +181,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@novnc/novnc": ["@novnc/novnc@1.4.0", "", {}, "sha512-kW6ALMc5BuH08e/ond/I1naYcfjc19JYMN1EdtmgjjjzPGCjW8fMtVM3MwM6q7YLRjPlQ3orEvoKMgSS7RkEVQ=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.3", "", {}, "sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA=="],
 
