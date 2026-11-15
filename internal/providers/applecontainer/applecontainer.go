@@ -99,13 +99,16 @@ func (p *Provider) cli(ctx context.Context, args ...string) ([]byte, error) {
 	return out, nil
 }
 
+// ErrNotInstalled is a runtime that Fettle has not installed yet. Prepare installs it.
+var ErrNotInstalled = errors.New("the Apple container runtime is not installed yet; Fettle installs it when it prepares")
+
 // Ping checks that the runtime answers (doctor).
 func (p *Provider) Ping(ctx context.Context) error {
 	if err := Supported(); err != nil {
 		return err
 	}
 	if _, err := os.Stat(p.bin()); err != nil {
-		return fmt.Errorf("the Apple container runtime is not installed yet; Fettle installs it when it prepares")
+		return ErrNotInstalled
 	}
 	out, err := p.cli(ctx, "system", "status")
 	if err != nil || !strings.Contains(string(out), "running") {

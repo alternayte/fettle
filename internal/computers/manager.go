@@ -995,3 +995,35 @@ func (m *Manager) DropFork(ctx context.Context, runID uuid.UUID) error {
 	}
 	return f.Destroy(ctx)
 }
+
+// AgentdHealth is the answer of the agentd of one running computer.
+type AgentdHealth struct {
+	Computer uuid.UUID
+	Err      error
+	Version  string
+}
+
+// HealthAll sends a health request with the pinned certificate and the token to the agentd
+// of each computer that runs in this process (doctor, §17).
+func (m *Manager) HealthAll(ctx context.Context) []AgentdHealth {
+	m.mu.Lock()
+	type one struct {
+		id uuid.UUID
+		cl *client.Client
+	}
+	var all []one
+	for id, lv := range m.live {
+		if lv.client != nil {
+			all = append(all, one{id, lv.client})
+		}
+	}
+	m.mu.Unlock()
+	var out []AgentdHealth
+	for _, o := range all {
+		hctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		h, err := o.cl.Health(hctx)
+		cancel()
+		out = append(out, AgentdHealth{Computer: o.id, Err: err, Version: h.Version})
+	}
+	return out
+}
