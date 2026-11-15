@@ -359,8 +359,15 @@ func TestSCN_TEAM_008_HandoffWaitFilesAndLoopGuard(t *testing.T) {
 	run, _ = e.Post(inbox.ChatID, "Hand off the weekly note.")
 	r = e.WaitRun(run, "done", "failed", "escalated")
 	res = toolResults(r, "handoff")
-	if len(res) != 4 || strings.Contains(res[2], "loop guard") || !strings.Contains(res[3], "loop guard") {
-		t.Fatalf("handoff results %v", res)
+	// The results of the handoffs that went out can steer the run again, so the script can
+	// try more handoffs; each try after the third is refused.
+	if len(res) < 4 {
+		t.Fatalf("handoff results %v: %s", res, r.EventTypes())
+	}
+	for i, x := range res {
+		if (i < 3) == strings.Contains(x, "loop guard") {
+			t.Fatalf("handoff %d: %q; results %v", i+1, x, res)
+		}
 	}
 
 	// With no hops left, a handoff is refused.
