@@ -1,0 +1,56 @@
+# The public CI (§24.2): just ci on Linux; a macOS job runs the desktop smoke test and the
+# provider suite of that host.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: extractions/setup-just@v2
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+          version: "~> v2"
+      - run: just setup
+      - run: just ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports-linux
+          path: tmp/reports
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: extractions/setup-just@v2
+      - run: just setup
+      - run: just desktop
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports-macos
+          path: tmp/reports

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Fettle
+Comment=Your AI team, on your computer or a server
+Exec=fettle-desktop
+Icon=fettle
+Categories=Office;Utility;
+Terminal=false
+StartupWMClass=Fettle

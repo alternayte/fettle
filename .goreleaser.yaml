@@ -1,0 +1,90 @@
+# The release pipeline (§17). `goreleaser release --snapshot --clean` builds it locally;
+# the desktop installers come from the desktop jobs of .github/workflows/release.yml.
+version: 2
+project_name: fettle
+
+before:
+  hooks:
+    - sh -c "cd ui && bun install --frozen-lockfile && bun run build"
+
+builds:
+  - id: fettle
+    main: ./cmd/fettle
+    binary: fettle
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+  - id: fettle-agentd
+    main: ./cmd/fettle-agentd
+    binary: fettle-agentd
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    goos: [linux]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: fettle
+    ids: [fettle, fettle-agentd]
+    name_template: "fettle_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - deploy/fettle.service
+    wrap_in_directory: false
+    # fettle-agentd runs only inside Linux computers, so other archives hold fettle alone.
+    allow_different_binary_count: true
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+  extra_files:
+    - glob: install.sh
+    - glob: deploy/fettle.service
+    - glob: deploy/compose.yaml
+    - glob: image/e2b/e2b.Dockerfile
+
+release:
+  extra_files:
+    - glob: install.sh
+    - glob: deploy/fettle.service
+    - glob: deploy/compose.yaml
+    - glob: image/e2b/e2b.Dockerfile
+
+dockers_v2:
+  - id: server
+    ids: [fettle, fettle-agentd]
+    dockerfile: deploy/Dockerfile.release
+    images: [ghcr.io/alternayte/fettle]
+    tags: ["{{ .Version }}", "{{ if not .IsSnapshot }}latest{{ end }}"]
+    platforms: [linux/amd64, linux/arm64]
+    labels:
+      org.opencontainers.image.source: https://github.com/alternayte/fettle
+      org.opencontainers.image.licenses: AGPL-3.0-only
+  - id: computer
+    ids: [fettle-agentd]
+    dockerfile: image/Dockerfile
+    images: [ghcr.io/alternayte/fettle-computer]
+    tags: ["{{ .Version }}", "{{ if not .IsSnapshot }}latest{{ end }}"]
+    platforms: [linux/amd64, linux/arm64]
+    build_args:
+      VERSION: "{{ .Version }}"
+    extra_files:
+      - go.mod
+      - go.sum
+      - agentd
+      - cmd/fettle-agentd
+    labels:
+      org.opencontainers.image.source: https://github.com/alternayte/fettle
+      org.opencontainers.image.licenses: AGPL-3.0-only
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  disable: true

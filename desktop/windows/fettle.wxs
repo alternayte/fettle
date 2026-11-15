@@ -1,0 +1,28 @@
+<!-- The Windows installer of the desktop app (§17), for WiX Toolset 4:
+     wix build desktop/windows/fettle.wxs -d Version=1.0.0 -d Exe=Fettle.exe -o Fettle.msi -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Fettle" Manufacturer="Fettle" Version="$(var.Version)" UpgradeCode="6f1f3a1e-3c2b-4d1a-9b7e-5a2f4c8d9e01" Scope="perUser">
+    <MajorUpgrade DowngradeErrorMessage="A newer Fettle is installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsDir" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Fettle">
+          <Component Id="App" Guid="*">
+            <File Id="FettleExe" Source="$(var.Exe)" Name="Fettle.exe" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="Shortcut" Guid="*">
+        <Shortcut Id="StartMenuShortcut" Name="Fettle" Target="[INSTALLFOLDER]Fettle.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\Fettle" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemoveProgramMenu" On="uninstall" />
+      </Component>
+    </StandardDirectory>
+    <Feature Id="Main">
+      <ComponentRef Id="App" />
+      <ComponentRef Id="Shortcut" />
+    </Feature>
+  </Package>
+</Wix>

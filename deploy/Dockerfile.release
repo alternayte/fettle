@@ -1,0 +1,10 @@
+# The server image of a release: the binaries that goreleaser built for this platform.
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/fettle ${TARGETPLATFORM}/fettle-agentd /usr/local/bin/
+ENV FETTLE_DATA=/data FETTLE_ADDR=:7420 FETTLE_NO_KEYCHAIN=1
+VOLUME /data
+EXPOSE 7420
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/fettle"]
+CMD ["serve"]

@@ -1,0 +1,20 @@
+# The .deb of the desktop app (§17): nfpm package --config desktop/linux/nfpm.yaml --packager deb
+name: fettle-desktop
+arch: ${ARCH}
+version: ${VERSION}
+maintainer: Fettle maintainers <alternayte@users.noreply.github.com>
+description: Fettle desktop app. Your AI team, on your computer or a server.
+license: AGPL-3.0-only
+homepage: https://github.com/alternayte/fettle
+depends:
+  - libgtk-3-0
+  - libwebkit2gtk-4.1-0
+contents:
+  - src: ${BIN}
+    dst: /usr/bin/fettle-desktop
+    file_info:
+      mode: 0755
+  - src: desktop/linux/fettle.desktop
+    dst: /usr/share/applications/fettle.desktop
+  - src: desktop/linux/fettle.png
+    dst: /usr/share/icons/hicolor/256x256/apps/fettle.png

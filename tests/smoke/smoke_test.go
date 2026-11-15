@@ -210,3 +210,125 @@ func TestSCN_OPS_003_InstallScriptOnDebianWithSystemd(t *testing.T) {
 		t.Fatalf("the service is active %t, ready %t:\n%s", active, ready, logs)
 	}
 }
+
+// TestSCN_OPS_001_ReleaseSnapshot checks the artifacts of `goreleaser release --snapshot`
+// (the smoke recipe runs it first) and the desktop installer of this host.
+func TestSCN_OPS_001_ReleaseSnapshot(t *testing.T) {
+	dist := filepath.Join(root(), "dist")
+	var meta struct {
+		Version string `json:"version"`
+	}
+	b, err := os.ReadFile(filepath.Join(dist, "metadata.json"))
+	if err != nil {
+		t.Fatalf("no snapshot in dist: %v", err)
+	}
+	_ = json.Unmarshal(b, &meta)
+	problems := []string{}
+	sizes := map[string]any{}
+	// Binaries and archives.
+	for _, p := range []string{"linux_amd64", "linux_arm64", "darwin_amd64", "darwin_arm64", "windows_amd64", "windows_arm64"} {
+		ext := ".tar.gz"
+		if strings.HasPrefix(p, "windows") {
+			ext = ".zip"
+		}
+		if _, err := os.Stat(filepath.Join(dist, "fettle_"+p+ext)); err != nil {
+			problems = append(problems, "no archive for "+p)
+		}
+	}
+	bins, _ := filepath.Glob(filepath.Join(dist, "fettle_*", "fettle*"))
+	for _, bin := range bins {
+		fi, err := os.Stat(bin)
+		if err != nil || fi.IsDir() {
+			continue
+		}
+		mb := float64(fi.Size()) / (1 << 20)
+		sizes[filepath.Base(filepath.Dir(bin))] = fmt.Sprintf("%.1f MB", mb)
+		if mb > 60 {
+			problems = append(problems, fmt.Sprintf("%s is %.1f MB; NFR-001 allows 60 MB", bin, mb))
+		}
+	}
+	if len(bins) < 6 {
+		problems = append(problems, fmt.Sprintf("%d server binaries, want 6", len(bins)))
+	}
+	agentd, _ := filepath.Glob(filepath.Join(dist, "fettle-agentd_linux_*", "fettle-agentd"))
+	if len(agentd) != 2 {
+		problems = append(problems, fmt.Sprintf("%d agentd binaries, want 2", len(agentd)))
+	}
+	// Checksums cover every archive and the release files.
+	sums, err := os.ReadFile(filepath.Join(dist, "SHA256SUMS"))
+	if err != nil {
+		problems = append(problems, "no SHA256SUMS")
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(sums)), "\n") {
+		f := strings.Fields(line)
+		if len(f) != 2 {
+			continue
+		}
+		path := filepath.Join(dist, f[1])
+		data, err := os.ReadFile(path)
+		if err != nil {
+			path = filepath.Join(root(), f[1])
+			data, err = os.ReadFile(path)
+		}
+		if err != nil {
+			problems = append(problems, "SHA256SUMS names a missing file "+f[1])
+			continue
+		}
+		h := sha256.Sum256(data)
+		if hex.EncodeToString(h[:]) != f[0] {
+			problems = append(problems, "the checksum of "+f[1]+" does not match")
+		}
+	}
+	for _, want := range []string{"install.sh", "compose.yaml", "fettle.service", "e2b.Dockerfile"} {
+		if !strings.Contains(string(sums), want) {
+			problems = append(problems, "SHA256SUMS lacks "+want)
+		}
+	}
+	// Images: server and computer, amd64 and arm64. NFR-004: the amd64 computer image is
+	// 2.5 GB or less uncompressed.
+	for _, img := range []string{"ghcr.io/alternayte/fettle", "ghcr.io/alternayte/fettle-computer"} {
+		for _, arch := range []string{"amd64", "arm64"} {
+			ref := img + ":" + meta.Version + "-" + arch
+			out, err := exec.Command("docker", "image", "inspect", "--format", "{{.Size}}", ref).Output()
+			if err != nil {
+				problems = append(problems, "no image "+ref)
+				continue
+			}
+			var n int64
+			_, _ = fmt.Sscan(strings.TrimSpace(string(out)), &n)
+			sizes[ref] = fmt.Sprintf("%.2f GB", float64(n)/1e9)
+			if strings.HasSuffix(img, "computer") && arch == "amd64" && float64(n) > 2.5e9 {
+				problems = append(problems, fmt.Sprintf("%s is %.2f GB; NFR-004 allows 2.5 GB", ref, float64(n)/1e9))
+			}
+		}
+	}
+	// Desktop installers: this host builds its own; the release workflow builds the rest.
+	installers := map[string]any{}
+	if runtime.GOOS == "darwin" {
+		out := t.TempDir()
+		run(t, nil, "desktop/macos/package.sh", meta.Version, out)
+		dmgs, _ := filepath.Glob(filepath.Join(out, "*.dmg"))
+		if len(dmgs) != 1 {
+			problems = append(problems, "no .dmg")
+		} else {
+			fi, _ := os.Stat(dmgs[0])
+			mb := float64(fi.Size()) / (1 << 20)
+			installers["dmg"] = fmt.Sprintf("%.1f MB", mb)
+			if mb > 40 {
+				problems = append(problems, fmt.Sprintf("the .dmg is %.1f MB; NFR-001 allows 40 MB", mb))
+			}
+		}
+		installers["msi"], installers["appimage"], installers["deb"] = "needs a windows host", "needs a linux host", "needs a linux host"
+	}
+	// One host builds only its own installer, so a local run is never the full scenario:
+	// the release workflow builds all of them on their own systems.
+	extra := map[string]any{"sizes": sizes, "installers": installers}
+	if len(problems) == 0 {
+		extra["skipped"] = "the installers of other systems build on their own hosts (.github/workflows/release.yml)"
+	}
+	report(t, "SCN-OPS-001", false, extra)
+	if len(problems) > 0 {
+		t.Fatalf("release snapshot:\n%s", strings.Join(problems, "\n"))
+	}
+	t.Logf("sizes %v, installers %v", sizes, installers)
+}
