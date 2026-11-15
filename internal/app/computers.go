@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -126,6 +127,30 @@ func (a *App) setupComputers(ctx context.Context) {
 		return nil
 	}
 	a.Agent.Checker = a.checker
+	a.Agent.DeliverAttachments = func(ctx context.Context, spaceID, botID uuid.UUID, atts []chats.Attachment) error {
+		b, err := a.Bots.Get(ctx, spaceID, botID)
+		if err != nil || b.ZoneID == nil {
+			return err
+		}
+		l, err := a.Computers.Acquire(ctx, *b.ZoneID)
+		if err != nil {
+			return err
+		}
+		defer l.Release()
+		if err := a.Computers.EnsureBotHome(ctx, l, botID); err != nil {
+			return err
+		}
+		for _, at := range atts {
+			data, err := a.AttachmentData(ctx, spaceID, at)
+			if err != nil {
+				return err
+			}
+			if err := l.Client.WriteFile(ctx, path.Join(computers.BotHome(botID), "attachments", at.ID, at.Name), data, 0o644); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	a.Agent.Hire = a.hire
 	a.Agent.CopyShared = func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error {
 		src, err := a.Computers.Acquire(ctx, fromZone)

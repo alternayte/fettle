@@ -28,6 +28,8 @@ type PostInput struct {
 	Body        string
 	ReplyTo     *uuid.UUID
 	Attachments []chats.Attachment
+	// ConfirmEveryone sends an @everyone message after the user saw the cost hint.
+	ConfirmEveryone bool
 }
 
 // PostResult tells what a user message started.
@@ -35,7 +37,9 @@ type PostResult struct {
 	Message    *chats.Message
 	EnvelopeID *uuid.UUID
 	RunID      *uuid.UUID
-	Steered    bool
+	// RunIDs are all runs that the message started or steered (a group can wake several).
+	RunIDs  []uuid.UUID
+	Steered bool
 }
 
 func (a *Agent) defaultBudget(ctx context.Context, spaceID uuid.UUID) envelopes.Budget {
@@ -67,51 +71,79 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 	if len(members) == 0 {
 		return nil, errors.New("this chat has no bots")
 	}
-	owner := members[0]
-	res := &PostResult{}
-	msg := &chats.Message{SpaceID: spaceID, ChatID: chat.ID(), AuthorKind: "user", AuthorID: user.ID, Body: body, ReplyTo: in.ReplyTo, Attachments: in.Attachments}
-	active, err := a.Runs.Active(ctx, owner, chatID)
+	owners, err := a.addressees(ctx, spaceID, chat.Kind, members, body, in.ConfirmEveryone)
 	if err != nil {
 		return nil, err
 	}
+	res := &PostResult{}
+	msg := &chats.Message{SpaceID: spaceID, ChatID: chat.ID(), AuthorKind: "user", AuthorID: user.ID, Body: body, ReplyTo: in.ReplyTo, Attachments: in.Attachments}
+	active := make([]*runs.Run, len(owners))
+	for i, o := range owners {
+		if active[i], err = a.Runs.Active(ctx, o.ID(), chatID); err != nil {
+			return nil, err
+		}
+	}
+	var started []uuid.UUID
 	err = a.E.WithTx(ctx, func(ctx context.Context) error {
-		if err := a.Chats.Insert(ctx, msg, &owner); err != nil {
+		first := owners[0].ID()
+		if err := a.Chats.Insert(ctx, msg, &first); err != nil {
 			return err
 		}
-		if active != nil {
-			res.Steered = true
-			rid := active.ID()
-			res.RunID = &rid
-			res.EnvelopeID = &active.EnvelopeID
-			if _, err := a.Journal.Append(ctx, rid, runs.NoFence, nil, runs.New{Type: runs.EvSteer, Data: evSteer{Text: body, MessageID: msg.ID().String()}}); err != nil {
-				return err
+		for i, o := range owners {
+			owner := o.ID()
+			if r := active[i]; r != nil {
+				res.Steered = true
+				rid := r.ID()
+				if res.RunID == nil {
+					res.RunID, res.EnvelopeID = &rid, &r.EnvelopeID
+				}
+				res.RunIDs = append(res.RunIDs, rid)
+				if _, err := a.Journal.Append(ctx, rid, runs.NoFence, nil, runs.New{Type: runs.EvSteer, Data: evSteer{Text: body, MessageID: msg.ID().String()}}); err != nil {
+					return err
+				}
+				if r.Status == runs.StatusWaiting && r.WaitReason != "card" {
+					if err := a.Runs.Wake(ctx, rid, QueueFor("user")); err != nil {
+						return err
+					}
+				}
+				started = append(started, rid)
+				continue
 			}
-			if active.Status == runs.StatusWaiting && active.WaitReason != "card" {
-				return a.Runs.Wake(ctx, rid, QueueFor("user"))
-			}
-			return nil
-		}
-		env := &envelopes.Envelope{SpaceID: spaceID, Kind: "message", Origin: "user", Requester: envelopes.Requester{Type: "user", ID: user.ID}, OwnerBotID: &owner, ChatID: ptr(chat.ID()), MessageID: ptr(msg.ID()), Goal: body, Capabilities: UserCapabilities, Budget: a.defaultBudget(ctx, spaceID)}
-		// "/name ..." starts the work with that skill loaded (§13.1).
-		if name := slashSkill(body); name != "" && a.SkillIndex != nil {
-			for _, sk := range a.SkillIndex(ctx, spaceID, owner) {
-				if sk.Name == name {
-					env.Decision.Skill = name
+			env := &envelopes.Envelope{SpaceID: spaceID, Kind: "message", Origin: "user", Requester: envelopes.Requester{Type: "user", ID: user.ID}, OwnerBotID: &owner, ChatID: ptr(chat.ID()), MessageID: ptr(msg.ID()), Goal: body, Capabilities: UserCapabilities, Budget: a.defaultBudget(ctx, spaceID)}
+			// "/name ..." starts the work with that skill loaded (§13.1).
+			if name := slashSkill(body); name != "" && a.SkillIndex != nil {
+				for _, sk := range a.SkillIndex(ctx, spaceID, owner) {
+					if sk.Name == name {
+						env.Decision.Skill = name
+					}
 				}
 			}
+			if env.Goal == "" {
+				env.Goal = "Look at the attached files."
+			}
+			if len(owners) > 1 {
+				env.IdempotencyKey = msg.ID().String() + ":" + owner.String()
+			}
+			if err := a.Envelopes.Create(ctx, env, nil); err != nil {
+				return err
+			}
+			if msg.EnvelopeID == nil {
+				msg.EnvelopeID = ptr(env.ID())
+			}
+			r := &runs.Run{SpaceID: spaceID, EnvelopeID: env.ID(), BotID: owner, Kind: "owner"}
+			if err := a.Runs.Create(ctx, r, QueueFor("user")); err != nil {
+				return err
+			}
+			if res.RunID == nil {
+				res.EnvelopeID, res.RunID = ptr(env.ID()), ptr(r.ID())
+			}
+			res.RunIDs = append(res.RunIDs, r.ID())
+			started = append(started, r.ID())
 		}
-		if env.Goal == "" {
-			env.Goal = "Look at the attached files."
-		}
-		if err := a.Envelopes.Create(ctx, env, nil); err != nil {
+		if msg.EnvelopeID != nil {
+			_, err := drel.MustFromContext(ctx).Exec(ctx, "UPDATE messages SET envelope_id = $1 WHERE id = $2", *msg.EnvelopeID, msg.ID())
 			return err
 		}
-		msg.EnvelopeID = ptr(env.ID())
-		r := &runs.Run{SpaceID: spaceID, EnvelopeID: env.ID(), BotID: owner, Kind: "owner"}
-		if err := a.Runs.Create(ctx, r, QueueFor("user")); err != nil {
-			return err
-		}
-		res.EnvelopeID, res.RunID = ptr(env.ID()), ptr(r.ID())
 		return nil
 	})
 	if err != nil {
@@ -119,8 +151,8 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 	}
 	res.Message = msg
 	a.Chats.Publish(chatID, "message", a.MessageView(ctx, msg))
-	if res.RunID != nil {
-		a.publishRun(ctx, *res.RunID)
+	for _, id := range started {
+		a.publishRun(ctx, id)
 	}
 	return res, nil
 }

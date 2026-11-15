@@ -1,7 +1,11 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -158,5 +162,159 @@ func TestSCN_BOT_002_DuplicateArchiveDelete(t *testing.T) {
 	chief := e.Chief()
 	if code, _ := e.Do("DELETE", e.SP("/bots/%s?confirm=%s", chief.ID, chief.Name), nil, nil); code != 409 {
 		t.Fatalf("deleting the primary bot got %d", code)
+	}
+}
+
+type postOut struct {
+	Message struct {
+		ID          string `json:"id"`
+		Attachments []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			Size int64  `json:"size"`
+		} `json:"attachments"`
+		ReplyTo   string            `json:"reply_to"`
+		Reactions map[string]string `json:"reactions"`
+	} `json:"message"`
+	RunID string `json:"run_id"`
+}
+
+func groupOf(e *apptest.Env, name string, ids ...string) string {
+	e.T.Helper()
+	var g struct {
+		ID string `json:"id"`
+	}
+	e.MustDo("POST", e.SP("/chats"), map[string]any{"name": name, "bot_ids": ids}, &g)
+	return g.ID
+}
+
+// runsOf counts the runs that a message started.
+func runsOf(e *apptest.Env, msgID string) int {
+	e.T.Helper()
+	var n int
+	if err := e.App.DB.Engine.QueryRow(context.Background(), "SELECT COUNT(*) FROM runs r JOIN envelopes v ON v.id = r.envelope_id WHERE v.message_id = $1 AND r.kind = 'owner'", uuid.MustParse(msgID)).Scan(&n); err != nil {
+		e.T.Fatal(err)
+	}
+	return n
+}
+
+// idle waits until no run of the space is active, so the next message starts new runs
+// instead of steering busy ones.
+func idle(e *apptest.Env) {
+	e.T.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		var n int
+		_ = e.App.DB.Engine.QueryRow(context.Background(), "SELECT COUNT(*) FROM runs WHERE status NOT IN ('done', 'failed', 'cancelled', 'escalated')").Scan(&n)
+		if n == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			e.T.Fatalf("%d runs are still active", n)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func TestSCN_TEAM_007_GroupMentionsAndEveryone(t *testing.T) {
+	e := apptest.Start(t, "sqlite")
+	e.SetupModel("openai-chat", "", 128000)
+	var research, writer apptest.Bot
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Research", "job": "Finds sources"}, &research)
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Writer", "job": "Writes notes"}, &writer)
+	group := groupOf(e, "Desk team", e.Chief().ID, research.ID, writer.ID)
+
+	var out postOut
+	e.MustDo("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "What did we decide about the desks?"}, &out)
+	if n := runsOf(e, out.Message.ID); n != 1 {
+		t.Fatalf("a message without a mention started %d runs, want 1", n)
+	}
+	idle(e)
+	e.MustDo("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "@Research @Writer compare the desks."}, &out)
+	var named int
+	_ = e.App.DB.Engine.QueryRow(context.Background(), "SELECT COUNT(DISTINCT r.bot_id) FROM runs r JOIN envelopes v ON v.id = r.envelope_id WHERE v.message_id = $1 AND r.bot_id IN ($2, $3)", uuid.MustParse(out.Message.ID), uuid.MustParse(research.ID), uuid.MustParse(writer.ID)).Scan(&named)
+	if n := runsOf(e, out.Message.ID); n != 2 || named != 2 {
+		t.Fatalf("two mentions started %d runs, %d of the named bots", n, named)
+	}
+	idle(e)
+	code, body := e.Do("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "@everyone stand up, please."}, nil)
+	if code != 409 || !strings.Contains(body, "wakes 3 bots") {
+		t.Fatalf("@everyone without confirm: %d %s", code, body)
+	}
+	e.MustDo("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "@everyone stand up, please.", "confirm_everyone": true}, &out)
+	if n := runsOf(e, out.Message.ID); n != 3 {
+		t.Fatalf("@everyone started %d runs", n)
+	}
+}
+
+func TestSCN_BOT_003_GroupMessagesAttachmentsRepliesReactions(t *testing.T) {
+	e := apptest.Start(t, "sqlite")
+	e.SetupModel("openai-chat", "", 128000)
+	var research, writer apptest.Bot
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Research", "job": "Finds sources"}, &research)
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Writer", "job": "Writes notes"}, &writer)
+	group := groupOf(e, "Writers room", research.ID, writer.ID)
+
+	data := make([]byte, 10<<20)
+	for i := range data {
+		data[i] = byte(i % 251)
+	}
+	req, _ := http.NewRequest("POST", e.URL+"/api/v1"+e.SP("/chats/%s/attachments?name=q3-report.bin", group), bytes.NewReader(data))
+	req.Header.Set("Authorization", "Bearer "+e.Token)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var at struct {
+		ID   string `json:"id"`
+		Size int64  `json:"size"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&at)
+	resp.Body.Close()
+	if resp.StatusCode != 200 || at.Size != 10<<20 {
+		t.Fatalf("upload %d %+v", resp.StatusCode, at)
+	}
+	var first, second postOut
+	e.MustDo("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "**Q3** notes:\n\n- one\n- two\n\n@Writer read the file.", "attachments": []string{at.ID}}, &first)
+	if len(first.Message.Attachments) != 1 || first.Message.Attachments[0].Name != "q3-report.bin" {
+		t.Fatalf("attachments %+v", first.Message.Attachments)
+	}
+	e.MustDo("POST", e.SP("/chats/%s/messages", group), map[string]any{"body": "@Research and this one?", "reply_to": first.Message.ID}, &second)
+	if second.Message.ReplyTo != first.Message.ID {
+		t.Fatalf("reply_to %q", second.Message.ReplyTo)
+	}
+	var reacted struct {
+		Reactions map[string]string `json:"reactions"`
+	}
+	e.MustDo("PUT", e.SP("/chats/%s/messages/%s/reaction", group, first.Message.ID), map[string]any{"emoji": "👍"}, &reacted)
+	if len(reacted.Reactions) != 1 {
+		t.Fatalf("reactions %v", reacted.Reactions)
+	}
+	req, _ = http.NewRequest("GET", e.URL+"/api/v1"+e.SP("/chats/%s/attachments/%s", group, at.ID), nil)
+	req.Header.Set("Authorization", "Bearer "+e.Token)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !bytes.Equal(got, data) {
+		t.Fatalf("download gives %d bytes", len(got))
+	}
+	// An attachment of another chat cannot ride on a message.
+	if code, _ := e.Do("POST", e.SP("/chats/%s/messages", e.Chief().ChatID), map[string]any{"body": "here", "attachments": []string{at.ID}}, nil); code != 422 {
+		t.Fatalf("a foreign attachment got %d", code)
+	}
+
+	// A group has 2 to 6 bots.
+	ids := []string{e.Chief().ID}
+	for i := 0; i < 6; i++ {
+		var b apptest.Bot
+		e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Bot " + string(rune('A'+i)), "job": "x"}, &b)
+		ids = append(ids, b.ID)
+	}
+	if code, _ := e.Do("POST", e.SP("/chats"), map[string]any{"name": "Too big", "bot_ids": ids}, nil); code != 422 {
+		t.Fatalf("a group of 7 got %d", code)
 	}
 }

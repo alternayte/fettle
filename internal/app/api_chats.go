@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -166,8 +167,10 @@ func (a *App) registerChats(api huma.API) {
 	huma.Register(api, op("post-message", http.MethodPost, "/spaces/{space}/chats/{chat}/messages", "Send a message. It starts a run, or steers the running one.", "chats"), func(ctx context.Context, in *struct {
 		ChatPath
 		Body struct {
-			Body    string `json:"body" maxLength:"32000"`
-			ReplyTo string `json:"reply_to,omitempty"`
+			Body            string   `json:"body" maxLength:"32000"`
+			ReplyTo         string   `json:"reply_to,omitempty"`
+			Attachments     []string `json:"attachments,omitempty" maxItems:"20" doc:"IDs from upload-attachment."`
+			ConfirmEveryone bool     `json:"confirm_everyone,omitempty" doc:"Send an @everyone message after the cost hint."`
 		}
 	}) (*struct {
 		Body struct {
@@ -192,7 +195,19 @@ func (a *App) registerChats(api huma.API) {
 			}
 			reply = &id
 		}
-		res, err := a.Agent.PostMessage(ctx, actorOf(p), in.Space, in.Chat, agent.PostInput{Body: in.Body.Body, ReplyTo: reply})
+		var atts []chats.Attachment
+		for _, id := range in.Body.Attachments {
+			at, err := a.loadAttachment(ctx, in.Space, in.Chat, id)
+			if err != nil {
+				return nil, err
+			}
+			atts = append(atts, at)
+		}
+		res, err := a.Agent.PostMessage(ctx, actorOf(p), in.Space, in.Chat, agent.PostInput{Body: in.Body.Body, ReplyTo: reply, Attachments: atts, ConfirmEveryone: in.Body.ConfirmEveryone})
+		var hint *agent.EveryoneHint
+		if errors.As(err, &hint) {
+			return nil, huma.Error409Conflict(hint.Error())
+		}
 		if err != nil {
 			return nil, apiError(err)
 		}

@@ -46,6 +46,9 @@ type Agent struct {
 	// Hire creates the bots of an allowed proposal card: bots, paused routines, skills and
 	// grant cards (§9.8).
 	Hire func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, list []Proposal) error
+	// DeliverAttachments copies the attachments of a user message into a bot's home at
+	// attachments/<id>/<name>.
+	DeliverAttachments func(ctx context.Context, spaceID, botID uuid.UUID, atts []chats.Attachment) error
 	// CopyShared copies one file from a zone's shared folder to another zone (handoff, §9.7).
 	CopyShared func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error
 	// SubagentEnded frees what a sub-agent run used on the computer (its browser context).

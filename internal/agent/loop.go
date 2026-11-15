@@ -166,6 +166,11 @@ func (x *exec) loop(ctx context.Context) error {
 					return err
 				}
 			}
+			if atts := x.attachments(ctx); len(atts) > 0 && a.DeliverAttachments != nil && x.bot.ZoneID != nil {
+				if err := a.DeliverAttachments(ctx, x.run.SpaceID, x.run.BotID, atts); err != nil {
+					a.Log.Warn("deliver attachments", "run", x.run.ID(), "error", a.Vault.Redactor.Global(err.Error()))
+				}
+			}
 			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvRunStarted, Data: evRunStarted{Step: step, Goal: x.env.Goal}}); err != nil {
 				return err
 			}
@@ -394,6 +399,13 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 		Conversation: conv, Turns: st.turns, Steers: st.steers, ContextWindow: window,
 		Helper: x.run.Kind == "subagent", Brief: x.env.Decision.Brief,
 		Notes: st.notes, Refs: x.refs(ctx),
+	}
+	for _, at := range x.attachments(ctx) {
+		where := "in your home at attachments/" + at.ID + "/" + at.Name
+		if x.bot.ZoneID == nil {
+			where = "not on a computer, because you have no zone"
+		}
+		in.Refs = append(in.Refs, fmt.Sprintf("Attached file %s (%s, %d bytes), %s", at.Name, at.Type, at.Size, where))
 	}
 	if x.env.Deadline != nil && a.now().Sub(*x.env.Deadline) >= 15*time.Minute {
 		in.DueAt = x.env.Deadline
@@ -788,11 +800,28 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 	}
 	card.Status = "pending"
 	card.RunID = x.run.ID().String()
-	var msg *chats.Message
+	var msg, link *chats.Message
+	// In a group, the card goes to the bot's direct chat and the group gets a link (§9.6).
+	cardChat := x.env.ChatID
+	if x.env.ChatID != nil {
+		if c, err := a.Chats.Get(ctx, x.run.SpaceID, *x.env.ChatID); err == nil && c.Kind == "group" {
+			if d, err := a.Chats.DirectFor(ctx, x.run.SpaceID, x.run.BotID); err == nil {
+				id := d.ID()
+				cardChat = &id
+				link = &chats.Message{SpaceID: x.run.SpaceID, ChatID: *x.env.ChatID, AuthorKind: "bot", AuthorID: x.bot.ID().String(), EnvelopeID: ptr(x.env.ID()),
+					Body: fmt.Sprintf("I need your answer: %s. [Open it in my chat](/chat/%s?card=%s)", card.Title, id, card.ID)}
+			}
+		}
+	}
 	err := a.E.WithTx(ctx, func(ctx context.Context) error {
-		if x.env.ChatID != nil {
-			msg = &chats.Message{SpaceID: x.run.SpaceID, ChatID: *x.env.ChatID, AuthorKind: "bot", AuthorID: x.bot.ID().String(), Card: &card, EnvelopeID: ptr(x.env.ID())}
+		if cardChat != nil {
+			msg = &chats.Message{SpaceID: x.run.SpaceID, ChatID: *cardChat, AuthorKind: "bot", AuthorID: x.bot.ID().String(), Card: &card, EnvelopeID: ptr(x.env.ID())}
 			if err := a.Chats.Insert(ctx, msg, nil); err != nil {
+				return err
+			}
+		}
+		if link != nil {
+			if err := a.Chats.Insert(ctx, link, nil); err != nil {
 				return err
 			}
 		}
@@ -816,7 +845,10 @@ func (x *exec) postCard(ctx context.Context, card chats.Card, status string) err
 	}
 	x.notifyCard(ctx, card, msg)
 	if msg != nil {
-		a.Chats.Publish(*x.env.ChatID, "message", a.MessageView(ctx, msg))
+		a.Chats.Publish(msg.ChatID, "message", a.MessageView(ctx, msg))
+	}
+	if link != nil {
+		a.Chats.Publish(link.ChatID, "message", a.MessageView(ctx, link))
 	}
 	return x.park(ctx, status, "card")
 }
@@ -939,4 +971,16 @@ func (x *exec) refs(ctx context.Context) []string {
 		}
 	}
 	return out
+}
+
+// attachments returns the files of the user message that started the work.
+func (x *exec) attachments(ctx context.Context) []chats.Attachment {
+	if x.env.MessageID == nil || x.env.ChatID == nil {
+		return nil
+	}
+	m, err := x.a.Chats.GetMessage(ctx, *x.env.ChatID, *x.env.MessageID)
+	if err != nil {
+		return nil
+	}
+	return m.Attachments
 }

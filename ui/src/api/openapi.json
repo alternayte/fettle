@@ -747,6 +747,32 @@
         ],
         "type": "object"
       },
+      "Create-groupRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bot_ids"
+        ],
+        "type": "object"
+      },
       "CreateOutBody": {
         "additionalProperties": false,
         "properties": {
@@ -963,6 +989,36 @@
         "required": [
           "skill",
           "versions"
+        ],
+        "type": "object"
+      },
+      "GroupView": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "bot_ids"
         ],
         "type": "object"
       },
@@ -1434,9 +1490,24 @@
       "Post-messageRequest": {
         "additionalProperties": false,
         "properties": {
+          "attachments": {
+            "description": "IDs from upload-attachment.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "body": {
             "maxLength": 32000,
             "type": "string"
+          },
+          "confirm_everyone": {
+            "description": "Send an @everyone message after the cost hint.",
+            "type": "boolean"
           },
           "reply_to": {
             "type": "string"
@@ -1739,6 +1810,19 @@
         },
         "required": [
           "content"
+        ],
+        "type": "object"
+      },
+      "ReactRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "emoji": {
+            "maxLength": 16,
+            "type": "string"
+          }
+        },
+        "required": [
+          "emoji"
         ],
         "type": "object"
       },
@@ -4644,6 +4728,209 @@
         "tags": [
           "chats"
         ]
+      },
+      "post": {
+        "operationId": "create-group",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-groupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a group chat with 2 to 6 bots",
+        "tags": [
+          "chats"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/chats/{chat}/attachments": {
+      "post": {
+        "operationId": "upload-attachment",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attachment"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Upload a file for the next message of a chat (the setting chat.attachment_max_mb limits it)",
+        "tags": [
+          "chats"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/chats/{chat}/attachments/{attachment}": {
+      "get": {
+        "operationId": "download-attachment",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Type": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Download an attachment of a chat",
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/spaces/{space}/chats/{chat}/messages": {
@@ -4773,6 +5060,75 @@
           }
         },
         "summary": "Send a message. It starts a run, or steers the running one.",
+        "tags": [
+          "chats"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/chats/{chat}/messages/{message}/reaction": {
+      "put": {
+        "operationId": "react",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chat",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "message",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set your reaction on a message; the same emoji again clears it",
         "tags": [
           "chats"
         ]

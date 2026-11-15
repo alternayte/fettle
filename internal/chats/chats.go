@@ -370,3 +370,68 @@ func (s *Service) PendingCards(ctx context.Context, spaceID uuid.UUID) ([]*Messa
 	}
 	return drel.NewRepository(s.e, MessageMeta).Where(Messages.ID.In(ids...)).OrderBy(Messages.SentAt.Asc()).All(ctx)
 }
+
+// Group sizes (§6.2).
+const (
+	GroupMin = 2
+	GroupMax = 6
+)
+
+// ErrGroupSize means a group chat does not have 2 to 6 bots.
+var ErrGroupSize = errors.New("a group chat has 2 to 6 bots")
+
+// CreateGroup creates a group chat with its bots.
+func (s *Service) CreateGroup(ctx context.Context, spaceID uuid.UUID, name string, botIDs []uuid.UUID) (*Chat, error) {
+	seen := map[uuid.UUID]bool{}
+	var ids []uuid.UUID
+	for _, id := range botIDs {
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) < GroupMin || len(ids) > GroupMax {
+		return nil, ErrGroupSize
+	}
+	name = strings.TrimSpace(name)
+	if name == "" || len([]rune(name)) > 60 {
+		return nil, errors.New("a group chat needs a name of 1 to 60 characters")
+	}
+	c := &Chat{SpaceID: spaceID, Kind: "group", Name: name}
+	err := s.e.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		drel.Repo(tx, ChatMeta).Add(c)
+		for _, id := range ids {
+			drel.Repo(tx, ChatMemberMeta).Add(&ChatMember{ChatID: c.ID(), BotID: id})
+		}
+		return nil
+	})
+	return c, err
+}
+
+// SetReaction sets or clears the reaction of a person on a message.
+func (s *Service) SetReaction(ctx context.Context, chatID, msgID uuid.UUID, userID, emoji string) (*Message, error) {
+	var out *Message
+	err := s.e.WithTx(ctx, func(ctx context.Context) error {
+		m, err := drel.Repo(drel.MustFromContext(ctx), MessageMeta).Where(Messages.ID.Eq(msgID)).Where(Messages.ChatID.Eq(chatID)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if m == nil {
+			return ErrMsgNotFound
+		}
+		r := map[string]string{}
+		for k, v := range m.Reactions {
+			r[k] = v
+		}
+		if emoji == "" || r[userID] == emoji {
+			delete(r, userID)
+		} else {
+			r[userID] = emoji
+		}
+		m.Reactions = r
+		out = m
+		return nil
+	})
+	return out, err
+}

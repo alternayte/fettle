@@ -463,6 +463,41 @@ export interface paths {
     /** List the chats of a space */
     get: operations["list-chats"];
     put?: never;
+    /** Create a group chat with 2 to 6 bots */
+    post: operations["create-group"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/chats/{chat}/attachments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload a file for the next message of a chat (the setting chat.attachment_max_mb limits it) */
+    post: operations["upload-attachment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/chats/{chat}/attachments/{attachment}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download an attachment of a chat */
+    get: operations["download-attachment"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -482,6 +517,23 @@ export interface paths {
     put?: never;
     /** Send a message. It starts a run, or steers the running one. */
     post: operations["post-message"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/chats/{chat}/messages/{message}/reaction": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set your reaction on a message; the same emoji again clears it */
+    put: operations["react"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1436,6 +1488,10 @@ export interface components {
       name: string;
       url?: string;
     };
+    "Create-groupRequest": {
+      bot_ids: string[] | null;
+      name: string;
+    };
     CreateOutBody: {
       routine: components["schemas"]["RoutineView"];
       secret?: string;
@@ -1512,6 +1568,12 @@ export interface components {
     "Get-skillResponse": {
       skill: components["schemas"]["SkillView"];
       versions: components["schemas"]["SkillVersionView"][] | null;
+    };
+    GroupView: {
+      bot_ids: string[] | null;
+      id: string;
+      kind: string;
+      name: string;
     };
     HistoryRow: {
       at: string;
@@ -1615,7 +1677,11 @@ export interface components {
       price_out?: number;
     };
     "Post-messageRequest": {
+      /** @description IDs from upload-attachment. */
+      attachments?: string[] | null;
       body: string;
+      /** @description Send an @everyone message after the cost hint. */
+      confirm_everyone?: boolean;
       reply_to?: string;
     };
     "Post-messageResponse": {
@@ -1691,6 +1757,9 @@ export interface components {
     };
     "Put-shared-memoryRequest": {
       content: string;
+    };
+    ReactRequest: {
+      emoji: string;
     };
     RoleView: {
       bot_id?: string;
@@ -2068,6 +2137,7 @@ export type SchemaComputerProviderView = components["schemas"]["ComputerProvider
 export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-catalogResponse"];
 export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
+export type SchemaCreateGroupRequest = components["schemas"]["Create-groupRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaDraftSkillResponse = components["schemas"]["Draft-skillResponse"];
@@ -2077,6 +2147,7 @@ export type SchemaErrorModel = components["schemas"]["ErrorModel"];
 export type SchemaEventView = components["schemas"]["EventView"];
 export type SchemaGetInstanceResponse = components["schemas"]["Get-instanceResponse"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
+export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
@@ -2109,6 +2180,7 @@ export type SchemaPushSubBody = components["schemas"]["PushSubBody"];
 export type SchemaPushSubBodyKeysStruct = components["schemas"]["PushSubBodyKeysStruct"];
 export type SchemaPutBotMemoryRequest = components["schemas"]["Put-bot-memoryRequest"];
 export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-memoryRequest"];
+export type SchemaReactRequest = components["schemas"]["ReactRequest"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
 export type SchemaRoutineBody = components["schemas"]["RoutineBody"];
 export type SchemaRoutineRunView = components["schemas"]["RoutineRunView"];
@@ -3275,6 +3347,119 @@ export interface operations {
       };
     };
   };
+  "create-group": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Create-groupRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GroupView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "upload-attachment": {
+    parameters: {
+      query?: {
+        name?: string;
+      };
+      header?: {
+        "Content-Type"?: string;
+      };
+      path: {
+        /** @description Space ID */
+        space: string;
+        chat: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/octet-stream": string;
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Attachment"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "download-attachment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        chat: string;
+        attachment: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          "Content-Disposition"?: string;
+          "Content-Type"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": string;
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "list-messages": {
     parameters: {
       query?: {
@@ -3336,6 +3521,44 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Post-messageResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  react: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        chat: string;
+        message: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReactRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MessageView"];
         };
       };
       /** @description Error */
