@@ -191,6 +191,92 @@ func TestSCN_CMP_012_AgentdEndpointsTokenAndPinnedTLS(t *testing.T) {
 	a := startAgentd(t, "token-acme-1")
 	c := a.c
 
+	t.Run("browser", func(t *testing.T) {
+		site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/report.csv" {
+				w.Header().Set("Content-Disposition", `attachment; filename="report.csv"`)
+				_, _ = w.Write([]byte("id,total\n1,40\n"))
+				return
+			}
+			_, _ = w.Write([]byte(`<!doctype html><title>Acme sign-in</title><label>User <input id=u></label>
+<label>Password <input id=p type=password></label><a href="/report.csv">Report</a>`))
+		}))
+		defer site.Close()
+		if err := c.BrowserOpen(ctx, client.BrowserContextRequest{ID: "bot-1", Ephemeral: true}); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = c.BrowserClose(ctx, "bot-1") }()
+		snap, err := c.BrowserNavigate(ctx, "bot-1", site.URL+"/login")
+		if err != nil || snap.Title != "Acme sign-in" {
+			t.Fatalf("navigate: %+v %v", snap, err)
+		}
+		ref := func(role, name string) string {
+			for _, e := range snap.Elements {
+				if e.Role == role && strings.Contains(e.Name, name) {
+					return e.Ref
+				}
+			}
+			t.Fatalf("no %s %q in %+v", role, name, snap.Elements)
+			return ""
+		}
+		user, pass, link := ref("textbox", "User"), ref("textbox", "Password"), ref("link", "Report")
+		if err := c.BrowserFill(ctx, "bot-1", client.FillRequest{Site: "https://evil.test", Fields: []client.FillField{{Ref: pass, Value: "x"}}}); err == nil {
+			t.Fatal("fill on another site passed the origin check")
+		}
+		if err := c.BrowserFill(ctx, "bot-1", client.FillRequest{Site: site.URL, Fields: []client.FillField{{Ref: user, Value: "owner@acme.test"}, {Ref: pass, Value: "acme-secret-1"}}}); err != nil {
+			t.Fatalf("fill: %v", err)
+		}
+		if snap, err = c.BrowserSnapshot(ctx, "bot-1"); err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range snap.Elements {
+			if strings.Contains(e.Value, "acme-secret-1") {
+				t.Fatal("the snapshot shows the password")
+			}
+		}
+		if _, err := c.BrowserPeek(ctx, "bot-1"); err != nil {
+			t.Fatalf("peek: %v", err)
+		}
+		res, err := c.BrowserAct(ctx, "bot-1", client.ActRequest{Ref: link, Action: "click"})
+		if err != nil || res.Refused != "" {
+			t.Fatalf("act: %+v %v", res, err)
+		}
+		png, _, err := c.BrowserScreenshot(ctx, "bot-1")
+		if err != nil || !bytes.HasPrefix(png, []byte("\x89PNG")) {
+			t.Fatalf("screenshot: %d bytes %v", len(png), err)
+		}
+		var names []string
+		for i := 0; i < 50 && len(names) == 0; i++ {
+			dl, err := c.BrowserDownloads(ctx, "bot-1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, d := range dl {
+				names = append(names, d.Name)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if !slices.Contains(names, "report.csv") {
+			t.Fatalf("downloads %v", names)
+		}
+	})
+
+	t.Run("mcp stdio", func(t *testing.T) {
+		conn, err := c.MCPStdio(ctx, []string{"cat"}, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = conn.Close() }()
+		msg := `{"jsonrpc":"2.0","id":1,"method":"ping"}` + "\n"
+		if _, err := io.WriteString(conn, msg); err != nil {
+			t.Fatal(err)
+		}
+		buf := make([]byte, len(msg))
+		if _, err := io.ReadFull(conn, buf); err != nil || string(buf) != msg {
+			t.Fatalf("echo %q %v", buf, err)
+		}
+	})
+
 	t.Run("screen", func(t *testing.T) {
 		_, errX := exec.LookPath("Xvfb")
 		_, errV := exec.LookPath("x11vnc")
