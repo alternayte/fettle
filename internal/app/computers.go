@@ -21,6 +21,7 @@ import (
 	"github.com/alternayte/fettle/internal/providers/applecontainer"
 	"github.com/alternayte/fettle/internal/providers/docker"
 	"github.com/alternayte/fettle/internal/providers/host"
+	"github.com/alternayte/fettle/internal/providers/kiln"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/tools"
 )
@@ -105,6 +106,13 @@ func (a *App) setupComputers(ctx context.Context) {
 	def := os.Getenv("FETTLE_DEFAULT_PROVIDER")
 	if def == "" {
 		def = DefaultProvider(provs)
+	}
+	// A remote Kiln host (D-15: remote, never a default unless FETTLE_DEFAULT_PROVIDER names it).
+	if u, tok := os.Getenv("FETTLE_KILN_URL"), os.Getenv("FETTLE_KILN_TOKEN"); u != "" && tok != "" {
+		k := kiln.New(u, tok, image, a.Cfg.Version)
+		k.HTTP = a.HTTP
+		provs["kiln"] = k
+		a.Vault.Redactor.RegisterGlobal("Kiln token", tok)
 	}
 	a.Computers = computers.NewManager(&computers.Manager{
 		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log, Audit: a.Audit,

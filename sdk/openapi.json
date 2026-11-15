@@ -548,6 +548,46 @@
         ],
         "type": "object"
       },
+      "Check-kilnRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "token"
+        ],
+        "type": "object"
+      },
+      "Check-kilnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "configured": {
+            "description": "This server already uses a Kiln host (FETTLE_KILN_URL).",
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pass",
+          "configured"
+        ],
+        "type": "object"
+      },
       "CheckResult": {
         "additionalProperties": false,
         "properties": {
@@ -4526,6 +4566,47 @@
           }
         },
         "summary": "The default computer provider, what works on this server, and the preparation progress",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/computer-setup/kiln-check": {
+      "post": {
+        "operationId": "check-kiln",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Check-kilnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Check-kilnResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Test the connection to a remote Kiln host and its token (instance admins)",
         "tags": [
           "computers"
         ]

@@ -373,7 +373,7 @@ func (m *Manager) waitHealthy(ctx context.Context, lv *live, c *Computer, mach M
 	for time.Now().Before(deadline) {
 		url, err := mach.AgentdURL(ctx)
 		if err == nil {
-			cl, err := client.New(url, lv.token, []byte(c.CertPEM))
+			cl, err := client.New(url, lv.token, []byte(c.CertPEM), DialOf(mach))
 			if err != nil {
 				return err
 			}

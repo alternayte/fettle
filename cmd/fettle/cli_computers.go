@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -118,12 +119,14 @@ type setupRow struct {
 func runComputerAdd(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("computer add", flag.ContinueOnError)
 	o := clientFlags(fs)
+	kilnURL := fs.String("url", "", "kiln: the URL of the Kiln host")
+	kilnToken := fs.String("token", "", "kiln: the API token of the Kiln host (default: FETTLE_KILN_TOKEN)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host>")
+		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host|kiln> [--url URL --token TOKEN]")
 		return errUsage
 	}
 	kind := strings.ToLower(pos[0])
@@ -142,8 +145,34 @@ func runComputerAdd(ctx context.Context, args []string) error {
 		fmt.Println("A card in the primary bot's chat asks you to allow it. It is on after you press Allow.")
 		return nil
 	}
-	if kind == "kiln" || kind == "e2b" {
+	if kind == "e2b" {
 		return fmt.Errorf("the %s provider is not in this version of Fettle", kind)
+	}
+	if kind == "kiln" && *kilnURL != "" {
+		tok := *kilnToken
+		if tok == "" {
+			tok = os.Getenv("FETTLE_KILN_TOKEN")
+		}
+		if tok == "" {
+			return errors.New("give the Kiln API token with --token or FETTLE_KILN_TOKEN")
+		}
+		var res struct {
+			Pass       bool   `json:"pass"`
+			Error      string `json:"error"`
+			Configured bool   `json:"configured"`
+		}
+		if err := c.do(ctx, http.MethodPost, "/computer-setup/kiln-check", map[string]string{"url": *kilnURL, "token": tok}, &res); err != nil {
+			return err
+		}
+		if !res.Pass {
+			return fmt.Errorf("the Kiln host does not answer: %s", res.Error)
+		}
+		fmt.Println("The Kiln host answers, and the token works.")
+		if !res.Configured {
+			fmt.Println("Set FETTLE_KILN_URL and FETTLE_KILN_TOKEN for the server, then restart it.")
+			fmt.Println("Then run fettle computer add kiln to build the computer templates.")
+			return nil
+		}
 	}
 	var s setupRow
 	if err := c.do(ctx, http.MethodPost, "/computer-setup/prepare?provider="+kind, nil, &s); err != nil {

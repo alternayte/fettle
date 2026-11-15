@@ -59,7 +59,7 @@ func connect(ctx context.Context, t *testing.T, m computers.Machine, token strin
 	for time.Now().Before(deadline) {
 		url, err := m.AgentdURL(ctx)
 		if err == nil {
-			cl, err := client.New(url, token, cert)
+			cl, err := client.New(url, token, cert, computers.DialOf(m))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -108,11 +108,11 @@ func Run(t *testing.T, p computers.Provider, image string) {
 			t.Fatalf("agentd URL %q %v", url, err)
 		}
 		other, _, _ := agentd.GenerateCert([]string{"x"})
-		bad, _ := client.New(url, token, other)
+		bad, _ := client.New(url, token, other, computers.DialOf(m))
 		if _, err := bad.Health(ctx); err == nil {
 			t.Fatal("a client pinned to another certificate connected")
 		}
-		wrong, _ := client.New(url, "wrong", cert)
+		wrong, _ := client.New(url, "wrong", cert, computers.DialOf(m))
 		if _, err := wrong.Health(ctx); !errors.Is(err, client.ErrUnauthorized) {
 			t.Fatalf("wrong token: %v", err)
 		}

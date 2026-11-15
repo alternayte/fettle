@@ -107,6 +107,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/computer-setup/kiln-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Test the connection to a remote Kiln host and its token (instance admins) */
+    post: operations["check-kiln"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/computer-setup/prepare": {
     parameters: {
       query?: never;
@@ -1904,6 +1921,16 @@ export interface components {
       pass: boolean;
       reason: string;
     };
+    "Check-kilnRequest": {
+      token: string;
+      url: string;
+    };
+    "Check-kilnResponse": {
+      /** @description This server already uses a Kiln host (FETTLE_KILN_URL). */
+      configured: boolean;
+      error?: string;
+      pass: boolean;
+    };
     CheckResult: {
       detail?: string;
       key: string;
@@ -3085,6 +3112,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ComputerSetup"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "check-kiln": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Check-kilnRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Check-kilnResponse"];
         };
       };
       /** @description Error */

@@ -61,7 +61,10 @@ type Client struct {
 // New returns a client for an agentd at an https base URL. It trusts only
 // the certificate in pinnedCertPEM: the server's leaf certificate must equal
 // it byte for byte. System roots are not used.
-func New(baseURL, token string, pinnedCertPEM []byte) (*Client, error) {
+//
+// dial, when given, opens the connection under TLS, for example a stream through a
+// provider's API (kiln); the TLS and the pin stay end to end.
+func New(baseURL, token string, pinnedCertPEM []byte, dial ...DialFunc) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("agentd client: base URL: %w", err)
@@ -91,8 +94,15 @@ func New(baseURL, token string, pinnedCertPEM []byte) (*Client, error) {
 			return nil
 		},
 	}
-	return newClient(baseURL, token, tlsConf), nil
+	c := newClient(baseURL, token, tlsConf)
+	if len(dial) > 0 && dial[0] != nil {
+		c.http.Transport.(*http.Transport).DialContext = dial[0]
+	}
+	return c, nil
 }
+
+// DialFunc opens the raw connection to agentd.
+type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // NewInsecureForTest returns a client for a plain HTTP agentd. Only tests use it.
 func NewInsecureForTest(baseURL, token string) *Client {

@@ -3,6 +3,7 @@ package computers
 import (
 	"context"
 	"errors"
+	"net"
 )
 
 // Size is a computer size (§10.2).
@@ -79,4 +80,18 @@ type Machine interface {
 	Fork(ctx context.Context) (Machine, error)
 	Destroy(ctx context.Context) error
 	Stats(ctx context.Context) (Stats, error)
+}
+
+// Dialer is a machine whose agentd port is reached through the provider's API, not a
+// network address (kiln streams). The client runs its pinned TLS inside the connection.
+type Dialer interface {
+	DialAgentd(ctx context.Context, network, addr string) (net.Conn, error)
+}
+
+// DialOf returns the dial function of a machine, or nil for a plain network address.
+func DialOf(m Machine) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	if d, ok := m.(Dialer); ok {
+		return d.DialAgentd
+	}
+	return nil
 }

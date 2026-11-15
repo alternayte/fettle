@@ -3,12 +3,16 @@ package app
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/alternayte/fettle/internal/auth"
 	"github.com/alternayte/fettle/internal/computers"
+	"github.com/alternayte/fettle/internal/providers/kiln"
 )
 
 // ProviderAvailability tells whether a provider works on this server, and why not.
@@ -66,6 +70,44 @@ func (a *App) computerSetup(ctx context.Context) ComputerSetup {
 }
 
 func (a *App) registerPrepare(api huma.API) {
+	huma.Register(api, op("check-kiln", http.MethodPost, "/computer-setup/kiln-check", "Test the connection to a remote Kiln host and its token (instance admins)", "computers"), func(ctx context.Context, in *struct {
+		Body struct {
+			URL   string `json:"url" minLength:"1" maxLength:"2048"`
+			Token string `json:"token" minLength:"1" maxLength:"4096"`
+		}
+	}) (*struct {
+		Body struct {
+			Pass       bool   `json:"pass"`
+			Error      string `json:"error,omitempty"`
+			Configured bool   `json:"configured" doc:"This server already uses a Kiln host (FETTLE_KILN_URL)."`
+		}
+	}, error) {
+		if p := auth.From(ctx); p == nil || !p.IsAdmin {
+			return nil, huma.Error403Forbidden("only an instance admin adds computer providers")
+		}
+		u, err := url.Parse(in.Body.URL)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			return nil, huma.Error422UnprocessableEntity("Use the URL of the Kiln host, such as https://kiln.acme.test.")
+		}
+		k := kiln.New(in.Body.URL, in.Body.Token, ComputerImage(a.Cfg.Version), a.Cfg.Version)
+		k.HTTP = a.HTTP
+		out := &struct {
+			Body struct {
+				Pass       bool   `json:"pass"`
+				Error      string `json:"error,omitempty"`
+				Configured bool   `json:"configured" doc:"This server already uses a Kiln host (FETTLE_KILN_URL)."`
+			}
+		}{}
+		_, out.Body.Configured = a.Computers.Providers["kiln"]
+		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		if err := k.Ping(cctx); err != nil {
+			out.Body.Error = strings.ReplaceAll(err.Error(), in.Body.Token, "[secret:Kiln token]")
+		} else {
+			out.Body.Pass = true
+		}
+		return out, nil
+	})
 	huma.Register(api, op("get-computer-setup", http.MethodGet, "/computer-setup", "The default computer provider, what works on this server, and the preparation progress", "computers"), func(ctx context.Context, _ *struct{}) (*struct{ Body ComputerSetup }, error) {
 		return &struct{ Body ComputerSetup }{Body: a.computerSetup(ctx)}, nil
 	})

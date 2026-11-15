@@ -144,6 +144,8 @@ The server reads these variables. A flag overrides its variable.
 | `FETTLE_NO_KEYCHAIN` | | Any value stops the use of the system keychain in local mode. | not set |
 | `FETTLE_OBJECT_STORE` | | `disk` or `s3`. | `disk` |
 | `FETTLE_S3_ENDPOINT` | | The endpoint of the S3-compatible store. | none |
+| `FETTLE_KILN_URL` | | The URL of a remote Kiln host for the `kiln` provider. | none |
+| `FETTLE_KILN_TOKEN` | | The API token of that Kiln host. | none |
 | `FETTLE_S3_REGION` | | The region. | none |
 | `FETTLE_S3_BUCKET` | | The bucket. Fettle creates it. | none |
 | `FETTLE_S3_ACCESS_KEY` | | The access key. | none |

@@ -34,7 +34,7 @@ A change of the provider or the network replaces the computer of the zone.
 | `applecontainer` | macOS 26 on Apple silicon | yes | yes |
 | `docker` | Docker Desktop, Docker Engine or Podman | yes | yes |
 | `host` | any system | no | no |
-| `kiln` | Linux with `/dev/kvm` | | |
+| `kiln` (remote) | a Kiln host, with its URL and token | yes | yes |
 | `e2b` | E2B | | |
 
 ### applecontainer
@@ -61,11 +61,33 @@ Turning it on is a hard ask: a card asks a person in every approval mode.
 It is never the default provider.
 Fettle looks for `fettle-agentd` next to the `fettle` binary. `FETTLE_AGENTD_BIN` names another path.
 
-### kiln and e2b
+### kiln
 
-The provider list knows the names `kiln` and `e2b`.
-This version of Fettle does not include these providers.
-`fettle computer add kiln` and `fettle computer add e2b` report this.
+The provider runs each computer as a Firecracker microVM on a remote Kiln host.
+A computer sleeps as a snapshot and wakes from it with its memory and disk.
+A fork is a native copy of the running computer.
+
+Fettle reaches `fettle-agentd` through a Kiln port stream.
+Fettle runs its own TLS inside the stream and checks the pinned certificate of the computer.
+The Kiln host does not see the requests to `fettle-agentd`.
+
+To use a Kiln host:
+
+1. Test the host and the token: `fettle computer add kiln --url https://kiln.acme.test --token <token>`.
+2. Set `FETTLE_KILN_URL` and `FETTLE_KILN_TOKEN` for the server, and restart it.
+3. Build the computer templates: `fettle computer add kiln`.
+4. Select `kiln` as the provider of a zone.
+
+A zone with an allowlist gets the same hosts on the Kiln host and in the computer.
+An open zone lets the computer reach every host name on ports 80 and 443.
+`kiln` is never the default provider, except when `FETTLE_DEFAULT_PROVIDER` names it.
+This version runs Kiln only as a remote host. A local Kiln on the same computer is not in this version.
+
+### e2b
+
+The provider list knows the name `e2b`.
+This version of Fettle does not include the provider.
+`fettle computer add e2b` reports this.
 The release holds `e2b.Dockerfile`, the E2B template definition of the computer image.
 
 ### Default provider

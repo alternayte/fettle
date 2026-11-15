@@ -14,6 +14,8 @@ github.com/alternayte/auth-all v0.8.0 h1:tTT3rgPFCoFeChavVZ8CfWobH0YUvP15KoHhFUm
 github.com/alternayte/auth-all v0.8.0/go.mod h1:R0cqJZoxuzllxbONfiPNNNXvHJoHS7efm8pA0/JEplE=
 github.com/alternayte/drel v0.10.4 h1:Bq+qJp/ps7MqxdEIbtnysIUZSGmvS18CTOUmATHoqlI=
 github.com/alternayte/drel v0.10.4/go.mod h1:XY8EMHGTTLuLJDfWMJX6NJgGYqWRm/YNHc52aLZLkUs=
+github.com/alternayte/kiln v0.17.1 h1:bhjPa1eT3FTzWneWxmnzHdvSIfRTOJXJl9MGpBcgCjw=
+github.com/alternayte/kiln v0.17.1/go.mod h1:yrLXz3wa6Fz9+yVTHkhCL81X7g0pdAMTBqno0OoBAf4=
 github.com/antlr4-go/antlr/v4 v4.13.0 h1:lxCg3LAv+EUK6t1i0y1V6/SLeUi0eKEKdhQAlS8TVTI=
 github.com/antlr4-go/antlr/v4 v4.13.0/go.mod h1:pfChB/xh/Unjila75QW7+VU4TSnWnnk9UTnmpPaOR2g=
 github.com/aws/aws-sdk-go-v2 v1.48.0 h1:tFU7EJVm7MfyaXLsXdYTZ0Vd6vwt9OljCyqq0gqk0Mc=

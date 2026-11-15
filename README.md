@@ -122,7 +122,7 @@ A provider supplies the computers of zones.
 | `applecontainer` | macOS 26 on Apple silicon | Lightweight VMs with Apple container. Fettle installs the pinned runtime without sudo. The default where it works. |
 | `docker` | Docker Desktop, Docker Engine or Podman | One container per computer. The default when Apple container does not work. |
 | `host` | Any system | Runs `fettle-agentd` as a process on the host, with no isolation. A person must allow it with a card. It is never the default. |
-| `kiln` | Linux with `/dev/kvm` | The provider list knows this name. This version of Fettle does not include the provider. |
+| `kiln` | A remote Kiln host | Firecracker microVMs that sleep as snapshots and fork natively. Fettle keeps the computer certificate pinned through the Kiln stream. |
 | `e2b` | E2B | The provider list knows this name. This version of Fettle does not include the provider. The release holds the template file `e2b.Dockerfile`. |
 
 Read [docs/computers.md](docs/computers.md).
