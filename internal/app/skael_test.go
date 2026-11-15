@@ -179,7 +179,14 @@ func TestSCN_SKL_004_SkaelSyncAndActivations(t *testing.T) {
 		Skills []SkillListItem `json:"skills"`
 	}
 	e.MustDo("GET", e.SP("/skills"), nil, &list)
-	if len(list.Skills) != 1 || list.Skills[0].Source != "skael" || list.Skills[0].CurrentVersion != 2 {
+	// The space also holds the local skill of the Chief of Staff template.
+	var synced []SkillListItem
+	for _, s := range list.Skills {
+		if s.Source == "skael" {
+			synced = append(synced, s)
+		}
+	}
+	if len(synced) != 1 || synced[0].CurrentVersion != 2 {
 		t.Fatalf("library %+v", list.Skills)
 	}
 	var detail struct {
@@ -189,7 +196,7 @@ func TestSCN_SKL_004_SkaelSyncAndActivations(t *testing.T) {
 			Files    []string `json:"files"`
 		} `json:"versions"`
 	}
-	e.MustDo("GET", e.SP("/skills/%s", list.Skills[0].ID), nil, &detail)
+	e.MustDo("GET", e.SP("/skills/%s", synced[0].ID), nil, &detail)
 	if len(detail.Versions) != 2 || detail.Versions[0].Upstream != 2 || detail.Versions[1].Upstream != 1 || len(detail.Versions[0].Files) != 2 {
 		t.Fatalf("versions %+v", detail.Versions)
 	}
@@ -197,7 +204,7 @@ func TestSCN_SKL_004_SkaelSyncAndActivations(t *testing.T) {
 	if code, body := e.Do("POST", e.SP("/skills"), map[string]any{"skill_md": "---\nname: acme-report\ndescription: A local edit.\n---\n\nLocal.\n"}, nil); code != 409 {
 		t.Fatalf("a local edit of a Skael skill got %d %s", code, body)
 	}
-	e.MustDo("PUT", e.SP("/skills/%s/bots/%s", list.Skills[0].ID, e.Chief().ID), map[string]any{"on": true}, nil)
+	e.MustDo("PUT", e.SP("/skills/%s/bots/%s", synced[0].ID, e.Chief().ID), map[string]any{"on": true}, nil)
 	e.Fake.AddScript(fakemodel.Script{Name: "load", Match: fakemodel.Match{User: "[[skael-load]]"}, Steps: []fakemodel.Step{
 		{ToolCalls: []fakemodel.ScriptCall{{Name: "load_skill", Args: map[string]any{"name": "acme-report"}}}}, {Text: "Loaded."},
 	}})
