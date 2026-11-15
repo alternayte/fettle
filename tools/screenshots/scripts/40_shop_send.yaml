@@ -1,0 +1,25 @@
+# Chief writes the order note on the shop page and asks before it presses Send.
+name: shop-send
+match:
+  user: "Send an order note"
+steps:
+  - text: "I wrote the note on the shop page. The Send button sends it to the shop, so I ask you first."
+    delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://shop.test/actions"
+  - delay_ms: 700
+    tool_calls:
+      - name: browser_act
+        args:
+          ref: e1
+          action: type
+          value: "Order for Acme: eight Gamma Desks, delivery to the new office."
+  - delay_ms: 600
+    tool_calls:
+      - name: browser_act
+        args:
+          ref: e2
+          action: click
+  - text: "I sent the order note to the shop."

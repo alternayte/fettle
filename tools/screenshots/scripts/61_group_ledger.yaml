@@ -1,0 +1,24 @@
+name: group-ledger
+match:
+  user: "furniture budget"
+steps:
+  - delay_ms: 800
+    tool_calls:
+      - name: write_file
+        args:
+          path: "open-invoices.csv"
+          content: |
+            supplier,invoice,amount_usd,due
+            Birchline Furniture,BF-2291,1840,2026-11-28
+            Harbor Lighting,HL-0476,1340,2026-12-05
+  - delay_ms: 800
+    tool_calls:
+      - name: attach_file
+        args:
+          path: "open-invoices.csv"
+          note: "The open furniture invoices."
+  - delay_ms: 1000
+    text: |
+      The furniture budget for this quarter is $6,000. Two invoices are open for $3,180 in total, so **$2,820** is left.
+
+      Twelve Gamma Desks cost $3,588. That is $768 over the budget. Eight desks now and four in January fit.

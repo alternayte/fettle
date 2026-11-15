@@ -1,0 +1,13 @@
+# The router keeps the order note with Chief. The router also sees the earlier desk
+# comparison, so this script comes before the fanout script.
+name: order-route
+match:
+  system: "You route one piece of work"
+  user: "Send an order note"
+steps:
+  - json:
+      step: single
+      owner_bot_id: ""
+      rationale: One page and one action.
+      confidence: 0.9
+      parts: []

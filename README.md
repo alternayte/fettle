@@ -7,7 +7,44 @@ Bots ask before consequential actions.
 One Go binary, `fettle`, is the server, the CLI and the desktop backend.
 A second binary, `fettle-agentd`, runs inside each computer.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/chat-approval-dark.png">
+  <img src="docs/images/chat-approval.png" alt="A chat with the bot Chief. Chief compares three desks with three helpers and shows a table with sources. Then Chief asks for approval before it presses Send on a shop page.">
+</picture>
+
 Demo: a 2-minute demo GIF comes with the first release.
+
+## Screens
+
+The screenshots show the synthetic Acme space with the fake model of the tests.
+`just screenshots` makes them again.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/group-chat.png" alt="The group chat Office move. Research, Ledger and Reporter each answer the message that names them. Ledger and Reporter send files."></td>
+    <td width="50%"><img src="docs/images/run-timeline.png" alt="The timeline of a verified run. It lists the route, three helper results, the model turn, the check and the finish. One helper result is open and shows its findings and sources."></td>
+  </tr>
+  <tr>
+    <td>A group chat. The message names a bot, and that bot answers.</td>
+    <td>The timeline of a run. Each step of the journal is one row.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/computer-screen.png" alt="The screen of the bot Research, read-only. The browser of its computer shows the Beta Desk page of the catalogue."></td>
+    <td><img src="docs/images/bots.png" alt="The bots page. It lists six bots with their jobs, their zones and their status. Two bots wait for the user."></td>
+  </tr>
+  <tr>
+    <td>The screen of a computer. You can watch it or take control.</td>
+    <td>The bots of a space, with their zones and their status.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/files.png" alt="The files page. It lists two files that bots sent in chats."></td>
+    <td><img src="docs/images/settings-computers.png" alt="The Computers settings page. It lists the zones browsing and personal with running computers, and the computer providers."></td>
+  </tr>
+  <tr>
+    <td>The files that bots sent in the chats of the space.</td>
+    <td>The zones of a space and the providers of their computers.</td>
+  </tr>
+</table>
 
 ## Words
 

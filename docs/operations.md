@@ -26,7 +26,9 @@ The command checks the database, the migrations, the object store and the master
 It also checks the proxy and CA settings and the model providers.
 It prints `PASS` or `FAIL` for each check. It exits with a non-zero code when a check fails.
 In server mode, run it with the same variables as the server.
-Instance admins can also run the checks through `GET /api/v1/admin/diagnostics`.
+Instance admins can also run the checks through `GET /api/v1/admin/diagnostics`, or with **Run checks** on the admin page.
+
+![The diagnostics on the admin page. 13 of 13 checks pass.](images/admin-diagnostics.png)
 
 ## Upgrades
 

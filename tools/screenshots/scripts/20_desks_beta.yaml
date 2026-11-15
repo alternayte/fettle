@@ -1,0 +1,21 @@
+# A helper reads one catalogue page and reports its facts.
+name: desks-beta
+match:
+  system: "You are a helper"
+  user: "docs.test/beta"
+steps:
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://docs.test/beta"
+  - delay_ms: 900
+    tool_calls:
+      - name: report_result
+        args:
+          summary: "Beta Desk: $610, 38.0 kg, a steel frame and two motors."
+          findings:
+            - claim: "The Beta Desk costs $610 and weighs 38.0 kg."
+              sources: ["http://docs.test/beta"]
+            - claim: "The Beta Desk has a steel frame and two motors."
+              sources: ["http://docs.test/beta"]

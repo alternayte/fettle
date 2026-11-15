@@ -1,0 +1,21 @@
+# A helper reads one catalogue page and reports its facts.
+name: desks-alpha
+match:
+  system: "You are a helper"
+  user: "docs.test/alpha"
+steps:
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://docs.test/alpha"
+  - delay_ms: 900
+    tool_calls:
+      - name: report_result
+        args:
+          summary: "Alpha Desk: $420, 31.5 kg, a bamboo top."
+          findings:
+            - claim: "The Alpha Desk costs $420 and weighs 31.5 kg."
+              sources: ["http://docs.test/alpha"]
+            - claim: "The Alpha Desk has a bamboo top."
+              sources: ["http://docs.test/alpha"]
