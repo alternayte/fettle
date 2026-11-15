@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alternayte/fettle/internal/usage"
-	"github.com/google/uuid"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/usage"
 
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"

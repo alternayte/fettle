@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/alternayte/fettle/templates"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alternayte/fettle/templates"
 
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
