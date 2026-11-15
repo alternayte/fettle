@@ -74,6 +74,7 @@ func startComputers(t *testing.T, dialect string, env ...string) *server {
 		out, _ := exec.Command("docker", "ps", "-aq", "--filter", "label=fettle.computer=1").Output()
 		for _, id := range strings.Fields(string(out)) {
 			if !before[id] {
+				logComputer(t, id)
 				_ = exec.Command("docker", "rm", "-f", id).Run()
 			}
 		}
@@ -159,4 +160,15 @@ func (s *server) runTool(name string, args map[string]any) string {
 		s.T.Fatalf("no %s result: %s", name, r.EventTypes())
 	}
 	return res[0]
+}
+
+// logComputer prints the state and the last log lines of a computer container when the test
+// failed, so a computer that did not start leaves evidence before the cleanup removes it.
+func logComputer(t *testing.T, id string) {
+	if !t.Failed() {
+		return
+	}
+	state, _ := exec.Command("docker", "inspect", "-f", "{{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} started={{.State.StartedAt}} finished={{.State.FinishedAt}} error={{.State.Error}}", id).CombinedOutput()
+	logs, _ := exec.Command("docker", "logs", "--tail", "40", id).CombinedOutput()
+	t.Logf("computer container %s: %s\n%s", id, strings.TrimSpace(string(state)), logs)
 }

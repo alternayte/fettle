@@ -30,6 +30,7 @@ func dockerApp(t *testing.T) *apptest.Env {
 	t.Cleanup(func() {
 		for _, id := range strings.Fields(docker(t, "ps", "-aq", "--filter", "label=fettle.computer=1")) {
 			if !before[id] {
+				logComputer(t, id)
 				docker(t, "rm", "-f", id)
 			}
 		}
