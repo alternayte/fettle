@@ -61,7 +61,7 @@ Each role has an ordered list of models.
 
 A role without a model uses the owner models.
 Bots cannot work until the owner role has a model.
-A bot can override a role. An empty list removes the override.
+A bot can override a role. Open the settings page of the bot and go to **Models**. Pick a model for the role, then select **Use for this bot**. **Use the space models** removes the override. In the API, `PUT /api/v1/spaces/{space}/model-roles/{role}` with `bot_id` sets it, and an empty list removes it.
 
 ## Fallback
 

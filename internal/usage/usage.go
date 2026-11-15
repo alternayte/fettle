@@ -34,6 +34,7 @@ func (s *Service) Record(ctx context.Context, ev *UsageEvent) error {
 var Dimensions = map[string]string{
 	"run":   "run_id",
 	"bot":   "bot_id",
+	"zone":  "zone_id",
 	"step":  "step",
 	"role":  "role",
 	"model": "model",
@@ -72,7 +73,7 @@ func (s *Service) View(ctx context.Context, spaceID uuid.UUID, dim string, since
 		}
 	}
 	q := `SELECT ` + expr + ` AS k, COALESCE(SUM(tokens_in),0), COALESCE(SUM(tokens_out),0),
-		COALESCE(SUM(CASE WHEN unit = 'seconds' THEN quantity ELSE 0 END),0), COALESCE(SUM(cost_usd),0), COUNT(*)
+		COALESCE(SUM(CASE WHEN unit = 'seconds' THEN quantity ELSE 0 END),0), COALESCE(SUM(cost_usd),0), COALESCE(SUM(CASE WHEN kind = 'model' THEN 1 ELSE 0 END),0)
 		FROM usage_events WHERE space_id = $1 AND at >= $2 GROUP BY k ORDER BY k`
 	rows, err := s.e.Query(ctx, q, spaceID, since)
 	if err != nil {

@@ -111,6 +111,30 @@ func TestSCN_LRN_002_RunScores(t *testing.T) {
 			t.Fatalf("a failed, escalated run over budget: %+v", sc)
 		}
 
+		// The helpers of a run count toward its cost and its budget.
+		fan := run(true, false, 0.2)
+		botID := bot.ID()
+		single := "single"
+		child := &envelopes.Envelope{SpaceID: sp.ID(), Kind: "part", Origin: "user", Requester: envelopes.Requester{Type: "bot", ID: botID.String()}, OwnerBotID: &botID, Goal: "Read the Beta Desk page", Budget: envelopes.Budget{USD: 1}, Step: &single}
+		if err := envs.Create(ctx, child, nil); err != nil {
+			t.Fatal(err)
+		}
+		helper := &runs.Run{SpaceID: sp.ID(), EnvelopeID: child.ID(), BotID: botID, ParentRunID: &fan, Kind: "subagent", Status: runs.StatusRunning}
+		if err := e.WithTx(ctx, func(ctx context.Context) error {
+			tx := drel.MustFromContext(ctx)
+			drel.Repo(tx, runs.RunMeta).Add(helper)
+			return tx.SaveChanges(ctx)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		hdone := runs.StatusDone
+		if _, err := j.Append(ctx, helper.ID(), runs.NoFence, &runs.Update{Status: &hdone, Finished: true, CostUSD: 0.9}); err != nil {
+			t.Fatal(err)
+		}
+		if sc, _ = svc.ScoreRun(ctx, fan); sc.CostUSD < 1.09 || sc.CostUSD > 1.11 || sc.WithinBudget {
+			t.Fatalf("a run whose helpers spent over its budget: %+v", sc)
+		}
+
 		// A later signal lowers the score of its run.
 		if _, err := svc.Record(ctx, learning.Input{SpaceID: sp.ID(), RunID: &good, Type: learning.ThumbsDown, Ref: "message:m1"}); err != nil {
 			t.Fatal(err)

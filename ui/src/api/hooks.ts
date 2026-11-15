@@ -13,7 +13,7 @@ import type {
   SchemaZoneBody,
 } from "./schema";
 
-export type UsageDimension = "run" | "bot" | "step" | "role" | "model" | "day" | "month";
+export type UsageDimension = "run" | "bot" | "zone" | "step" | "role" | "model" | "day" | "month";
 export type ModelRole = "owner" | "router" | "verifier" | "computer_use" | "summarizer";
 
 /** Session holds the caller and the space the UI works in. The layout provides it after /me loads. */

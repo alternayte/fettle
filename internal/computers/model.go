@@ -45,7 +45,10 @@ type Computer struct {
 	ImageDigest           string     `db:"image_digest"`
 	WorkspaceRev          int64      `db:"workspace_rev"`
 	LastActiveAt          *time.Time `db:"last_active_at"`
-	Error                 string     `db:"error"`
+	// MeteredAt is the end of the running time that usage already holds; nil when the
+	// computer does not run.
+	MeteredAt *time.Time `db:"metered_at"`
+	Error     string     `db:"error"`
 }
 
 // Workspace is one stored revision pointer of a bot home or a zone shared folder (§10.3).

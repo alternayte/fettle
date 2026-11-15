@@ -34,9 +34,11 @@ type RoutineRunView struct {
 	EnvelopeID string     `json:"envelope_id,omitempty"`
 	RunID      string     `json:"run_id,omitempty"`
 	State      string     `json:"state,omitempty"`
-	Coalesced  bool       `json:"coalesced"`
-	Missed     bool       `json:"missed" doc:"The tick came due while Fettle was not running."`
-	Source     string     `json:"source"`
+	// Verified is true when the checker passed the result, as on the run line.
+	Verified  *bool  `json:"verified,omitempty"`
+	Coalesced bool   `json:"coalesced"`
+	Missed    bool   `json:"missed" doc:"The tick came due while Fettle was not running."`
+	Source    string `json:"source"`
 }
 
 type routineBody struct {
@@ -208,6 +210,9 @@ func (a *App) registerRoutines(api huma.API) {
 				v.EnvelopeID = rr.EnvelopeID.String()
 				if run, err := a.Runs.ForEnvelope(ctx, *rr.EnvelopeID); err == nil {
 					v.RunID, v.State = run.ID().String(), run.Status
+					if line, err := a.Agent.RunLineFor(ctx, run); err == nil {
+						v.Verified = line.Verified
+					}
 				}
 			}
 			out.Body.Runs = append(out.Body.Runs, v)

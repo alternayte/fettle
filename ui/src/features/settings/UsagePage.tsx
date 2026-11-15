@@ -2,14 +2,16 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, Coins } from "lucide-react";
 import { errorText } from "@/api/client";
-import { useBots, useUsage, type UsageDimension } from "@/api/hooks";
+import { useBots, useUsage, useZones, type UsageDimension } from "@/api/hooks";
 import { Notice, Section } from "@/app/Page";
 import { has, t } from "@/lib/copy";
 import { formatDuration, formatTokens, formatUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NativeSelect } from "./ProviderForm";
 
-const DIMS: UsageDimension[] = ["day", "month", "bot", "run", "step", "role", "model"];
+const DIMS: UsageDimension[] = ["day", "month", "bot", "zone", "run", "step", "role", "model"];
+// Computer time belongs to a zone, not to a bot, a run or a model.
+const TIMED: UsageDimension[] = ["day", "month", "zone"];
 const RANGES = [7, 30, 90, 365];
 
 export function UsagePage() {
@@ -18,6 +20,10 @@ export function UsagePage() {
   const usage = useUsage(by, days);
   const bots = useBots();
   const botName = Object.fromEntries((bots.data ?? []).map((b) => [b.id, b.name]));
+  const zones = useZones();
+  const zoneName = Object.fromEntries((zones.data ?? []).map((z) => [z.id, z.name]));
+  const timed = TIMED.includes(by);
+  const cols = ["calls", "tokensIn", "tokensOut", ...(timed ? ["time"] : []), "cost"];
   const rows = usage.data ?? [];
   const total = rows.reduce(
     (a, r) => ({
@@ -33,6 +39,7 @@ export function UsagePage() {
   const keyCell = (key: string) => {
     if (!key) return <span className="text-ink-faint">{t("usage.none")}</span>;
     if (by === "bot") return botName[key] ?? <span className="font-mono text-xs">{key.slice(0, 8)}</span>;
+    if (by === "zone") return zoneName[key] ?? <span className="font-mono text-xs">{key.slice(0, 8)}</span>;
     if (by === "run")
       return (
         <Link to="/runs/$runId" params={{ runId: key }} className="font-mono text-xs underline underline-offset-2">
@@ -105,7 +112,7 @@ export function UsagePage() {
                     <th scope="col" className="label-caps py-1.5 pr-3 font-[var(--weight-strong)]">
                       {t(`usage.dims.${by}`)}
                     </th>
-                    {["calls", "tokensIn", "tokensOut", "time", "cost"].map((c) => (
+                    {cols.map((c) => (
                       <th key={c} scope="col" className="label-caps py-1.5 pl-3 text-right font-[var(--weight-strong)]">
                         {t(`usage.col.${c}`)}
                       </th>
@@ -119,9 +126,11 @@ export function UsagePage() {
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{r.calls}</td>
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_in)}</td>
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_out)}</td>
-                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">
-                        {formatDuration(r.seconds * 1000)}
-                      </td>
+                      {timed && (
+                        <td className="figures py-1.5 pl-3 text-right text-ink-soft">
+                          {formatDuration(r.seconds * 1000)}
+                        </td>
+                      )}
                       <td className="figures py-1.5 pl-3 text-right text-ink">{formatUSD(r.cost_usd)}</td>
                     </tr>
                   ))}
@@ -134,7 +143,9 @@ export function UsagePage() {
                     <td className="figures py-1.5 pl-3 text-right text-ink">{total.calls}</td>
                     <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tin)}</td>
                     <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tout)}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink">{formatDuration(total.sec * 1000)}</td>
+                    {timed && (
+                      <td className="figures py-1.5 pl-3 text-right text-ink">{formatDuration(total.sec * 1000)}</td>
+                    )}
                     <td className="figures py-1.5 pl-3 text-right font-[var(--weight-strong)] text-ink">
                       {formatUSD(total.cost)}
                     </td>

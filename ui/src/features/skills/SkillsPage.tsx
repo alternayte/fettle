@@ -165,7 +165,7 @@ function SkaelSync() {
           busy={sync.isPending}
           onClick={() =>
             sync.mutate(undefined, {
-              onSuccess: (r) => toast.success(t("skills.skael.synced", { skills: r.skills, updated: r.updated })),
+              onSuccess: (r) => toast.success(tn("skills.skael.synced", r.skills, { updated: r.updated })),
               onError: (err) => toast.error(t("skills.skael.failed"), { description: errorText(err) }),
             })
           }

@@ -111,7 +111,7 @@ func (a *App) registerSettings(api huma.API) {
 
 	huma.Register(api, op("usage-view", http.MethodGet, "/spaces/{space}/usage", "Cost view grouped by run, bot, step, role, model, day or month", "usage"), func(ctx context.Context, in *struct {
 		SpacePath
-		By   string `query:"by" enum:"run,bot,step,role,model,day,month" default:"day"`
+		By   string `query:"by" enum:"run,bot,zone,step,role,model,day,month" default:"day"`
 		Days int    `query:"days" minimum:"1" maximum:"400" default:"30"`
 	}) (*struct {
 		Body struct {

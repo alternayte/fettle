@@ -1,0 +1,1 @@
+ALTER TABLE "computers" DROP COLUMN "metered_at";

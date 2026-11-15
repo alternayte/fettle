@@ -2497,6 +2497,7 @@ export interface components {
       /** Format: date-time */
       started_at?: string;
       state?: string;
+      verified?: boolean;
     };
     RoutineView: {
       bot_id: string;
@@ -6788,7 +6789,8 @@ export interface operations {
   "usage-view": {
     parameters: {
       query?: {
-        by?: "run" | "bot" | "step" | "role" | "model" | "day" | "month";
+        by?:
+          "run" | "bot" | "zone" | "step" | "role" | "model" | "day" | "month";
         days?: number;
       };
       header?: never;

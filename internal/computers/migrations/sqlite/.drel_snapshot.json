@@ -64,6 +64,11 @@
           "notNull": false
         },
         {
+          "name": "metered_at",
+          "type": "DATETIME",
+          "notNull": false
+        },
+        {
           "name": "error",
           "type": "TEXT",
           "notNull": true

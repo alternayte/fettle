@@ -2787,6 +2787,9 @@
           },
           "state": {
             "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -10205,6 +10208,7 @@
               "enum": [
                 "run",
                 "bot",
+                "zone",
                 "step",
                 "role",
                 "model",

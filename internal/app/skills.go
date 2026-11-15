@@ -196,24 +196,46 @@ func (a *App) DraftSkill(ctx context.Context, spaceID, runID uuid.UUID) (string,
 	for _, ev := range evs {
 		switch ev.Type {
 		case runs.EvModelTurn:
+			calls, text := turnCalls(ev.Data)
+			steps = append(steps, calls...)
+			if text != "" {
+				result = text
+			}
+		case runs.EvSubagentsStarted:
+			// Helpers do the work of a fanout or forked step, so their calls are steps too.
 			var d struct {
-				Text      string `json:"text"`
-				ToolCalls []struct {
-					Name string          `json:"name"`
-					Args json.RawMessage `json:"args"`
-				} `json:"tool_calls"`
+				Runs []struct {
+					RunID string `json:"run_id"`
+					Goal  string `json:"goal"`
+				} `json:"runs"`
 			}
 			_ = json.Unmarshal([]byte(ev.Data), &d)
-			for _, c := range d.ToolCalls {
-				args := string(c.Args)
-				if len(args) > 160 {
-					args = args[:160] + "…"
+			if len(d.Runs) == 0 {
+				continue
+			}
+			var sb strings.Builder
+			fmt.Fprintf(&sb, "Split the work into %d helpers that work in parallel:", len(d.Runs))
+			for _, h := range d.Runs {
+				fmt.Fprintf(&sb, "\n   - %s", strings.ReplaceAll(strings.TrimSpace(h.Goal), "\n", " "))
+				id, err := uuid.Parse(h.RunID)
+				if err != nil {
+					continue
 				}
-				steps = append(steps, fmt.Sprintf("Use `%s` with %s.", c.Name, args))
+				hevs, err := a.Journal.Load(ctx, id)
+				if err != nil {
+					continue
+				}
+				for _, hev := range hevs {
+					if hev.Type != runs.EvModelTurn {
+						continue
+					}
+					calls, _ := turnCalls(hev.Data)
+					for _, c := range calls {
+						fmt.Fprintf(&sb, "\n     - %s", c)
+					}
+				}
 			}
-			if strings.TrimSpace(d.Text) != "" {
-				result = d.Text
-			}
+			steps = append(steps, sb.String(), "Combine the results of the helpers.")
 		case runs.EvRunFinished:
 			var d struct {
 				Summary string `json:"summary"`
@@ -251,4 +273,24 @@ func (a *App) DraftSkill(ctx context.Context, spaceID, runID uuid.UUID) (string,
 		fmt.Fprintf(&b, "\n## Result of the run that this skill comes from\n\n%s\n", result)
 	}
 	return a.Vault.Redactor.String(ctx, spaceID, b.String()), nil
+}
+
+// turnCalls returns the tool calls of a model turn as skill steps, and the turn's text.
+func turnCalls(data string) (calls []string, text string) {
+	var d struct {
+		Text      string `json:"text"`
+		ToolCalls []struct {
+			Name string          `json:"name"`
+			Args json.RawMessage `json:"args"`
+		} `json:"tool_calls"`
+	}
+	_ = json.Unmarshal([]byte(data), &d)
+	for _, c := range d.ToolCalls {
+		args := string(c.Args)
+		if len(args) > 160 {
+			args = args[:160] + "…"
+		}
+		calls = append(calls, fmt.Sprintf("Use `%s` with %s.", c.Name, args))
+	}
+	return calls, strings.TrimSpace(d.Text)
 }

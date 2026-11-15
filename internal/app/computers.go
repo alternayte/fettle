@@ -24,6 +24,7 @@ import (
 	"github.com/alternayte/fettle/internal/providers/kiln"
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/tools"
+	"github.com/alternayte/fettle/internal/usage"
 )
 
 func init() {
@@ -130,6 +131,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		HomeLimit:  a.homeLimit,
 		OnOversize: a.warnOversize,
 		OnSleep:    a.wakeComputerWaiters,
+		OnActive:   a.recordComputerTime,
 	})
 	a.Zones.CheckProvider = a.Computers.CheckProvider
 	a.Agent.Computer = func(ctx context.Context, spaceID, botID uuid.UUID) error {
@@ -243,6 +245,7 @@ type maintenanceWorker struct {
 
 func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceArgs]) error {
 	ctx = context.WithValue(ctx, maintenanceKey{}, true)
+	w.a.Computers.Meter(ctx)
 	if _, err := w.a.Computers.SleepIdle(ctx); err != nil {
 		w.a.Log.Warn("idle sleep failed", "error", err)
 	}
@@ -261,6 +264,19 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 		w.a.Log.Warn("open work wake failed", "error", err)
 	}
 	return nil
+}
+
+// recordComputerTime writes the running seconds of a computer to usage, per zone and size
+// (§8.4). Computer time has no cost of its own: the provider bills it outside Fettle.
+func (a *App) recordComputerTime(ctx context.Context, c *computers.Computer, seconds int64) {
+	z, err := a.Zones.Find(ctx, c.ZoneID)
+	if err != nil {
+		return
+	}
+	zoneID := z.ID()
+	if err := a.Usage.Record(ctx, &usage.UsageEvent{SpaceID: z.SpaceID, Kind: "computer", ZoneID: &zoneID, Quantity: seconds, Unit: "seconds", Size: z.Size}); err != nil {
+		a.Log.Warn("computer usage", "error", err)
+	}
 }
 
 // cleanupSignIn removes expired sessions, tokens and passkey ceremonies of server mode;

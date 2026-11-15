@@ -64,6 +64,11 @@
           "notNull": false
         },
         {
+          "name": "metered_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
           "name": "error",
           "type": "text",
           "notNull": true

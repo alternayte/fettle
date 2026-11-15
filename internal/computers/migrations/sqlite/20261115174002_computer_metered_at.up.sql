@@ -1,0 +1,1 @@
+ALTER TABLE "computers" ADD COLUMN "metered_at" DATETIME;

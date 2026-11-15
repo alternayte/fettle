@@ -62,3 +62,22 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
     </div>
   );
 });
+
+// Block elements become their text, so an excerpt stays one flowing line.
+const INLINE = ["strong", "em", "del", "code", "a"];
+const inlineComponents: Components = { ...components, p: ({ children }) => <>{children} </> };
+
+/** MarkdownInline renders an excerpt of bot output with inline formatting only, for one or two clamped lines. */
+export const MarkdownInline = memo(function MarkdownInline({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, htmlAsText]}
+      components={inlineComponents}
+      urlTransform={keepUrl}
+      allowedElements={[...INLINE, "p"]}
+      unwrapDisallowed
+    >
+      {text}
+    </ReactMarkdown>
+  );
+});

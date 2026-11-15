@@ -171,7 +171,8 @@ func (s *Service) ScoreRun(ctx context.Context, runID uuid.UUID) (*Score, error)
 		return nil, err
 	}
 	var spent float64
-	_ = s.e.QueryRow(ctx, "SELECT COALESCE(SUM(cost_usd), 0) FROM runs WHERE envelope_id = $1", r.EnvelopeID).Scan(&spent)
+	// The helpers of the run count too, as on the run line.
+	_ = s.e.QueryRow(ctx, "SELECT COALESCE(SUM(cost_usd), 0) FROM runs WHERE envelope_id = $1 OR parent_run_id = $2", r.EnvelopeID, runID).Scan(&spent)
 	within := !f.BudgetCard && (env.Budget.USD <= 0 || spent <= env.Budget.USD)
 	var signals int
 	if err := s.e.QueryRow(ctx, "SELECT COUNT(*) FROM steering_signals WHERE run_id = $1", runID).Scan(&signals); err != nil {

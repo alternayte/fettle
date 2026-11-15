@@ -712,13 +712,14 @@
       "run": "Run",
       "step": "Step",
       "role": "Role",
-      "model": "Model"
+      "model": "Model",
+      "zone": "Zone"
     },
     "col": {
       "calls": "Calls",
       "tokensIn": "Tokens in",
       "tokensOut": "Tokens out",
-      "time": "Time",
+      "time": "Computer time",
       "cost": "Cost"
     }
   },
@@ -1149,7 +1150,10 @@
       "vault": "Open the vault",
       "saved": "Saved the Skael sync.",
       "syncNow": "Sync now",
-      "synced": "The set has {skills} skills. {updated} changed.",
+      "synced": {
+        "one": "The set has {n} skill. {updated} changed.",
+        "other": "The set has {n} skills. {updated} changed."
+      },
       "failed": "The Skael sync failed"
     }
   },
@@ -1205,10 +1209,16 @@
     },
     "scores": {
       "title": "Run scores",
-      "summary": "{runs} ended runs in 30 days, average score {avg} of 100.",
+      "summary": {
+        "one": "{n} ended run in 30 days, average score {avg} of 100.",
+        "other": "{n} ended runs in 30 days, average score {avg} of 100."
+      },
       "empty": "No ended runs in 30 days.",
       "none": "No runs.",
-      "runs": "{n} runs",
+      "runs": {
+        "one": "{n} run",
+        "other": "{n} runs"
+      },
       "byBot": "By bot",
       "bySkill": "By skill",
       "byStep": "By step",

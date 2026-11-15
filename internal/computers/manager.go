@@ -58,6 +58,9 @@ type Manager struct {
 	ExtraHosts map[string]string
 	// OnSleep is called after a computer sleeps, so runs that wait for a computer can start.
 	OnSleep func(ctx context.Context)
+	// OnActive receives the running seconds of a computer for usage (§8.4).
+	OnActive func(ctx context.Context, c *Computer, seconds int64)
+	meterMu  sync.Mutex
 	// HomeLimit is the size limit of a bot home in bytes (0: no limit).
 	HomeLimit func(ctx context.Context, spaceID uuid.UUID) int64
 	// OnOversize is called when a bot home is over its limit; the bot posts a warning card.
@@ -362,8 +365,54 @@ func (m *Manager) bringUp(ctx context.Context, z *zones.Zone, c *Computer) (*liv
 }
 
 func (m *Manager) setState(ctx context.Context, id uuid.UUID, state, errText string) error {
-	_, err := m.E.Exec(ctx, "UPDATE computers SET state = $1, error = $2, updated_at = $3 WHERE id = $4", state, errText, m.now(), id)
+	now := m.now().UTC()
+	if state != StateRunning {
+		// The running time up to now goes to usage before the meter stops.
+		m.meter(ctx, id, now)
+	}
+	if state == StateRunning {
+		// Each $n appears once and in order, because SQLite binds them by position.
+		_, err := m.E.Exec(ctx, "UPDATE computers SET state = $1, error = $2, updated_at = $3, metered_at = COALESCE(metered_at, $4) WHERE id = $5", state, errText, now, now, id)
+		return err
+	}
+	_, err := m.E.Exec(ctx, "UPDATE computers SET state = $1, error = $2, updated_at = $3, metered_at = NULL WHERE id = $4", state, errText, now, id)
 	return err
+}
+
+// Meter sends the running time of every running computer since its last meter to
+// OnActive. The maintenance tick calls it, so usage holds the time while computers run.
+func (m *Manager) Meter(ctx context.Context) {
+	rows, err := drel.NewRepository(m.E, ComputerMeta).Where(Computers.State.Eq(StateRunning)).All(ctx)
+	if err != nil {
+		return
+	}
+	now := m.now().UTC()
+	for _, c := range rows {
+		m.meter(ctx, c.ID(), now)
+	}
+}
+
+// meter reports the running seconds of one computer from metered_at to now and moves
+// metered_at to now. meterMu orders the callers, so each span counts once.
+func (m *Manager) meter(ctx context.Context, id uuid.UUID, now time.Time) {
+	m.meterMu.Lock()
+	defer m.meterMu.Unlock()
+	c, err := drel.NewRepository(m.E, ComputerMeta).Where(Computers.ID.Eq(id)).FirstOrNil(ctx)
+	if err != nil || c == nil || c.State != StateRunning || c.MeteredAt == nil {
+		return
+	}
+	from := c.MeteredAt.UTC()
+	secs := int64(now.Sub(from) / time.Second)
+	if secs <= 0 {
+		return
+	}
+	until := from.Add(time.Duration(secs) * time.Second)
+	if _, err := m.E.Exec(ctx, "UPDATE computers SET metered_at = $1 WHERE id = $2", until, id); err != nil {
+		return
+	}
+	if m.OnActive != nil {
+		m.OnActive(ctx, c, secs)
+	}
 }
 
 // waitHealthy connects to agentd with the pinned certificate and waits for its health check.

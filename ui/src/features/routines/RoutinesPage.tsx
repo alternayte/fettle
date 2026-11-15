@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AlarmClock, Play, Plus, Trash2, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
@@ -15,6 +16,8 @@ import type { SchemaRoutineBody, SchemaRoutineView } from "@/api/schema";
 import { Notice, Page, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import { Switch } from "@/components/ui/switch";
+import { RunStateLabel } from "@/features/chat/RunLine";
+import type { RunState } from "@/features/chat/types";
 import { NativeSelect } from "@/features/settings/ProviderForm";
 import { TimeZoneInput } from "@/features/settings/TimeZoneInput";
 import { t } from "@/lib/copy";
@@ -184,9 +187,9 @@ function RunHistory({ id }: { id: string }) {
             {r.missed && <span className="ml-2 text-warn">· {t("routines.missed")}</span>}
           </span>
           {r.run_id ? (
-            <a href={`/runs/${r.run_id}`} className="figures text-ink underline underline-offset-2">
-              {r.state}
-            </a>
+            <Link to="/runs/$runId" params={{ runId: r.run_id }} className="hover:underline">
+              <RunStateLabel run={{ state: (r.state ?? "running") as RunState, verified: r.verified ?? null }} />
+            </Link>
           ) : (
             <span />
           )}

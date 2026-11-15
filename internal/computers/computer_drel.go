@@ -22,6 +22,7 @@ var Computers = struct {
 	ImageDigest  drel.StringColumn
 	WorkspaceRev drel.OrderedColumn[int64]
 	LastActiveAt drel.ComparableColumn[*time.Time]
+	MeteredAt    drel.ComparableColumn[*time.Time]
 	Error        drel.StringColumn
 	CreatedAt    drel.TimeColumn
 	UpdatedAt    drel.TimeColumn
@@ -37,6 +38,7 @@ var Computers = struct {
 	ImageDigest:  drel.NewStringCol("image_digest"),
 	WorkspaceRev: drel.NewOrderedCol[int64]("workspace_rev"),
 	LastActiveAt: drel.NewComparableCol[*time.Time]("last_active_at"),
+	MeteredAt:    drel.NewComparableCol[*time.Time]("metered_at"),
 	Error:        drel.NewStringCol("error"),
 	CreatedAt:    drel.NewTimeCol("created_at"),
 	UpdatedAt:    drel.NewTimeCol("updated_at"),
@@ -45,7 +47,7 @@ var Computers = struct {
 func scanComputer(row drel.Row) (*Computer, error) {
 	p := &Computer{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.ZoneID, &p.ProviderID, &p.ProviderRef, &p.State, &p.AgentdURL, &p.TokenHash, &p.CertPEM, &p.ImageDigest, &p.WorkspaceRev, &p.LastActiveAt, &p.Error, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.ZoneID, &p.ProviderID, &p.ProviderRef, &p.State, &p.AgentdURL, &p.TokenHash, &p.CertPEM, &p.ImageDigest, &p.WorkspaceRev, &p.LastActiveAt, &p.MeteredAt, &p.Error, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +65,12 @@ type computerSnapshot struct {
 	ImageDigest  string
 	WorkspaceRev int64
 	LastActiveAt *time.Time
+	MeteredAt    *time.Time
 	Error        string
 }
 
 func snapshotComputer(p *Computer) any {
-	return computerSnapshot{ZoneID: p.ZoneID, ProviderID: p.ProviderID, ProviderRef: p.ProviderRef, State: p.State, AgentdURL: p.AgentdURL, TokenHash: p.TokenHash, CertPEM: p.CertPEM, ImageDigest: p.ImageDigest, WorkspaceRev: p.WorkspaceRev, LastActiveAt: p.LastActiveAt, Error: p.Error}
+	return computerSnapshot{ZoneID: p.ZoneID, ProviderID: p.ProviderID, ProviderRef: p.ProviderRef, State: p.State, AgentdURL: p.AgentdURL, TokenHash: p.TokenHash, CertPEM: p.CertPEM, ImageDigest: p.ImageDigest, WorkspaceRev: p.WorkspaceRev, LastActiveAt: p.LastActiveAt, MeteredAt: p.MeteredAt, Error: p.Error}
 }
 
 func diffComputer(p *Computer, snap any) []drel.FieldChange {
@@ -102,6 +105,9 @@ func diffComputer(p *Computer, snap any) []drel.FieldChange {
 	}
 	if p.LastActiveAt != s.LastActiveAt {
 		changes = append(changes, drel.FieldChange{Column: "last_active_at", Value: p.LastActiveAt})
+	}
+	if p.MeteredAt != s.MeteredAt {
+		changes = append(changes, drel.FieldChange{Column: "metered_at", Value: p.MeteredAt})
 	}
 	if p.Error != s.Error {
 		changes = append(changes, drel.FieldChange{Column: "error", Value: p.Error})
@@ -138,17 +144,19 @@ func computerColumnValue(p *Computer, idx int) any {
 	case 10:
 		return p.LastActiveAt
 	case 11:
-		return p.Error
+		return p.MeteredAt
 	case 12:
-		return p.CreatedAt()
+		return p.Error
 	case 13:
+		return p.CreatedAt()
+	case 14:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func computerInsertColumns(p *Computer) ([]string, []any) {
-	return []string{"zone_id", "provider_id", "provider_ref", "state", "agentd_url", "token_hash", "cert_pem", "image_digest", "workspace_rev", "last_active_at", "error"}, []any{p.ZoneID, p.ProviderID, p.ProviderRef, p.State, p.AgentdURL, p.TokenHash, p.CertPEM, p.ImageDigest, p.WorkspaceRev, p.LastActiveAt, p.Error}
+	return []string{"zone_id", "provider_id", "provider_ref", "state", "agentd_url", "token_hash", "cert_pem", "image_digest", "workspace_rev", "last_active_at", "metered_at", "error"}, []any{p.ZoneID, p.ProviderID, p.ProviderRef, p.State, p.AgentdURL, p.TokenHash, p.CertPEM, p.ImageDigest, p.WorkspaceRev, p.LastActiveAt, p.MeteredAt, p.Error}
 }
 
 func computerScanReturning(p *Computer, row drel.Row) error {
@@ -172,7 +180,7 @@ func computerScanGenerated(p *Computer, row drel.Row) error {
 
 var ComputerMeta = drel.ModelMeta[Computer]{
 	Table:         "computers",
-	Columns:       []string{"id", "zone_id", "provider_id", "provider_ref", "state", "agentd_url", "token_hash", "cert_pem", "image_digest", "workspace_rev", "last_active_at", "error", "created_at", "updated_at"},
+	Columns:       []string{"id", "zone_id", "provider_id", "provider_ref", "state", "agentd_url", "token_hash", "cert_pem", "image_digest", "workspace_rev", "last_active_at", "metered_at", "error", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanComputer,
 	Snapshot:      snapshotComputer,

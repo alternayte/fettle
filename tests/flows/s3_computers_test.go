@@ -100,6 +100,11 @@ func TestSCN_CMP_003_IdleSleepAndAdmission(t *testing.T) {
 	if n, _ := e.App.Computers.SleepIdle(ctx); n != 0 {
 		t.Fatal("the computer slept before its idle minute")
 	}
+	// The tick meters the running time so far (§8.4).
+	e.App.Computers.Meter(ctx)
+	if secs, n := computerTime(t, e, personal); n != 1 || secs < 30 {
+		t.Fatalf("after one meter: %d rows, %d s", n, secs)
+	}
 	c, _ := e.App.Computers.Current(ctx, uuid.MustParse(personal))
 	rev := c.WorkspaceRev
 	clock = clock.Add(2 * time.Minute)
@@ -109,6 +114,10 @@ func TestSCN_CMP_003_IdleSleepAndAdmission(t *testing.T) {
 	c, _ = e.App.Computers.Current(ctx, uuid.MustParse(personal))
 	if c.State != "sleeping" || c.WorkspaceRev <= rev {
 		t.Fatalf("personal computer is %s at revision %d (was %d)", c.State, c.WorkspaceRev, rev)
+	}
+	// The sleep meters the rest, so the zone has its whole running time once.
+	if secs, n := computerTime(t, e, personal); n != 2 || secs < 150 || secs > 240 {
+		t.Fatalf("after the sleep: %d rows, %d s", n, secs)
 	}
 	// The sleep frees the slot, and the waiting run starts.
 	e.WaitRun(r2, "done")
@@ -166,4 +175,14 @@ func TestSCN_CMP_004_WorkspaceArchiveLimitAndRestore(t *testing.T) {
 	if !strings.Contains(out, "the kiln log") || !strings.Contains(out, "No such file") {
 		t.Fatalf("restored home: %s", out)
 	}
+}
+
+// computerTime returns the metered seconds and the number of computer usage rows of a zone.
+func computerTime(t *testing.T, e *apptest.Env, zone string) (secs int64, rows int) {
+	t.Helper()
+	err := e.App.DB.Engine.QueryRow(context.Background(), "SELECT COALESCE(SUM(quantity),0), COUNT(*) FROM usage_events WHERE kind = 'computer' AND unit = 'seconds' AND size = 'small' AND zone_id = $1", uuid.MustParse(zone)).Scan(&secs, &rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return secs, rows
 }

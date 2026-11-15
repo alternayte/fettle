@@ -6,7 +6,8 @@ import { errorText } from "@/api/client";
 import { useSetSetting } from "@/api/hooks";
 import { Notice, Page, Section } from "@/app/Page";
 import { Btn } from "@/components/form";
-import { has, t } from "@/lib/copy";
+import { has, t, tn } from "@/lib/copy";
+import { MarkdownInline } from "@/features/chat/Markdown";
 import { formatDay, formatClock, formatDuration, formatUSD } from "@/lib/format";
 import { useRouterReport, useRunPatchJob, useScores, useSignals } from "./api";
 
@@ -144,7 +145,7 @@ function Averages({ title, rows }: { title: string; rows: { key: string; runs: n
                 <th scope="row" className={`${td} max-w-40 truncate text-left font-normal`}>
                   {r.key}
                 </th>
-                <td className={tdNum}>{t("learning.scores.runs", { n: r.runs })}</td>
+                <td className={tdNum}>{tn("learning.scores.runs", r.runs)}</td>
                 <td className={`${tdNum} text-ink`}>{Math.round(r.avg_score)}</td>
               </tr>
             ))}
@@ -164,7 +165,7 @@ function Scores() {
         <>
           <p className="mb-4 text-sm text-ink-soft">
             {d.runs > 0
-              ? t("learning.scores.summary", { runs: d.runs, avg: Math.round(d.average) })
+              ? tn("learning.scores.summary", d.runs, { avg: Math.round(d.average) })
               : t("learning.scores.empty")}
           </p>
           {d.runs > 0 && (
@@ -256,7 +257,11 @@ function Signals() {
                     </>
                   )}
                 </p>
-                {s.detail && <p className="mt-0.5 line-clamp-2 break-words text-ink">{s.detail}</p>}
+                {s.detail && (
+                  <p className="mt-0.5 line-clamp-2 break-words text-ink [&_code]:font-mono [&_code]:text-[0.92em]">
+                    <MarkdownInline text={s.detail} />
+                  </p>
+                )}
               </div>
             </li>
           ))}

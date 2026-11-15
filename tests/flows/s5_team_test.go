@@ -134,6 +134,14 @@ func TestSCN_E2E_001_FanoutCompareVerifiedTable(t *testing.T) {
 	if !found {
 		t.Fatal("the chat has no table")
 	}
+	// Save as skill keeps the helpers' work as steps (§13.1).
+	var draft struct {
+		SkillMD string `json:"skill_md"`
+	}
+	e.MustDo("POST", e.SP("/runs/%s/draft-skill", run), nil, &draft)
+	if !strings.Contains(draft.SkillMD, "Split the work into 3 helpers") || !strings.Contains(draft.SkillMD, "     - Use `browser_") {
+		t.Fatalf("the skill draft has no helper steps:\n%s", draft.SkillMD)
+	}
 }
 
 func TestSCN_TEAM_006_FailedCitationsRetryThenEscalate(t *testing.T) {

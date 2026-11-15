@@ -154,6 +154,8 @@ Fettle has five bot templates. Each template has a skill and a paused routine.
 ![The settings page of Ledger. It shows the profile with the name, the job and the public description, the instructions, and the version history.](images/bot-settings.png)
 
 Each save of the instructions makes a new version. **Version history** shows the versions and restores an earlier one.
+
+A bot uses the models of the space. To give one bot other models, open its settings page and go to **Models**. Pick a model for a role, then select **Use for this bot**. Select **Use the space models** to remove the change.
 A bot that you make in the UI works in the zone `personal`. To use another zone, give `--zone` to `fettle bot create`.
 
 The **Bots** page lists the bots with their zones and their status.
@@ -245,12 +247,13 @@ No person starts the work of a routine, so each action outside the computer need
 
 ![The Runs page. It lists the runs of the space, newest first. Two runs wait for the user and the others are verified with a score of 100.](images/runs.png)
 
-2. Select **Settings**, then **Cost**. Select **Bot** to group the cost by bot. Other groups are day, month, run, step, role and model.
+2. Select **Settings**, then **Cost**. Select **Bot** to group the cost by bot. Other groups are day, month, zone, run, step, role and model.
+3. Select **Zone** to see the computer time of each zone. Computer time belongs to a zone, so the day, month and zone groups show it.
 
-![The Cost page grouped by bot. It shows the calls, the tokens in and out, the time and the cost of each bot, and the total.](images/settings-cost.png)
+![The Cost page grouped by bot. It shows the calls, the tokens in and out and the cost of each bot, and the total.](images/settings-cost.png)
 
-3. If a reply of a bot is wrong, react to it with a thumbs down. The reaction is a steering signal.
-4. Select **Learning** in the sidebar.
+4. If a reply of a bot is wrong, react to it with a thumbs down. The reaction is a steering signal.
+5. Select **Learning** in the sidebar.
 
 ![The Learning page. It shows the router report by step, the run scores by bot, skill, step and model, the skill patches, and one steering signal: a thumbs down on the weekly report of Reporter.](images/learning.png)
 
