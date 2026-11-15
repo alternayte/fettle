@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -23,6 +24,9 @@ func TestSCN_LRN_003_GatedSkillPatchProposals(t *testing.T) {
 	ctx := context.Background()
 	sp, bot := uuid.MustParse(e.Space), uuid.MustParse(chief.ID)
 	owner := audit.Actor{Kind: "user", ID: e.Owner}
+	// The daily job of the maintenance tick would take the signals first; this test runs
+	// the job itself.
+	e.MustDo("PUT", e.SP("/settings/learning.patches_last_at"), map[string]any{"value": time.Now().UTC().Format(time.RFC3339)}, nil)
 
 	// Two skills with evals.json, both on Chief.
 	for _, s := range []struct{ md, evals string }{
