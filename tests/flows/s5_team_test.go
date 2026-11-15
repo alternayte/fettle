@@ -321,3 +321,50 @@ func TestSCN_TEAM_005_HelperLimitsAndFailures(t *testing.T) {
 		t.Fatalf("the owner did not continue after the failure: %s", r.EventTypes())
 	}
 }
+
+func TestSCN_TEAM_008_HandoffWaitFilesAndLoopGuard(t *testing.T) {
+	e := dockerApp(t)
+	var inbox, writer apptest.Bot
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Inbox", "job": "Triage mail", "zone_id": zoneID(e, "personal")}, &inbox)
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Writer", "job": "Writes summaries", "zone_id": zoneID(e, "browsing")}, &writer)
+	setScript := func(b apptest.Bot, marker string, steps ...fakemodel.Step) {
+		e.Fake.AddScript(fakemodel.Script{Name: marker, Match: fakemodel.Match{System: "[[script:" + marker + "]]"}, Steps: steps})
+		e.MustDo("PATCH", e.SP("/bots/%s", b.ID), map[string]any{"name": b.Name, "job": "x", "instructions": "[[script:" + marker + "]]"}, nil)
+	}
+	setScript(writer, "writer",
+		fakemodel.Step{ToolCalls: call("exec", map[string]any{"command": "cat /home/fettle/shared/inbox/*/notes.txt"})},
+		fakemodel.Step{Text: "Summary: {{tool_result}}"})
+	setScript(inbox, "inbox",
+		fakemodel.Step{ToolCalls: call("write_file", map[string]any{"path": "shared/notes.txt", "content": "The Q3 total is 40 units."})},
+		fakemodel.Step{ToolCalls: call("handoff", map[string]any{"bot": "Writer", "goal": "Summarize the Q3 notes.", "context_refs": []map[string]any{{"type": "file", "ref": "shared/notes.txt"}}, "wait": true})},
+		fakemodel.Step{Text: "Writer says: {{tool_result}}"})
+	run, _ := e.Post(inbox.ChatID, "Get the Q3 notes summarized.")
+	r := e.WaitRun(run, "done", "failed", "escalated")
+	res := toolResults(r, "handoff")
+	if r.Line.State != "done" || len(res) != 1 || !strings.Contains(res[0], "The Q3 total is 40 units.") || !strings.Contains(res[0], "Writer finished") {
+		t.Fatalf("run %s, handoff results %v: %s", r.Line.State, res, r.EventTypes())
+	}
+	if !r.HasEvent("handoff_sent") || !r.HasEvent("handoff_result") {
+		t.Fatalf("events %s", r.EventTypes())
+	}
+
+	// The loop guard refuses the fourth handoff of one goal in one tree.
+	again := fakemodel.Step{ToolCalls: call("handoff", map[string]any{"bot": "Writer", "goal": "Draft the weekly note!", "wait": false})}
+	setScript(writer, "writer2", fakemodel.Step{Text: "Drafted."})
+	setScript(inbox, "inbox2", again, again, again, again, fakemodel.Step{Text: "Done handing off."})
+	run, _ = e.Post(inbox.ChatID, "Hand off the weekly note.")
+	r = e.WaitRun(run, "done", "failed", "escalated")
+	res = toolResults(r, "handoff")
+	if len(res) != 4 || strings.Contains(res[2], "loop guard") || !strings.Contains(res[3], "loop guard") {
+		t.Fatalf("handoff results %v", res)
+	}
+
+	// With no hops left, a handoff is refused.
+	e.MustDo("PUT", e.SP("/settings/budget.hops"), map[string]any{"value": 0}, nil)
+	setScript(inbox, "inbox3", fakemodel.Step{ToolCalls: call("handoff", map[string]any{"bot": "Writer", "goal": "Write anything.", "wait": true})}, fakemodel.Step{Text: "Could not."})
+	run, _ = e.Post(inbox.ChatID, "Hand off once more.")
+	r = e.WaitRun(run, "done", "failed", "escalated")
+	if res := toolResults(r, "handoff"); len(res) != 1 || !strings.Contains(res[0], "No hops are left") {
+		t.Fatalf("hops 0: %v", res)
+	}
+}

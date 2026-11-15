@@ -110,6 +110,8 @@ type Input struct {
 	AllowHosts  []string
 	Size        string
 	IdleMinutes int
+	// ShareBlocked stops handoffs from copying this zone's files out.
+	ShareBlocked bool
 }
 
 func (s *Service) validate(ctx context.Context, in Input) error {
@@ -146,7 +148,7 @@ func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UU
 	if in.AllowHosts == nil {
 		in.AllowHosts = []string{}
 	}
-	z := &Zone{SpaceID: spaceID, Name: strings.TrimSpace(in.Name), ProviderID: in.ProviderID, Network: in.Network, AllowHosts: in.AllowHosts, Size: in.Size, IdleMinutes: in.IdleMinutes}
+	z := &Zone{SpaceID: spaceID, Name: strings.TrimSpace(in.Name), ProviderID: in.ProviderID, Network: in.Network, AllowHosts: in.AllowHosts, Size: in.Size, IdleMinutes: in.IdleMinutes, ShareBlocked: in.ShareBlocked}
 	err := s.e.WithTx(ctx, func(ctx context.Context) error {
 		drel.Repo(drel.MustFromContext(ctx), ZoneMeta).Add(z)
 		return s.audit.Record(ctx, actor, &spaceID, "zone.create", "zone:"+z.ID().String(), map[string]string{"name": z.Name, "network": z.Network})
@@ -172,6 +174,7 @@ func (s *Service) Update(ctx context.Context, actor audit.Actor, spaceID, id uui
 			in.AllowHosts = []string{}
 		}
 		z.Name, z.ProviderID, z.Network, z.AllowHosts, z.Size = strings.TrimSpace(in.Name), in.ProviderID, in.Network, in.AllowHosts, in.Size
+		z.ShareBlocked = in.ShareBlocked
 		if in.IdleMinutes > 0 {
 			z.IdleMinutes = in.IdleMinutes
 		}

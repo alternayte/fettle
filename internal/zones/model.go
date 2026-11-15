@@ -15,6 +15,9 @@ type Zone struct {
 	AllowHosts            []string   `db:"allow_hosts"`
 	Size                  string     `db:"size,check=size IN ('small','browser','desktop')"`
 	IdleMinutes           int        `db:"idle_minutes"`
+	// ShareBlocked stops handoffs from copying files of this zone's shared folder to
+	// other zones (§9.7).
+	ShareBlocked bool `db:"share_blocked"`
 }
 
 // ZoneGrant lets a zone use one vault item or one connector account.

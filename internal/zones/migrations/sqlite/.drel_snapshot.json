@@ -50,6 +50,11 @@
           "notNull": true
         },
         {
+          "name": "share_blocked",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
           "name": "created_at",
           "type": "DATETIME",
           "notNull": true,

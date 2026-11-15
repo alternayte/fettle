@@ -26,6 +26,7 @@ type ZoneView struct {
 	AllowHosts    []string `json:"allow_hosts"`
 	Size          string   `json:"size"`
 	IdleMinutes   int      `json:"idle_minutes"`
+	ShareBlocked  bool     `json:"share_blocked" doc:"Handoffs from this zone copy no files to other zones."`
 	ComputerState string   `json:"computer_state"`
 	ComputerError string   `json:"computer_error,omitempty"`
 	Bots          []string `json:"bots"`
@@ -49,10 +50,12 @@ type zoneBody struct {
 	AllowHosts  []string `json:"allow_hosts,omitempty" maxItems:"100"`
 	Size        string   `json:"size" enum:"small,browser,desktop"`
 	IdleMinutes int      `json:"idle_minutes,omitempty" minimum:"1" maximum:"1440"`
+	// ShareBlocked stops handoffs from copying this zone's files out (§9.7).
+	ShareBlocked bool `json:"share_blocked,omitempty"`
 }
 
 func (b zoneBody) input() (zones.Input, error) {
-	in := zones.Input{Name: b.Name, Network: b.Network, Size: b.Size, IdleMinutes: b.IdleMinutes}
+	in := zones.Input{Name: b.Name, Network: b.Network, Size: b.Size, IdleMinutes: b.IdleMinutes, ShareBlocked: b.ShareBlocked}
 	for _, h := range b.AllowHosts {
 		if h = strings.ToLower(strings.TrimSpace(h)); h != "" {
 			in.AllowHosts = append(in.AllowHosts, h)
@@ -81,7 +84,7 @@ type ZonePath struct {
 }
 
 func (a *App) zoneView(ctx context.Context, z *zones.Zone) ZoneView {
-	v := ZoneView{ID: z.ID().String(), Name: z.Name, Network: z.Network, AllowHosts: z.AllowHosts, Size: z.Size, IdleMinutes: z.IdleMinutes, ComputerState: computers.StateNone, Bots: []string{}}
+	v := ZoneView{ID: z.ID().String(), Name: z.Name, Network: z.Network, AllowHosts: z.AllowHosts, Size: z.Size, IdleMinutes: z.IdleMinutes, ShareBlocked: z.ShareBlocked, ComputerState: computers.StateNone, Bots: []string{}}
 	if v.AllowHosts == nil {
 		v.AllowHosts = []string{}
 	}

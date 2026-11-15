@@ -11,33 +11,35 @@ import (
 )
 
 var Zones = struct {
-	ID          drel.ComparableColumn[uuid.UUID]
-	SpaceID     drel.ComparableColumn[uuid.UUID]
-	Name        drel.StringColumn
-	ProviderID  drel.ComparableColumn[*uuid.UUID]
-	Network     drel.StringColumn
-	AllowHosts  drel.ComparableColumn[[]string]
-	Size        drel.StringColumn
-	IdleMinutes drel.OrderedColumn[int]
-	CreatedAt   drel.TimeColumn
-	UpdatedAt   drel.TimeColumn
+	ID           drel.ComparableColumn[uuid.UUID]
+	SpaceID      drel.ComparableColumn[uuid.UUID]
+	Name         drel.StringColumn
+	ProviderID   drel.ComparableColumn[*uuid.UUID]
+	Network      drel.StringColumn
+	AllowHosts   drel.ComparableColumn[[]string]
+	Size         drel.StringColumn
+	IdleMinutes  drel.OrderedColumn[int]
+	ShareBlocked drel.BoolColumn
+	CreatedAt    drel.TimeColumn
+	UpdatedAt    drel.TimeColumn
 }{
-	ID:          drel.NewComparableCol[uuid.UUID]("id"),
-	SpaceID:     drel.NewComparableCol[uuid.UUID]("space_id"),
-	Name:        drel.NewStringCol("name"),
-	ProviderID:  drel.NewComparableCol[*uuid.UUID]("provider_id"),
-	Network:     drel.NewStringCol("network"),
-	AllowHosts:  drel.NewComparableCol[[]string]("allow_hosts"),
-	Size:        drel.NewStringCol("size"),
-	IdleMinutes: drel.NewOrderedCol[int]("idle_minutes"),
-	CreatedAt:   drel.NewTimeCol("created_at"),
-	UpdatedAt:   drel.NewTimeCol("updated_at"),
+	ID:           drel.NewComparableCol[uuid.UUID]("id"),
+	SpaceID:      drel.NewComparableCol[uuid.UUID]("space_id"),
+	Name:         drel.NewStringCol("name"),
+	ProviderID:   drel.NewComparableCol[*uuid.UUID]("provider_id"),
+	Network:      drel.NewStringCol("network"),
+	AllowHosts:   drel.NewComparableCol[[]string]("allow_hosts"),
+	Size:         drel.NewStringCol("size"),
+	IdleMinutes:  drel.NewOrderedCol[int]("idle_minutes"),
+	ShareBlocked: drel.NewBoolCol("share_blocked"),
+	CreatedAt:    drel.NewTimeCol("created_at"),
+	UpdatedAt:    drel.NewTimeCol("updated_at"),
 }
 
 func scanZone(row drel.Row) (*Zone, error) {
 	p := &Zone{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.SpaceID, &p.Name, &p.ProviderID, &p.Network, drel.JSON[[]string]{V: &p.AllowHosts}, &p.Size, &p.IdleMinutes, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.SpaceID, &p.Name, &p.ProviderID, &p.Network, drel.JSON[[]string]{V: &p.AllowHosts}, &p.Size, &p.IdleMinutes, &p.ShareBlocked, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -45,17 +47,18 @@ func scanZone(row drel.Row) (*Zone, error) {
 }
 
 type zoneSnapshot struct {
-	SpaceID     uuid.UUID
-	Name        string
-	ProviderID  *uuid.UUID
-	Network     string
-	AllowHosts  []string
-	Size        string
-	IdleMinutes int
+	SpaceID      uuid.UUID
+	Name         string
+	ProviderID   *uuid.UUID
+	Network      string
+	AllowHosts   []string
+	Size         string
+	IdleMinutes  int
+	ShareBlocked bool
 }
 
 func snapshotZone(p *Zone) any {
-	return zoneSnapshot{SpaceID: p.SpaceID, Name: p.Name, ProviderID: p.ProviderID, Network: p.Network, AllowHosts: p.AllowHosts, Size: p.Size, IdleMinutes: p.IdleMinutes}
+	return zoneSnapshot{SpaceID: p.SpaceID, Name: p.Name, ProviderID: p.ProviderID, Network: p.Network, AllowHosts: p.AllowHosts, Size: p.Size, IdleMinutes: p.IdleMinutes, ShareBlocked: p.ShareBlocked}
 }
 
 func diffZone(p *Zone, snap any) []drel.FieldChange {
@@ -81,6 +84,9 @@ func diffZone(p *Zone, snap any) []drel.FieldChange {
 	}
 	if p.IdleMinutes != s.IdleMinutes {
 		changes = append(changes, drel.FieldChange{Column: "idle_minutes", Value: p.IdleMinutes})
+	}
+	if p.ShareBlocked != s.ShareBlocked {
+		changes = append(changes, drel.FieldChange{Column: "share_blocked", Value: p.ShareBlocked})
 	}
 	return changes
 }
@@ -108,15 +114,17 @@ func zoneColumnValue(p *Zone, idx int) any {
 	case 7:
 		return p.IdleMinutes
 	case 8:
-		return p.CreatedAt()
+		return p.ShareBlocked
 	case 9:
+		return p.CreatedAt()
+	case 10:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func zoneInsertColumns(p *Zone) ([]string, []any) {
-	return []string{"space_id", "name", "provider_id", "network", "allow_hosts", "size", "idle_minutes"}, []any{p.SpaceID, p.Name, p.ProviderID, p.Network, drel.JSON[[]string]{V: &p.AllowHosts}, p.Size, p.IdleMinutes}
+	return []string{"space_id", "name", "provider_id", "network", "allow_hosts", "size", "idle_minutes", "share_blocked"}, []any{p.SpaceID, p.Name, p.ProviderID, p.Network, drel.JSON[[]string]{V: &p.AllowHosts}, p.Size, p.IdleMinutes, p.ShareBlocked}
 }
 
 func zoneScanReturning(p *Zone, row drel.Row) error {
@@ -140,7 +148,7 @@ func zoneScanGenerated(p *Zone, row drel.Row) error {
 
 var ZoneMeta = drel.ModelMeta[Zone]{
 	Table:         "zones",
-	Columns:       []string{"id", "space_id", "name", "provider_id", "network", "allow_hosts", "size", "idle_minutes", "created_at", "updated_at"},
+	Columns:       []string{"id", "space_id", "name", "provider_id", "network", "allow_hosts", "size", "idle_minutes", "share_blocked", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanZone,
 	Snapshot:      snapshotZone,

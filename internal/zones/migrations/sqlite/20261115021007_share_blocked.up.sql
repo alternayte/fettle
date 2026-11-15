@@ -1,0 +1,1 @@
+ALTER TABLE "zones" ADD COLUMN "share_blocked" INTEGER NOT NULL DEFAULT 0;

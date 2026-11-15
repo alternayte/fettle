@@ -2950,6 +2950,9 @@
             "description": "Empty uses the default provider.",
             "type": "string"
           },
+          "share_blocked": {
+            "type": "boolean"
+          },
           "size": {
             "enum": [
               "small",
@@ -3012,6 +3015,10 @@
           "provider_kind": {
             "type": "string"
           },
+          "share_blocked": {
+            "description": "Handoffs from this zone copy no files to other zones.",
+            "type": "boolean"
+          },
           "size": {
             "type": "string"
           }
@@ -3024,6 +3031,7 @@
           "allow_hosts",
           "size",
           "idle_minutes",
+          "share_blocked",
           "computer_state",
           "bots"
         ],

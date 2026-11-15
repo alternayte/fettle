@@ -74,6 +74,10 @@ type Decision struct {
 	// outputs of its tools, never its reasoning (§9.5).
 	Result   string   `json:"result,omitempty"`
 	Evidence []string `json:"evidence,omitempty"`
+	// FromRun and FromCall name the run and the call of a handoff; Wait is its wait flag.
+	FromRun  string `json:"from_run,omitempty"`
+	FromCall string `json:"from_call,omitempty"`
+	Wait     bool   `json:"wait,omitempty"`
 }
 
 // Envelope is one unit of work (Appendix C).

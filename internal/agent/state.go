@@ -43,6 +43,8 @@ type (
 	evSteer struct {
 		Text      string `json:"text"`
 		MessageID string `json:"message_id,omitempty"`
+		// Origin is bot for a result that another bot sent; it is data, not intent.
+		Origin string `json:"origin,omitempty"`
 	}
 	evCard struct {
 		CardID    string `json:"card_id"`
@@ -120,6 +122,9 @@ type state struct {
 	verifyRetries  int
 	humanAnswers   []string
 	lastModelSeq   int64
+	notes          []string // results from other bots since the last model turn
+	handoffs       map[string]evHandoffSent
+	handoffResults map[string]evHandoffResult
 	subStarted     bool
 	subRuns        []evSubStart
 	subResults     map[string]evSubResult
@@ -131,7 +136,7 @@ type state struct {
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}, subResults: map[string]evSubResult{}}
+	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}, subResults: map[string]evSubResult{}, handoffs: map[string]evHandoffSent{}, handoffResults: map[string]evHandoffResult{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -149,7 +154,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			st.modelTurns++
 			st.lastModel = &d
 			st.lastModelSeq = ev.Seq
-			st.steers = nil
+			st.steers, st.notes = nil, nil
 			st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "model", Text: d.Text, ToolCalls: d.ToolCalls})
 			if d.Text != "" {
 				st.finalText = d.Text
@@ -183,8 +188,12 @@ func rebuild(evs []*runs.RunEvent) *state {
 		case runs.EvSteer:
 			var d evSteer
 			_ = json.Unmarshal([]byte(ev.Data), &d)
-			st.steers = append(st.steers, d.Text)
-			st.intent = append(st.intent, d.Text)
+			if d.Origin == OriginBot {
+				st.notes = append(st.notes, d.Text)
+			} else {
+				st.steers = append(st.steers, d.Text)
+				st.intent = append(st.intent, d.Text)
+			}
 		case runs.EvCardPosted:
 			var d evCard
 			_ = json.Unmarshal([]byte(ev.Data), &d)
@@ -232,6 +241,14 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			u := d.Until
 			st.sleepUntil = &u
+		case runs.EvHandoffSent:
+			var d evHandoffSent
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.handoffs[d.CallID] = d
+		case runs.EvHandoffResult:
+			var d evHandoffResult
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.handoffResults[d.CallID] = d
 		case runs.EvVerifyStarted:
 			st.verifyStarted++
 		case runs.EvVerifyResult:
@@ -305,5 +322,5 @@ func (st *state) needsModel() bool {
 	if st.lastModel == nil {
 		return true
 	}
-	return len(st.lastModel.ToolCalls) > 0 || len(st.steers) > 0
+	return len(st.lastModel.ToolCalls) > 0 || len(st.steers) > 0 || len(st.notes) > 0
 }

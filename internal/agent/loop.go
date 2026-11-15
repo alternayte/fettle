@@ -193,6 +193,22 @@ func (x *exec) loop(ctx context.Context) error {
 		if st.subStarted && len(st.subResults) < len(st.subRuns) {
 			return x.wait(ctx, "subagents")
 		}
+		if x.run.Kind == "owner" && st.step == "handoff" && x.env.Decision.Route != nil {
+			// The router gave the whole work to another bot: hand it off and wait (§9.2).
+			call := models.ToolCall{ID: "route_handoff", Name: "handoff"}
+			call.Args, _ = json.Marshal(map[string]any{"bot": x.env.Decision.Route.OwnerBotID, "goal": x.env.Goal, "budget_share": 0.9, "wait": true})
+			if res, ok := st.handoffResults[call.ID]; ok {
+				status := runs.StatusDone
+				if res.Status != runs.StatusDone {
+					status = runs.StatusFailed
+				}
+				return x.finish(ctx, st, status, res.Summary)
+			}
+			if err := x.handoff(ctx, st, call); err != nil {
+				return err
+			}
+			continue
+		}
 		if len(st.uncertain) > 0 {
 			if err := x.resolveUncertain(ctx, st); err != nil {
 				return err
@@ -256,6 +272,9 @@ func (x *exec) finish(ctx context.Context, st *state, status, summary string) er
 			return err
 		}
 		if err := x.tellParent(ctx, st, status, summary); err != nil {
+			return err
+		}
+		if err := x.tellSender(ctx, status, summary); err != nil {
 			return err
 		}
 		var res *envelopes.Result
@@ -374,6 +393,7 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 		Goal: x.env.Goal, GoalOrigin: origin, Acceptance: accept, BudgetLeftUSD: x.env.Budget.USD - spent, Capabilities: x.env.Capabilities,
 		Conversation: conv, Turns: st.turns, Steers: st.steers, ContextWindow: window,
 		Helper: x.run.Kind == "subagent", Brief: x.env.Decision.Brief,
+		Notes: st.notes, Refs: x.refs(ctx),
 	}
 	if x.env.Deadline != nil && a.now().Sub(*x.env.Deadline) >= 15*time.Minute {
 		in.DueAt = x.env.Deadline
@@ -603,6 +623,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	}
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
+	}
+	if call.Name == "handoff" {
+		return x.handoff(ctx, st, call)
 	}
 	if call.Name == "report_result" && x.run.Kind == "subagent" {
 		return x.reportResult(ctx, st, call)
@@ -891,4 +914,26 @@ func QueueFor(origin string) string {
 		return jobs.Interactive
 	}
 	return jobs.Background
+}
+
+// refs resolves the context references of the envelope to text lines.
+func (x *exec) refs(ctx context.Context) []string {
+	var out []string
+	for _, r := range x.env.ContextRefs {
+		switch r.Type {
+		case "message":
+			id, err := uuid.Parse(r.Ref)
+			if err != nil || x.env.ChatID == nil {
+				continue
+			}
+			if m, err := x.a.Chats.GetMessage(ctx, *x.env.ChatID, id); err == nil {
+				out = append(out, "Message: "+truncate(m.Body, 4000))
+			}
+		case "file":
+			out = append(out, "File in your zone: "+r.Ref)
+		default:
+			out = append(out, r.Type+": "+r.Ref)
+		}
+	}
+	return out
 }

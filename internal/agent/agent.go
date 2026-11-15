@@ -43,6 +43,8 @@ type Agent struct {
 	Policy    *policy.Service
 	// Checker opens the zone computer of a bot for file, command and citations checks.
 	Checker func(ctx context.Context, spaceID, botID uuid.UUID) (Checker, error)
+	// CopyShared copies one file from a zone's shared folder to another zone (handoff, §9.7).
+	CopyShared func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error
 	// SubagentEnded frees what a sub-agent run used on the computer (its browser context).
 	SubagentEnded func(ctx context.Context, spaceID, botID, runID uuid.UUID)
 	// CanFork reports whether the zone of a bot can fork: native fork support or a
@@ -101,6 +103,7 @@ func New(a Agent) *Agent {
 	ag.registerMemoryTools()
 	ag.registerTakeover()
 	ag.registerSubagentTools()
+	ag.registerHandoff()
 	return ag
 }
 

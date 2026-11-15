@@ -1943,6 +1943,7 @@ export interface components {
       network: "open" | "allowlist";
       /** @description Empty uses the default provider. */
       provider_id?: string;
+      share_blocked?: boolean;
       /** @enum {string} */
       size: "small" | "browser" | "desktop";
     };
@@ -1958,6 +1959,8 @@ export interface components {
       network: string;
       provider_id?: string;
       provider_kind: string;
+      /** @description Handoffs from this zone copy no files to other zones. */
+      share_blocked: boolean;
       size: string;
     };
     ZonesOutBody: {

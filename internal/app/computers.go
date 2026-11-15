@@ -126,6 +126,23 @@ func (a *App) setupComputers(ctx context.Context) {
 		return nil
 	}
 	a.Agent.Checker = a.checker
+	a.Agent.CopyShared = func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error {
+		src, err := a.Computers.Acquire(ctx, fromZone)
+		if err != nil {
+			return err
+		}
+		data, err := src.Client.ReadFile(ctx, from)
+		src.Release()
+		if err != nil {
+			return err
+		}
+		dst, err := a.Computers.Acquire(ctx, toZone)
+		if err != nil {
+			return err
+		}
+		defer dst.Release()
+		return dst.Client.WriteFile(ctx, to, data, 0o644)
+	}
 	a.Agent.CanFork = func(ctx context.Context, spaceID, botID uuid.UUID) bool {
 		b, err := a.Bots.Get(ctx, spaceID, botID)
 		return err == nil && b.ZoneID != nil && a.Computers.CanFork(ctx, *b.ZoneID)

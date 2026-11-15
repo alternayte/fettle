@@ -53,6 +53,9 @@ func (x *exec) needsVerify(st *state) bool {
 	if x.run.Kind != "owner" {
 		return false
 	}
+	if st.step == "handoff" {
+		return false // the target bot's run has its own checks
+	}
 	if st.step != "direct" {
 		return true
 	}

@@ -98,6 +98,10 @@ type Input struct {
 	// Helper marks a sub-agent run; Brief is the context brief from its owner (§9.4).
 	Helper bool
 	Brief  string
+	// Notes are results from other bots that arrived while the run worked (handoff, §9.7).
+	Notes []string
+	// Refs are the context references of the envelope, already resolved to text.
+	Refs []string
 }
 
 // Context is the assembled model input.
@@ -179,6 +183,9 @@ func Assemble(in Input) Context {
 		add(Item{Section: SecEnvelope, Name: "brief", Origin: OriginBot, Role: "user", Text: "Context brief from the owner of the work:\n" + dataTag(OriginBot, "brief", in.Brief)})
 	}
 	add(Item{Section: SecEnvelope, Name: "envelope", Origin: origin, Role: "user", Text: env})
+	if len(in.Refs) > 0 {
+		add(Item{Section: SecEnvelope, Name: "context_refs", Origin: OriginBot, Role: "user", Text: "Context that came with this work:\n" + dataTag(OriginBot, "context", strings.Join(in.Refs, "\n"))})
+	}
 
 	// Conversation window: newest messages until half of the context window (§8.1).
 	budget := int64(in.ContextWindow) / 2
@@ -238,6 +245,9 @@ func Assemble(in Input) Context {
 			}
 			add(it)
 		}
+	}
+	for _, n := range in.Notes {
+		add(Item{Section: SecSteer, Name: "note", Origin: OriginBot, Role: "user", Text: "A result arrived from another bot:\n" + dataTag(OriginBot, "result", n)})
 	}
 	for _, s := range in.Steers {
 		add(Item{Section: SecSteer, Name: "steer", Origin: OriginUser, Role: "user", Text: "New message from the user while you work:\n" + s})

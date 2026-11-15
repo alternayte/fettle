@@ -50,6 +50,11 @@
           "notNull": true
         },
         {
+          "name": "share_blocked",
+          "type": "boolean",
+          "notNull": true
+        },
+        {
           "name": "created_at",
           "type": "timestamptz",
           "notNull": true,
