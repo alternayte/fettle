@@ -154,7 +154,7 @@ jobs:
           chmod +x appimagetool && sudo mv appimagetool /usr/local/bin/
           mkdir -p out
           desktop/linux/appimage.sh fettle-desktop "$v" out
-          VERSION="$v" ARCH="${{ matrix.arch }}" BIN=fettle-desktop nfpm package --config desktop/linux/nfpm.yaml --packager deb --target out/
+          VERSION="$v" ARCH="${{ matrix.arch }}" nfpm package --config desktop/linux/nfpm.yaml --packager deb --target out/
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-linux-${{ matrix.arch }}

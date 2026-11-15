@@ -1,4 +1,5 @@
-# The .deb of the desktop app (§17): nfpm package --config desktop/linux/nfpm.yaml --packager deb
+# The .deb of the desktop app (§17). Build ./fettle-desktop first, then run from the repository root:
+# VERSION=1.0.0 ARCH=amd64 nfpm package --config desktop/linux/nfpm.yaml --packager deb
 name: fettle-desktop
 arch: ${ARCH}
 version: ${VERSION}
@@ -10,7 +11,7 @@ depends:
   - libgtk-4-1
   - libwebkitgtk-6.0-4
 contents:
-  - src: ${BIN}
+  - src: fettle-desktop
     dst: /usr/bin/fettle-desktop
     file_info:
       mode: 0755
