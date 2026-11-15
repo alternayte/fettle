@@ -43,6 +43,11 @@ desktop-app: ui
       codesign --force --sign - bin/Fettle.app >/dev/null 2>&1 || true
     fi
 
+# recipe: desktop
+# The desktop app smoke test on this host (layer D): builds the Wails app with the smoke socket.
+desktop: ui
+    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags desktopsmoke -timeout 20m ./tests/desktop/
+
 # recipe: dev
 # Run the server and the UI dev server with hot reload.
 dev:
@@ -93,9 +98,14 @@ lint:
 # recipe: test
 # Unit and integration tests on SQLite and PostgreSQL (layers U and I).
 test:
+    #!/usr/bin/env bash
+    set -euo pipefail
     go build -o bin/fettle-agentd ./cmd/fettle-agentd
     FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -race -count=1 ./...
+    # The overhead step: the idle memory scenario waits 10 minutes beside the load scenarios.
+    go test -count=1 -timeout 15m -run 'TestSCN_UX_012' ./cmd/fettle/ & idle=$!
     FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -count=1 -run 'TestSCN_RUN_009|TestSCN_RUN_010' ./internal/agent/
+    wait $idle
     cd ui && bun test scripts
 
 # recipe: contract
@@ -121,9 +131,10 @@ e2e: build image
     cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 
 # recipe: providers
-# Provider conformance and resume times on this host (layer P); docker in S2.
+# Provider conformance, resume times and the sleeping-bot load on this host (layer P).
 providers: image
-    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags providers -timeout 20m ./internal/providers/docker/
+    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags providers -timeout 20m ./internal/providers/...
+    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags 'e2e providers' -timeout 20m -run 'TestSCN_CMP_017' ./tests/flows/
 
 # recipe: ci
 # The gate (grows by slice, D-105).

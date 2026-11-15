@@ -85,60 +85,65 @@ export function UsagePage() {
             </button>
           ))}
         </div>
-        {usage.isError && (
-          <Notice icon={CircleAlert} tone="danger" title={t("usage.loadFailed")}>
-            {errorText(usage.error)}
-          </Notice>
-        )}
-        {usage.isSuccess && rows.length === 0 && (
-          <Notice icon={Coins} title={t("usage.empty.title")}>
-            {t("usage.empty.body")}
-          </Notice>
-        )}
-        {rows.length > 0 && (
-          <div id="usage-table" role="tabpanel" className="overflow-x-auto">
-            <table className={cn("w-full min-w-[34rem] text-sm", usage.isFetching && "opacity-70")}>
-              <thead>
-                <tr className="border-b border-rule-strong text-left">
-                  <th scope="col" className="label-caps py-1.5 pr-3 font-[var(--weight-strong)]">
-                    {t(`usage.dims.${by}`)}
-                  </th>
-                  {["calls", "tokensIn", "tokensOut", "time", "cost"].map((c) => (
-                    <th key={c} scope="col" className="label-caps py-1.5 pl-3 text-right font-[var(--weight-strong)]">
-                      {t(`usage.col.${c}`)}
+        {/* The panel of the tabs exists in every state, so aria-controls names an element. */}
+        <div id="usage-table" role="tabpanel" aria-label={t(`usage.dims.${by}`)}>
+          {usage.isError && (
+            <Notice icon={CircleAlert} tone="danger" title={t("usage.loadFailed")}>
+              {errorText(usage.error)}
+            </Notice>
+          )}
+          {usage.isSuccess && rows.length === 0 && (
+            <Notice icon={Coins} title={t("usage.empty.title")}>
+              {t("usage.empty.body")}
+            </Notice>
+          )}
+          {rows.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className={cn("w-full min-w-[34rem] text-sm", usage.isFetching && "opacity-70")}>
+                <thead>
+                  <tr className="border-b border-rule-strong text-left">
+                    <th scope="col" className="label-caps py-1.5 pr-3 font-[var(--weight-strong)]">
+                      {t(`usage.dims.${by}`)}
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key || "-"} className="border-b border-rule">
-                    <td className="max-w-64 truncate py-1.5 pr-3 text-ink">{keyCell(r.key)}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink-soft">{r.calls}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_in)}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_out)}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatDuration(r.seconds * 1000)}</td>
-                    <td className="figures py-1.5 pl-3 text-right text-ink">{formatUSD(r.cost_usd)}</td>
+                    {["calls", "tokensIn", "tokensOut", "time", "cost"].map((c) => (
+                      <th key={c} scope="col" className="label-caps py-1.5 pl-3 text-right font-[var(--weight-strong)]">
+                        {t(`usage.col.${c}`)}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-rule-strong">
-                  <th scope="row" className="py-1.5 pr-3 text-left text-sm font-[var(--weight-strong)] text-ink">
-                    {t("usage.total")}
-                  </th>
-                  <td className="figures py-1.5 pl-3 text-right text-ink">{total.calls}</td>
-                  <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tin)}</td>
-                  <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tout)}</td>
-                  <td className="figures py-1.5 pl-3 text-right text-ink">{formatDuration(total.sec * 1000)}</td>
-                  <td className="figures py-1.5 pl-3 text-right font-[var(--weight-strong)] text-ink">
-                    {formatUSD(total.cost)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.key || "-"} className="border-b border-rule">
+                      <td className="max-w-64 truncate py-1.5 pr-3 text-ink">{keyCell(r.key)}</td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">{r.calls}</td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_in)}</td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_out)}</td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">
+                        {formatDuration(r.seconds * 1000)}
+                      </td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink">{formatUSD(r.cost_usd)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-rule-strong">
+                    <th scope="row" className="py-1.5 pr-3 text-left text-sm font-[var(--weight-strong)] text-ink">
+                      {t("usage.total")}
+                    </th>
+                    <td className="figures py-1.5 pl-3 text-right text-ink">{total.calls}</td>
+                    <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tin)}</td>
+                    <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tout)}</td>
+                    <td className="figures py-1.5 pl-3 text-right text-ink">{formatDuration(total.sec * 1000)}</td>
+                    <td className="figures py-1.5 pl-3 text-right font-[var(--weight-strong)] text-ink">
+                      {formatUSD(total.cost)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
       </Section>
     </div>
   );

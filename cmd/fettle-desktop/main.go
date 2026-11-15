@@ -51,6 +51,11 @@ type shell struct {
 	server  *app.App
 	base    string // the UI origin that the window loads
 	windows int
+	// pendingUpdate shows the update question when the window shows again.
+	pendingUpdate func()
+	// hidden is true while the window is closed to the tray. Wails reports occlusion, not
+	// this state: a locked screen reads as not visible.
+	hidden bool
 	// openURL opens a link of another origin in the system browser.
 	openURL func(u string) error
 	// asked is called when the update dialog shows (the smoke build answers it).
@@ -82,9 +87,10 @@ func main() {
 	s.wails = application.New(application.Options{
 		Name:        "Fettle",
 		Description: "Bots that work on computers and ask before they act",
-		Services:    []application.Service{application.NewService(s.notes)},
-		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: false},
-		OnShutdown:  s.stop,
+		// The only bound service sends notifications; no bound method returns app data (SI-16).
+		Services:   []application.Service{application.NewService(s.notes)},
+		Mac:        application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: false},
+		OnShutdown: s.stop,
 	})
 	if err := s.start(); err != nil {
 		slog.Error("start", "error", err)
@@ -98,6 +104,9 @@ func main() {
 	s.win.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		e.Cancel()
 		s.win.Hide()
+		s.mu.Lock()
+		s.hidden = true
+		s.mu.Unlock()
 	})
 	s.tray()
 	s.notes.OnNotificationResponse(func(r notifications.NotificationResult) {
@@ -211,6 +220,14 @@ func (s *shell) show(path string) {
 	}
 	s.win.Show()
 	s.win.Focus()
+	s.mu.Lock()
+	s.hidden = false
+	present := s.pendingUpdate
+	s.pendingUpdate = nil
+	s.mu.Unlock()
+	if present != nil {
+		go present()
+	}
 }
 
 // connect switches to a remote server: it saves the choice, stops the local server and
@@ -316,19 +333,34 @@ func (s *shell) checkUpdate(u *desktop.Updater) {
 		slog.Warn("update download", "error", err)
 		return
 	}
-	application.InvokeSync(func() {
-		d := s.wails.Dialog.Question().SetTitle("Fettle " + m.Version + " is ready").
-			SetMessage("Install the update and restart Fettle now? Running work continues after the restart.")
-		yes := d.AddButton("Install and restart")
-		yes.IsDefault = true
-		yes.OnClick(func() { go s.install(file) })
-		later := d.AddButton("Later")
-		later.IsCancel = true
-		d.Show()
+	// The question is a sheet on the window: a modal alert would stop the main thread and
+	// with it every window. A hidden window gets a notification, and the sheet waits for it.
+	present := func() {
+		application.InvokeSync(func() {
+			d := s.wails.Dialog.Question().SetTitle("Fettle " + m.Version + " is ready").
+				SetMessage("Install the update and restart Fettle now? Running work continues after the restart.")
+			yes := d.AddButton("Install and restart")
+			yes.IsDefault = true
+			yes.OnClick(func() { go s.install(file) })
+			later := d.AddButton("Later")
+			later.IsCancel = true
+			d.AttachToWindow(s.win).Show()
+		})
 		if s.asked != nil {
 			s.asked(func() { go s.install(file) })
 		}
-	})
+	}
+	s.mu.Lock()
+	hidden := s.hidden
+	if hidden {
+		s.pendingUpdate = present
+	}
+	s.mu.Unlock()
+	if !hidden {
+		present()
+		return
+	}
+	s.notify("Fettle "+m.Version+" is ready", "Open Fettle to install the update.", "/")
 }
 
 func (s *shell) install(file string) {

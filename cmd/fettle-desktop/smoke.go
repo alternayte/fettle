@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,7 +19,13 @@ import (
 // The smoke build (tags desktop and smoke) adds a control socket, so the desktop smoke test
 // (§24, layer D) drives the real window, tray and update code. Release builds lack it.
 
+// smokeAgent runs in the page: it fetches queued test scripts and runs them as inline
+// scripts, which the UI's CSP allows. Wails runs ExecJS only after its own JS runtime
+// starts, and the Fettle UI does not load that runtime.
+const smokeAgent = `<script>(function(){setInterval(function(){fetch("/__smoke/next").then(function(r){return r.status===200?r.text():null}).then(function(code){if(!code)return;var s=document.createElement("script");s.textContent=code;document.head.appendChild(s)}).catch(function(){})},300)})();</script>`
+
 type smokeState struct {
+	js       chan string
 	mu       sync.Mutex
 	opened   []string
 	asked    bool
@@ -33,7 +40,7 @@ type smokeRequest struct {
 	Agent  string `json:"agent"`
 }
 
-var st = &smokeState{}
+var st = &smokeState{js: make(chan string, 64)}
 
 func init() {
 	smokeEarly = func(s *shell) {
@@ -50,6 +57,31 @@ func init() {
 		}
 		s.wrap = func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/__smoke/next" {
+					select {
+					case code := <-st.js:
+						w.Header().Set("Content-Type", "text/javascript")
+						_, _ = w.Write([]byte(code))
+					default:
+						w.WriteHeader(http.StatusNoContent)
+					}
+					return
+				}
+				if r.Method == http.MethodGet && !strings.HasPrefix(r.URL.Path, "/api/") && !strings.HasPrefix(r.URL.Path, "/assets/") {
+					rec := httptest.NewRecorder()
+					h.ServeHTTP(rec, r)
+					body := rec.Body.Bytes()
+					if strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") {
+						body = []byte(strings.Replace(string(body), "</head>", smokeAgent+"</head>", 1))
+					}
+					for k, v := range rec.Header() {
+						w.Header()[k] = v
+					}
+					w.Header().Del("Content-Length")
+					w.WriteHeader(rec.Code)
+					_, _ = w.Write(body)
+					return
+				}
 				if strings.HasPrefix(r.URL.Path, "/api/") {
 					_, err := r.Cookie("fettle_local")
 					st.mu.Lock()
@@ -106,7 +138,10 @@ func serveSmoke(s *shell, c net.Conn) {
 			}
 			on, _ := s.wails.Autostart.IsEnabled()
 			st.mu.Lock()
-			out["visible"] = s.win.IsVisible()
+			s.mu.Lock()
+			out["visible"] = !s.hidden
+			out["base"] = s.base
+			s.mu.Unlock()
 			out["windows"] = names
 			out["opened"] = append([]string(nil), st.opened...)
 			out["asked"] = st.asked
@@ -114,13 +149,12 @@ func serveSmoke(s *shell, c net.Conn) {
 			st.mu.Unlock()
 			out["autostart"] = on
 			out["version"] = version
-			out["base"] = s.base
 		case "close-window":
 			application.InvokeSync(func() { s.win.Close() })
 		case "show":
 			application.InvokeSync(func() { s.show("") })
 		case "js":
-			application.InvokeSync(func() { s.win.ExecJS(cmd.Arg) })
+			st.js <- cmd.Arg
 		case "autostart-on":
 			out["error"] = errString(s.wails.Autostart.Enable())
 		case "autostart-off":

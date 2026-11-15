@@ -61,7 +61,7 @@
   --surface-raised: oklch(0.995 0.004 80);
   --ink: oklch(0.255 0.026 42);
   --ink-soft: oklch(0.42 0.024 46);
-  --ink-faint: oklch(0.56 0.02 52);
+  --ink-faint: oklch(0.52 0.02 52);
   --rule: oklch(0.875 0.016 72);
   --rule-strong: oklch(0.79 0.02 66);
   --accent: oklch(0.52 0.075 168);

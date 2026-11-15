@@ -34,6 +34,13 @@ func LoadMasterKey(envValue, dataDir string, server bool) ([]byte, MasterKeySour
 	if server {
 		return nil, "", errors.New("server mode needs FETTLE_MASTER_KEY")
 	}
+	path := filepath.Join(dataDir, "master.key")
+	// A key file exists when the keychain was not available at the first start (for
+	// example a locked keychain). Its data needs that key, so the file wins over the keychain.
+	if b, err := os.ReadFile(path); err == nil {
+		k, err := ParseMasterKey(string(b))
+		return k, SourceFile, err
+	}
 	if os.Getenv("FETTLE_NO_KEYCHAIN") == "" {
 		if v, err := keyring.Get(keyringService, keyringUser); err == nil {
 			k, err := ParseMasterKey(v)
@@ -43,12 +50,11 @@ func LoadMasterKey(envValue, dataDir string, server bool) ([]byte, MasterKeySour
 			if err := keyring.Set(keyringService, keyringUser, base64.StdEncoding.EncodeToString(k)); err == nil {
 				return k, SourceKeychain, nil
 			}
+		} else if _, serr := os.Stat(filepath.Join(dataDir, "fettle.db")); serr == nil {
+			// The keychain holds the key of this data but does not answer (it is locked).
+			// A new key would make the data unreadable.
+			return nil, "", fmt.Errorf("the keychain does not give the master key (%w); unlock the keychain and start Fettle again", err)
 		}
-	}
-	path := filepath.Join(dataDir, "master.key")
-	if b, err := os.ReadFile(path); err == nil {
-		k, err := ParseMasterKey(string(b))
-		return k, SourceFile, err
 	}
 	k := NewKey()
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
