@@ -16,7 +16,7 @@ import (
 func init() {
 	settings.Register(settings.Def{Key: "digest.enabled", Scope: "space", Default: false, Doc: "The primary bot sends a daily digest of finished work, waiting cards and failures."})
 	settings.Register(settings.Def{Key: "digest.time", Scope: "space", Default: "08:00", Doc: "The local time of the daily digest (HH:MM, space time zone)."})
-	settings.Register(settings.Def{Key: "digest.last_at", Scope: "space", Default: "", Doc: "When the last digest was sent (set by Fettle)."})
+	settings.Register(settings.Def{Key: "digest.last_at", Scope: "space", Default: "", Doc: "When the last digest was sent (set by Fettle).", Internal: true})
 }
 
 // SendDigests sends the daily digest of each space whose digest is due at now (§9.8).

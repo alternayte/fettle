@@ -20,7 +20,13 @@ type Def struct {
 	Scope   string // instance or space
 	Default any
 	Doc     string
+	// Internal marks bookkeeping that Fettle writes for its own jobs (last run times). A
+	// space export leaves it out.
+	Internal bool
 }
+
+// IsInternal reports whether a key is job bookkeeping of the instance.
+func IsInternal(key string) bool { return defs[key].Internal }
 
 // Known settings and their defaults.
 var defs = map[string]Def{}

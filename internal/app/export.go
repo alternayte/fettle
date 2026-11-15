@@ -23,6 +23,7 @@ import (
 	"golang.org/x/crypto/scrypt"
 
 	"github.com/alternayte/fettle/internal/audit"
+	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/vault"
 )
 
@@ -167,6 +168,11 @@ func (a *App) ExportSpace(ctx context.Context, spaceID uuid.UUID, w io.Writer, p
 				row[c] = normalize(vals[i])
 			}
 			switch t.name {
+			case "settings":
+				// Job bookkeeping of this instance is not space content.
+				if k, _ := row["key"].(string); settings.IsInternal(k) {
+					continue
+				}
 			case "routines":
 				// The webhook secret is sealed with this instance's key: export it open, so the
 				// importer seals it again.

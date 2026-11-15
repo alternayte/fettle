@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	settings.Register(settings.Def{Key: "learning.patches_last_at", Scope: "space", Default: "", Doc: "When the daily skill patch job last ran (set by Fettle)."})
+	settings.Register(settings.Def{Key: "learning.patches_last_at", Scope: "space", Default: "", Doc: "When the daily skill patch job last ran (set by Fettle).", Internal: true})
 }
 
 // PatchTrials is the number of eval trials per version in the patch gate (§14.3).
