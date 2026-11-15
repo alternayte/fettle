@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -28,7 +29,7 @@ type S3 struct {
 }
 
 // NewS3 returns an S3 store.
-func NewS3(_ context.Context, cfg S3Config) (*S3, error) {
+func NewS3(ctx context.Context, cfg S3Config) (*S3, error) {
 	if cfg.Bucket == "" {
 		return nil, errors.New("FETTLE_S3_BUCKET is required for the s3 object store")
 	}
@@ -45,7 +46,21 @@ func NewS3(_ context.Context, cfg S3Config) (*S3, error) {
 		opts.BaseEndpoint = aws.String(cfg.Endpoint)
 	}
 	c := s3.New(opts)
-	return &S3{c: c, up: transfermanager.New(c, func(o *transfermanager.Options) { o.PartSizeBytes = 16 << 20 }), bucket: cfg.Bucket}, nil
+	st := &S3{c: c, up: transfermanager.New(c, func(o *transfermanager.Options) { o.PartSizeBytes = 16 << 20 }), bucket: cfg.Bucket}
+	st.ensureBucket(ctx)
+	return st, nil
+}
+
+// ensureBucket creates the bucket when the store answers that it does not exist, so a new
+// MinIO works without a setup step. Any other answer leaves the check to /readyz.
+func (s *S3) ensureBucket(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	_, err := s.c.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: &s.bucket})
+	var nf *types.NotFound
+	if err != nil && errors.As(err, &nf) {
+		_, _ = s.c.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: &s.bucket})
+	}
 }
 
 // Put streams an object. Large or unknown-size bodies go up in 16 MiB parts, so a
@@ -90,7 +105,11 @@ func (s *S3) List(ctx context.Context, prefix string) ([]string, error) {
 func (s *S3) Check(ctx context.Context) error {
 	const k = ".health-check"
 	if err := s.Put(ctx, k, bytes.NewReader([]byte("ok")), 2); err != nil {
-		return fmt.Errorf("object store is not writable: %w", err)
+		// A store that started after Fettle may still lack the bucket.
+		s.ensureBucket(ctx)
+		if err := s.Put(ctx, k, bytes.NewReader([]byte("ok")), 2); err != nil {
+			return fmt.Errorf("object store is not writable: %w", err)
+		}
 	}
 	return s.Delete(ctx, k)
 }

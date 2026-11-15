@@ -1,0 +1,23 @@
+[Unit]
+Description=Fettle server
+Documentation=https://github.com/alternayte/fettle
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fettle
+Group=fettle
+EnvironmentFile=/etc/fettle/fettle.env
+ExecStart=/usr/local/bin/fettle serve --mode server --data /var/lib/fettle
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=35
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/fettle
+
+[Install]
+WantedBy=multi-user.target

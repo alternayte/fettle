@@ -48,6 +48,11 @@ desktop-app: ui
 desktop: ui
     FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags desktopsmoke -timeout 20m ./tests/desktop/
 
+# recipe: smoke
+# Layer S: the server image, the Compose stack and install.sh in a Debian container with systemd.
+smoke:
+    FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags smoke -timeout 30m ./tests/smoke/
+
 # recipe: dev
 # Run the server and the UI dev server with hot reload.
 dev:

@@ -1,0 +1,13 @@
+# The server image needs the Go sources and the UI sources, not build output or packages.
+*
+!go.mod
+!go.sum
+!agentd
+!cmd
+!internal
+!templates
+!connectors
+!ui
+ui/node_modules
+ui/dist
+!ui/embed.go
