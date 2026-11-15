@@ -1,6 +1,7 @@
 // shoot.ts makes the product screenshots in docs/images. It starts the fake model, two
-// fixture sites and a Fettle server with a scratch data folder, seeds the synthetic Acme
-// space through the API, and captures each page with Playwright at 1440x900, scale 2.
+// fixture sites and a Fettle server with a scratch data folder. It drives the setup wizard
+// up to the owner model, seeds the synthetic Acme space through the API, and captures each
+// page with Playwright at 1440x900, scale 2.
 //
 // Run it with `just screenshots`. Pass --keep to leave the server running after the
 // capture; the script then prints the URL with the local token. Pass --no-capture to only
@@ -160,6 +161,7 @@ type Seed = {
   bots: Record<string, { id: string; chat_id: string }>;
   group: string;
   fanoutRun: string;
+  api: Api;
 };
 
 async function seed(api: Api, fakeURL: string): Promise<Seed> {
@@ -169,7 +171,10 @@ async function seed(api: Api, fakeURL: string): Promise<Seed> {
   await api("PATCH", "/me", { name: "Ada" });
   await api("PATCH", S, { name: "Acme", time_zone: "UTC" });
 
-  const p = await api("POST", `${S}/model-providers`, { name: "Acme models", api_type: "openai-chat", base_url: fakeURL, key: "sk-acme-shots-0001" });
+  // The setup shots add this provider through the wizard; without them the seed adds it.
+  type Provider = { id: string; name: string };
+  const known = ((await api("GET", `${S}/model-providers`)).providers ?? []) as Provider[];
+  const p = known.find((x) => x.name === "Acme models") ?? (await api("POST", `${S}/model-providers`, { name: "Acme models", api_type: "openai-chat", base_url: fakeURL, key: "sk-acme-shots-0001" }));
   await api("POST", `${S}/model-providers/${p.id}/test`, { model: "acme/large" });
   for (const role of ["owner", "summarizer"]) {
     await api("PUT", `${S}/model-roles/${role}`, { targets: [{ provider_id: p.id, model: "acme/large", price_in: 3, price_out: 15, context_window: 128000 }] });
@@ -230,22 +235,82 @@ async function seed(api: Api, fakeURL: string): Promise<Seed> {
   const files = (await api("GET", `${S}/files`)).files as unknown[];
   if (files.length !== 2) throw new Error(`want 2 files in the space, got ${files.length}`);
 
-  return { space, bots, group: group.id, fanoutRun: fan.run_id };
+  // The Friday report routine of Reporter: on, and run one time.
+  type Routine = { id: string; name: string; bot_id: string; prompt: string; trigger: string; cron: string; tz: string; notify: string };
+  const friday = ((await api("GET", `${S}/routines`)).routines as Routine[]).find((r) => r.name === "Friday report");
+  if (!friday) throw new Error("no Friday report routine");
+  await api("PATCH", `${S}/routines/${friday.id}`, { bot_id: friday.bot_id, name: friday.name, prompt: friday.prompt, trigger: friday.trigger, cron: friday.cron, tz: friday.tz, notify: friday.notify, enabled: true });
+  await api("POST", `${S}/routines/${friday.id}/run`);
+  await settle(bots.Reporter.chat_id, "Write the weekly report", ["done"]);
+
+  // A thumbs down on the report is a steering signal for the Learning page.
+  type Msg = { id: string; author_kind: string; body: string };
+  const reporterMsgs = ((await api("GET", `${S}/chats/${bots.Reporter.chat_id}/messages`)).messages ?? []) as Msg[];
+  const report = reporterMsgs.find((m) => m.author_kind === "bot" && m.body.includes("weekly report"));
+  if (!report) throw new Error("no report message");
+  await api("PUT", `${S}/chats/${bots.Reporter.chat_id}/messages/${report.id}/reaction`, { emoji: "👎" });
+
+  return { space, bots, group: group.id, fanoutRun: fan.run_id, api };
+}
+
+// The skill that the walkthrough saves from the desk comparison, given to Chief and Research.
+// It comes after the draft shot, so the library in that shot does not list it yet.
+let savedSkill: Promise<string> | undefined;
+function skill(s: Seed) {
+  savedSkill ??= (async () => {
+    const S = `/spaces/${s.space}`;
+    const sk = await s.api("POST", `${S}/skills`, { skill_md: SKILL_MD });
+    for (const b of [s.bots.Chief.id, s.bots.Research.id]) await s.api("PUT", `${S}/skills/${sk.id}/bots/${b}`, { on: true });
+    return sk.id as string;
+  })();
+  return savedSkill;
+}
+
+const SKILL_MD = `---
+name: compare-products
+description: Compare products from their catalogue pages and pick one, with a source for each fact.
+---
+
+# Compare products
+
+## Steps
+
+1. Read the page of each product in its own helper.
+2. Give the price, the weight and the main feature of each product, with the page as the source.
+3. Put the products in one table.
+4. Pick one product and give the reason in one sentence.
+`;
+
+// Research asks a person to sign in on the shop page. Only the takeover shots need this, and
+// it changes the screen of Research, so it runs after the other shots.
+let takeoverCard: Promise<{ chat: string; card: string }> | undefined;
+function takeover(s: Seed) {
+  takeoverCard ??= (async () => {
+    const S = `/spaces/${s.space}`;
+    const chat = s.bots.Research.chat_id;
+    await s.api("POST", `${S}/chats/${chat}/messages`, { body: "Check the delivery dates on the account page of the shop." });
+    const card = await until("the takeover card", async () => {
+      const page = await s.api("GET", `${S}/chats/${chat}/messages`);
+      const m = ((page.messages ?? []) as { card?: { id: string; kind: string } }[]).find((x) => x.card?.kind === "takeover");
+      return m?.card?.id;
+    }, 240_000);
+    return { chat, card };
+  })();
+  return takeoverCard;
 }
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const { url, token, fakeURL } = await start();
-  const api = client(url, token);
-  const s = await seed(api, fakeURL);
-  console.log(JSON.stringify(s, null, 2));
-  if (!NO_CAPTURE) {
-    const browser = await chromium.launch();
-    try {
-      await capture(browser, url, token, s);
-    } finally {
-      await browser.close();
-    }
+  const browser = NO_CAPTURE ? undefined : await chromium.launch();
+  try {
+    if (browser) await captureSetup(browser, url, token, fakeURL);
+    const api = client(url, token);
+    const s = await seed(api, fakeURL);
+    console.log(JSON.stringify({ ...s, api: undefined }, null, 2));
+    if (browser) await capture(browser, url, token, s);
+  } finally {
+    await browser?.close();
   }
   if (KEEP) {
     console.log(`${url}/#token=${token}`);
@@ -254,7 +319,70 @@ async function main() {
   }
 }
 
-type Shot = { name: string; path: string; theme?: "light" | "dark"; ready: (p: Page) => Promise<unknown>; act?: (p: Page) => Promise<unknown> };
+const SETUP_SHOTS = ["setup-computer", "setup-model", "setup-owner-model"];
+const want = (name: string) => !ONLY || ONLY.includes(name);
+
+async function openPage(browser: Browser, url: string, token: string, path: string, theme: "light" | "dark") {
+  const ctx = await browser.newContext({ baseURL: url, viewport: VIEW, deviceScaleFactor: 2, colorScheme: theme, reducedMotion: "reduce", locale: "en-GB", timezoneId: "UTC" });
+  await ctx.addInitScript((t) => localStorage.setItem("fettle.theme", t), theme);
+  const page = await ctx.newPage();
+  await page.goto(`${path}#token=${token}`);
+  return page;
+}
+
+async function snap(page: Page, name: string, blur = true) {
+  if (blur) await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.mouse.move(VIEW.width - 2, VIEW.height - 2);
+  await sleep(800);
+  const file = join(OUT, `${name}.png`);
+  await page.screenshot({ path: file });
+  execFileSync("pngquant", ["--force", "--strip", "--quality", "60-95", "--output", file, file]);
+  execFileSync("oxipng", ["-q", "-o", "4", "--strip", "safe", file]);
+  console.log(`${name}.png ${Math.round(statSync(file).size / 1024)} KB`);
+}
+
+const STILL = "*, *::before, *::after { caret-color: transparent !important; transition: none !important; animation: none !important; }";
+
+// captureSetup drives the first-run wizard of the fresh server: the computer, the model
+// provider with its test, and the owner model picker. It stops before the owner model is
+// saved; the seed finishes the setup through the API.
+async function captureSetup(browser: Browser, url: string, token: string, fakeURL: string) {
+  if (!SETUP_SHOTS.some(want)) return;
+  const page = await openPage(browser, url, token, "/setup", "light");
+  try {
+    await page.getByText("The computer is ready.").waitFor({ timeout: 300_000 });
+    await page.addStyleTag({ content: STILL });
+    if (want("setup-computer")) await snap(page, "setup-computer");
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await page.getByLabel("Provider", { exact: true }).selectOption("openai-compatible");
+    await page.getByLabel("Base URL").fill(fakeURL);
+    await page.getByLabel("OpenAI-compatible key").fill("sk-acme-shots-0001");
+    await page.getByRole("button", { name: "More options" }).click();
+    await page.getByLabel("Name", { exact: true }).fill("Acme models");
+    await page.getByRole("button", { name: "Save and test" }).click();
+    const next = page.getByRole("button", { name: "Continue" });
+    await until("the provider test", async () => (await next.isEnabled()) && (await page.getByText(/Last test:/).isVisible()), 60_000);
+    if (want("setup-model")) await snap(page, "setup-model");
+    await next.click();
+
+    await page.getByRole("combobox", { name: "Owner model" }).click();
+    await page.getByRole("option", { name: /fake\/large/ }).waitFor();
+    if (want("setup-owner-model")) await snap(page, "setup-owner-model", false);
+  } finally {
+    await page.context().close();
+  }
+}
+
+type Shot = {
+  name: string;
+  path: string | (() => Promise<string>);
+  theme?: "light" | "dark";
+  ready: (p: Page) => Promise<unknown>;
+  act?: (p: Page) => Promise<unknown>;
+  // keepFocus leaves the focus where act put it, so an open popover stays open.
+  keepFocus?: boolean;
+};
 
 function shots(s: Seed): Shot[] {
   const text = (t: string | RegExp) => (p: Page) => p.getByText(t).first().waitFor({ timeout: 60_000 });
@@ -271,6 +399,12 @@ function shots(s: Seed): Shot[] {
     },
     { name: "chat-approval", path: `/chat/${s.bots.Chief.chat_id}`, ready: (p) => p.getByRole("button", { name: "Allow once" }).waitFor() },
     { name: "chat-approval-dark", path: `/chat/${s.bots.Chief.chat_id}`, theme: "dark", ready: (p) => p.getByRole("button", { name: "Allow once" }).waitFor() },
+    {
+      name: "chat-desks",
+      path: `/chat/${s.bots.Chief.chat_id}?run=${s.fanoutRun}`,
+      ready: text("Helper result"),
+      act: (p) => p.getByText("Compare the three desks in the catalogue at docs.test and pick one").first().scrollIntoViewIfNeeded(),
+    },
     { name: "group-chat", path: `/chat/${s.group}`, ready: text("I added an") },
     {
       name: "run-timeline",
@@ -291,29 +425,90 @@ function shots(s: Seed): Shot[] {
         await p.locator("#diagnostics-section").evaluate((e) => e.scrollIntoView());
       },
     },
+    { name: "bot-settings", path: `/bots/${s.bots.Ledger.id}`, ready: text("Version history") },
+    {
+      name: "group-new",
+      path: `/chat/${s.group}`,
+      ready: text("I added an"),
+      act: async (p) => {
+        await p.getByRole("button", { name: "New group" }).click();
+        await p.getByLabel("Group name").fill("Office move");
+        for (const n of ["Chief", "Ledger", "Reporter", "Research"]) await p.getByRole("checkbox", { name: n }).check();
+      },
+      keepFocus: true,
+    },
+    {
+      name: "skill-draft",
+      path: `/skills?from_run=${s.fanoutRun}`,
+      ready: (p) => p.getByLabel("Draft SKILL.md").waitFor({ timeout: 60_000 }),
+      act: (p) => p.getByLabel("Draft SKILL.md").fill(SKILL_MD),
+    },
+    { name: "skill-page", path: async () => `/skills/${await skill(s)}`, ready: text("Bots with this skill") },
+    {
+      name: "routines",
+      path: "/routines",
+      ready: text("Friday report"),
+      act: async (p) => {
+        await p.getByRole("button", { name: /^Friday report/ }).click();
+        await p.getByText("Last runs").waitFor();
+        await p.getByText("Run now", { exact: true }).nth(1).waitFor({ timeout: 30_000 });
+      },
+    },
+    { name: "runs", path: "/runs", ready: text("Compare the three desks") },
+    {
+      name: "settings-cost",
+      path: "/settings/usage",
+      ready: text("Total"),
+      act: async (p) => {
+        await p.getByRole("tab", { name: "Bot" }).click();
+        await p.getByRole("cell", { name: "Ledger" }).waitFor();
+      },
+    },
+    {
+      name: "learning",
+      path: "/learning",
+      ready: text("Thumbs down"),
+      // Scroll so the steering signal shows in full under the run scores.
+      act: async (p) => {
+        await p.mouse.move(VIEW.width / 2, VIEW.height / 2);
+        await p.mouse.wheel(0, 300);
+      },
+    },
+    // Last, because the takeover changes the screen and the status of Research.
+    {
+      name: "chat-takeover",
+      path: async () => `/chat/${(await takeover(s)).chat}`,
+      ready: (p) => p.getByRole("link", { name: "Open the screen" }).waitFor({ timeout: 60_000 }),
+    },
+    {
+      name: "screen-control",
+      path: async () => `/screen/${s.bots.Research.id}?card=${(await takeover(s)).card}`,
+      ready: (p) => p.locator("canvas").first().waitFor(),
+      act: async (p) => {
+        await sleep(2000);
+        await p.getByRole("button", { name: "Take control" }).click();
+        await p.getByText("You control the screen").waitFor();
+        await p.getByLabel("Note for the bot").fill("I signed in with the Acme account.");
+        await sleep(3000);
+        if (await p.getByText("The screen connection ended.").isVisible()) throw new Error("the screen connection ended");
+      },
+    },
   ];
 }
 
 async function capture(browser: Browser, url: string, token: string, s: Seed) {
   for (const shot of shots(s)) {
-    if (ONLY && !ONLY.includes(shot.name)) continue;
-    const theme = shot.theme ?? "light";
-    const ctx = await browser.newContext({ baseURL: url, viewport: VIEW, deviceScaleFactor: 2, colorScheme: theme, reducedMotion: "reduce", locale: "en-GB", timezoneId: "UTC" });
-    await ctx.addInitScript((t) => localStorage.setItem("fettle.theme", t), theme);
-    const page = await ctx.newPage();
-    await page.goto(`${shot.path}#token=${token}`);
-    await shot.ready(page);
-    await page.addStyleTag({ content: "*, *::before, *::after { caret-color: transparent !important; transition: none !important; animation: none !important; }" });
-    await shot.act?.(page);
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await page.mouse.move(VIEW.width - 2, VIEW.height - 2);
-    await sleep(800);
-    const file = join(OUT, `${shot.name}.png`);
-    await page.screenshot({ path: file });
-    await ctx.close();
-    execFileSync("pngquant", ["--force", "--strip", "--quality", "60-95", "--output", file, file]);
-    execFileSync("oxipng", ["-q", "-o", "4", "--strip", "safe", file]);
-    console.log(`${shot.name}.png ${Math.round(statSync(file).size / 1024)} KB`);
+    if (!want(shot.name)) continue;
+    const path = typeof shot.path === "string" ? shot.path : await shot.path();
+    const page = await openPage(browser, url, token, path, shot.theme ?? "light");
+    try {
+      await shot.ready(page);
+      await page.addStyleTag({ content: STILL });
+      await shot.act?.(page);
+      await snap(page, shot.name, !shot.keepFocus);
+    } finally {
+      await page.context().close();
+    }
   }
 }
 

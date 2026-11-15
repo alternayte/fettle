@@ -1,0 +1,20 @@
+# Research meets a sign-in page and asks a person to take over the screen.
+name: shop-takeover
+match:
+  user: "delivery dates"
+steps:
+  - delay_ms: 900
+    tool_calls:
+      - name: browser_navigate
+        args:
+          url: "http://shop.test/account"
+  - delay_ms: 700
+    text: "The shop asks for a sign-in before it shows the delivery dates."
+    tool_calls:
+      - name: request_takeover
+        args:
+          reason: "Sign in to the shop with the Acme account, then select Done."
+  - tool_calls:
+      - name: browser_snapshot
+        args: {}
+  - text: "You are signed in. I can read the delivery dates now."

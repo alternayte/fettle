@@ -1,0 +1,22 @@
+# The Friday report routine of Reporter, started with Run now.
+name: routine-report
+match:
+  user: "Write the weekly report for this week"
+steps:
+  - delay_ms: 800
+    tool_calls:
+      - name: write_file
+        args:
+          path: "shared/reports/2026-W46.md"
+          content: |
+            # Weekly report, week 46
+
+            ## Office move
+            - Done: the team picked the Gamma Desk.
+            - Next: order eight desks now and four in January.
+            - Risks: the Beta Desk is over the 35 kg limit of the lift.
+  - delay_ms: 1000
+    text: |
+      I saved the weekly report as `shared/reports/2026-W46.md`.
+
+      **Office move.** The team picked the Gamma Desk. Eight desks come now and four in January.
