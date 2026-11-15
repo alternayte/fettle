@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,7 +35,7 @@ const TokenPrefix = "fet_"
 type Server struct {
 	Auth *authall.Auth
 	// Passkeys holds the WebAuthn passkeys of the accounts; the relying party is the host of
-	// FETTLE_BASE_URL.
+	// FETTLE_BASE_URL. It is nil when that host is an IP address.
 	Passkeys *passkeys.Plugin
 	users    *UserStore
 	baseURL  string
@@ -75,7 +76,11 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 		return nil, err
 	}
 	secure := u.Scheme == "https"
-	pk := passkeys.New(passkeys.RPDisplayName("Fettle"))
+	// WebAuthn binds a passkey to a domain name, so a base URL with an IP address has none.
+	var pk *passkeys.Plugin
+	if net.ParseIP(u.Hostname()) == nil {
+		pk = passkeys.New(passkeys.RPDisplayName("Fettle"))
+	}
 	opts := []authall.Option{
 		authall.WithStore(st),
 		authall.WithBaseURL(strings.TrimRight(c.BaseURL, "/")),
@@ -89,8 +94,10 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 		authall.WithPlugins(
 			roles.New(roles.Hierarchy("user", "admin")),
 			apikeys.New(apikeys.Prefix(TokenPrefix), apikeys.MaxTTL(366*24*time.Hour), apikeys.AllowNoExpiry(), apikeys.AdminRole("admin")),
-			pk,
 		),
+	}
+	if pk != nil {
+		opts = append(opts, authall.WithPlugins(pk))
 	}
 	if c.Clock != nil {
 		opts = append(opts, authall.WithClock(c.Clock))

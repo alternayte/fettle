@@ -78,11 +78,14 @@ type InstanceView struct {
 	// Edition is community or enterprise, with the features that work; the licence
 	// details are on the admin route.
 	Edition EditionView `json:"edition"`
+	// Passkeys is true when people can sign in with a passkey: server mode with a base URL
+	// whose host is a domain name.
+	Passkeys bool `json:"passkeys"`
 }
 
 func (a *App) registerMe(api huma.API) {
 	huma.Register(api, op("get-instance", http.MethodGet, "/instance", "The mode and the version of this server. It needs no sign-in.", "auth"), func(ctx context.Context, _ *struct{}) (*struct{ Body InstanceView }, error) {
-		v := InstanceView{Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Desktop: a.Desktop != nil}
+		v := InstanceView{Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Desktop: a.Desktop != nil, Passkeys: a.SignIn != nil && a.SignIn.Passkeys != nil}
 		v.DesktopFirstRun = a.Desktop != nil && a.Desktop.FirstRun != nil && a.Desktop.FirstRun()
 		v.Edition = a.edition(ctx)
 		v.Edition.License = nil

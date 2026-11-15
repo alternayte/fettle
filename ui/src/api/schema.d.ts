@@ -2185,6 +2185,7 @@ export interface components {
       edition: components["schemas"]["EditionView"];
       /** @enum {string} */
       mode: "local" | "server";
+      passkeys: boolean;
       version: string;
     };
     InviteInfo: {

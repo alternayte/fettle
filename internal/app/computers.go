@@ -272,6 +272,9 @@ func (a *App) cleanupSignIn(ctx context.Context) {
 	if err := a.SignIn.Auth.Cleanup(ctx); err != nil {
 		a.Log.Warn("sign-in cleanup", "error", err)
 	}
+	if a.SignIn.Passkeys == nil {
+		return
+	}
 	if _, err := a.SignIn.Passkeys.Cleanup(ctx); err != nil {
 		a.Log.Warn("passkey cleanup", "error", err)
 	}

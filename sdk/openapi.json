@@ -1473,6 +1473,9 @@
             ],
             "type": "string"
           },
+          "passkeys": {
+            "type": "boolean"
+          },
           "version": {
             "type": "string"
           }
@@ -1482,7 +1485,8 @@
           "version",
           "desktop",
           "desktop_first_run",
-          "edition"
+          "edition",
+          "passkeys"
         ],
         "type": "object"
       },

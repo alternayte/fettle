@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, ChevronRight, Fingerprint, KeyRound } from "lucide-react";
 import { toast } from "sonner";
-import { errorText } from "@/api/client";
+import { api, errorText } from "@/api/client";
 import { PasskeyError, addPasskey, deletePasskey, listPasskeys, passkeysSupported } from "@/api/signin";
 import { useSession, useUpdateMe } from "@/api/hooks";
 import { Section } from "@/app/Page";
@@ -157,6 +157,7 @@ const linkCls =
 
 export function AccountPage() {
   const { me, space } = useSession();
+  const instance = useQuery({ queryKey: ["instance"], queryFn: async () => (await api.GET("/api/v1/instance")).data });
   const role = has(`members.roles.${space.role}`) ? t(`members.roles.${space.role}`) : space.role;
   return (
     <div className="max-w-3xl">
@@ -166,7 +167,7 @@ export function AccountPage() {
         </p>
         <NameForm />
       </Section>
-      {me.mode === "server" && <Passkeys />}
+      {me.mode === "server" && instance.data?.passkeys && <Passkeys />}
       <Section id="account-more" title={t("account.more")}>
         <ul className="border-t border-rule">
           <li>

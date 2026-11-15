@@ -22,7 +22,7 @@ export function FullPage({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SignInForm() {
+function SignInForm({ passkeys }: { passkeys: boolean }) {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,7 +75,7 @@ function SignInForm() {
           {t("auth.signIn.submit")}
         </Btn>
       </form>
-      {((sso.data ?? []).length > 0 || passkeysSupported()) && (
+      {((sso.data ?? []).length > 0 || (passkeys && passkeysSupported())) && (
         <div className="mt-4 space-y-2">
           <p className="text-center text-xs text-ink-faint">{t("auth.signIn.or")}</p>
           {(sso.data ?? []).map((m) => (
@@ -88,7 +88,7 @@ function SignInForm() {
               {t("auth.signIn.sso", { name: m.name })}
             </a>
           ))}
-          {passkeysSupported() && (
+          {passkeys && passkeysSupported() && (
             <Btn
               kind="plain"
               className="w-full"
@@ -116,7 +116,7 @@ function SignInForm() {
 function SignedOut() {
   const instance = useQuery({ queryKey: ["instance"], queryFn: async () => (await api.GET("/api/v1/instance")).data });
   if (instance.isPending) return <div className="h-full bg-ground" aria-busy="true" />;
-  if (instance.data?.mode === "server") return <SignInForm />;
+  if (instance.data?.mode === "server") return <SignInForm passkeys={!!instance.data.passkeys} />;
   return (
     <FullPage>
       <div className="flex items-start gap-3">
