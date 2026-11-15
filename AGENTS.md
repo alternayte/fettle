@@ -11,12 +11,15 @@ One Go binary, fettle, is the server, the CLI and the desktop backend. A second 
 - `bin/fettle up` starts a local server in the background and prints the URL with the local token; `bin/fettle down` stops it.
 - `just gen` regenerates drel code, the migration list, the OpenAPI document and the TypeScript client. Run it after a model or API change.
 - `just image` builds the computer image fettle-computer:dev in the local Docker. Computers run it by default.
+- `just desktop-app` builds the Wails desktop app into bin/fettle-desktop, and on macOS into bin/Fettle.app.
+- The CLI reaches the local server through the address and the local token in the data folder, or a server through FETTLE_SERVER and a personal access token in FETTLE_TOKEN.
 
 ## Test
 - `just ci` is the gate; `just check` runs the same recipes.
-- `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run. The load and overhead scenarios run in a second step without the race detector.
+- `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run. The load and overhead scenarios run in a second step without the race detector; the idle memory scenario in it waits 10 minutes.
 - `just contract` runs tests tagged contract; they start MinIO and Skael containers, so Docker must run. `just e2e` builds the binaries and the computer image, runs the fixture sites in Docker, and runs tests/flows and the Playwright suite in tests/e2e.
-- `just providers` runs the provider conformance suite on this host and writes its results to the reports folder.
+- `just providers` runs every provider package that works on this host (Apple container needs macOS 26 on Apple silicon) and the sleeping-bot load scenario, and writes the results to the reports folder.
+- `just desktop` runs the desktop smoke test in tests/desktop. It needs an unlocked macOS session, because WebKit pauses a page that nobody can see.
 - Storage tests use `internal/testenv/testenv.go`; app-level tests use `internal/apptest/apptest.go` with the fake model in `internal/fakes/model`.
 - `checks/agents-md.sh` checks this file.
 
@@ -32,7 +35,7 @@ One Go binary, fettle, is the server, the CLI and the desktop backend. A second 
 - Providers only manage machine lifecycle. All other computer operations go to agentd over HTTPS with the computer token.
 - The UI is one React SPA in the ui directory, embedded in the binary. UI tooling uses Bun. Take components from shadcn and theme them with the Fettle tokens.
 - The desktop app uses Wails v3. The desktop UI reaches the local server over HTTP with the local token, never through Wails bound methods.
-- Core code is AGPL-3.0-only. Enterprise code lives in the ee directory behind the build tag ee, with its own licence. Core packages never import ee. The sdk and templates directories are Apache-2.0.
+- Core code is AGPL-3.0-only. Enterprise code lives in the ee directory behind the build tag ee, with its own licence. Core packages never import ee. The templates directory holds the bot templates that the binary embeds, under Apache-2.0.
 - Add a dependency only when its licence is compatible with AGPL-3.0.
 - Tests never call a real model or a real third-party service. They use the fakes in internal/fakes and testcontainers.
 - A Go scenario test is named TestSCN_AREA_nnn_Words. A Playwright scenario test starts with its scenario ID.
