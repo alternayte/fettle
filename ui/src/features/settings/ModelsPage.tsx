@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, CircleAlert, Plus, Server, Trash2, X } from "lucide-react";
+import { ArrowUp, CircleAlert, Plus, Server, Trash2, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
@@ -104,10 +104,15 @@ function RoleRow({
   role,
   targets,
   providers,
+  bot,
+  inherited = [],
 }: {
   role: ModelRole;
   targets: SchemaTarget[];
   providers: SchemaProviderView[];
+  /** bot makes the row edit the override of one bot; inherited are the space targets of the role. */
+  bot?: string;
+  inherited?: SchemaTarget[];
 }) {
   const setRole = useSetRole();
   const [providerId, setProviderId] = useState(providers[0]?.id ?? "");
@@ -116,7 +121,7 @@ function RoleRow({
   const byId = Object.fromEntries(providers.map((p) => [p.id, p]));
   const save = (next: SchemaTarget[], ok: string) =>
     setRole.mutate(
-      { role, targets: next },
+      { role, targets: next, bot },
       {
         onSuccess: () => {
           setModel("");
@@ -125,7 +130,7 @@ function RoleRow({
         onError: (err) => toast.error(t("models.roles.saveFailed"), { description: errorText(err) }),
       },
     );
-  const pid = `role-${role}`;
+  const pid = bot ? `bot-role-${role}` : `role-${role}`;
   return (
     <li className="grid gap-3 border-b border-rule py-4 md:grid-cols-[12rem_1fr]">
       <div>
@@ -135,7 +140,13 @@ function RoleRow({
       <div className="min-w-0 space-y-2">
         {targets.length === 0 ? (
           <p className="text-sm text-ink-faint">
-            {role === "owner" ? t("models.roles.ownerMissing") : t("models.roles.inherit")}
+            {bot && inherited.length > 0
+              ? t("models.roles.botInherits", { models: inherited.map((x) => x.model).join(", ") })
+              : role === "owner"
+                ? t("models.roles.ownerMissing")
+                : bot
+                  ? t("models.roles.botInheritsOwner")
+                  : t("models.roles.inherit")}
           </p>
         ) : (
           <ol className="space-y-1" aria-label={t("models.roles.order", { role: t(`models.roles.${role}.name`) })}>
@@ -215,18 +226,62 @@ function RoleRow({
               onClick={() => save([...targets, targetFor(provider, model)], t("models.roles.saved"))}
             >
               <Plus aria-hidden className="size-3.5" />
-              {targets.length === 0 ? t("models.roles.set") : t("models.roles.addFallback")}
+              {targets.length > 0
+                ? t("models.roles.addFallback")
+                : bot
+                  ? t("models.roles.override")
+                  : t("models.roles.set")}
             </Btn>
           </div>
+        )}
+        {bot && targets.length > 0 && (
+          <Btn kind="quiet" size="sm" busy={setRole.isPending} onClick={() => save([], t("models.roles.usingSpace"))}>
+            <Undo2 aria-hidden className="size-3.5" />
+            {t("models.roles.useSpace")}
+          </Btn>
         )}
       </div>
     </li>
   );
 }
 
+/** ModelRoles lists the model roles of the space, or the overrides of one bot. */
+export function ModelRoles({ bot }: { bot?: string }) {
+  const providers = useProviders();
+  const space = useRoles();
+  const own = useRoles(bot);
+  const roles = bot ? own : space;
+  const list = providers.data ?? [];
+  const targetsOf = (rs: typeof space.data, r: ModelRole) => rs?.find((x) => x.role === r)?.targets ?? [];
+  return (
+    <>
+      {roles.isError && (
+        <Notice icon={CircleAlert} tone="danger" title={t("models.roles.loadFailed")}>
+          {errorText(roles.error)}
+        </Notice>
+      )}
+      {list.length === 0 ? (
+        <p className="text-sm text-ink-faint">{t("models.roles.needProvider")}</p>
+      ) : (
+        <ul className="border-t border-rule">
+          {ROLES.map((r) => (
+            <RoleRow
+              key={r}
+              role={r}
+              providers={list}
+              bot={bot}
+              targets={targetsOf(roles.data, r)}
+              inherited={bot ? targetsOf(space.data, r) : undefined}
+            />
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 export function ModelsPage() {
   const providers = useProviders();
-  const roles = useRoles();
   const test = useTestProvider();
   const [adding, setAdding] = useState(false);
   const list = providers.data ?? [];
@@ -283,25 +338,7 @@ export function ModelsPage() {
       </Section>
       <Section id="roles" title={t("models.roles.title")}>
         <p className="mb-2 text-sm text-ink-soft">{t("models.roles.body")}</p>
-        {roles.isError && (
-          <Notice icon={CircleAlert} tone="danger" title={t("models.roles.loadFailed")}>
-            {errorText(roles.error)}
-          </Notice>
-        )}
-        {list.length === 0 ? (
-          <p className="text-sm text-ink-faint">{t("models.roles.needProvider")}</p>
-        ) : (
-          <ul className="border-t border-rule">
-            {ROLES.map((r) => (
-              <RoleRow
-                key={r}
-                role={r}
-                providers={list}
-                targets={roles.data?.find((x) => x.role === r)?.targets ?? []}
-              />
-            ))}
-          </ul>
-        )}
+        <ModelRoles />
       </Section>
     </div>
   );

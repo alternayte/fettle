@@ -412,7 +412,12 @@
       "saved": "Role saved",
       "saveFailed": "Fettle did not save the role",
       "loadFailed": "Fettle cannot load the roles",
-      "missingProvider": "Removed provider"
+      "missingProvider": "Removed provider",
+      "botInherits": "Uses the space models: {models}.",
+      "botInheritsOwner": "Uses the owner models of this bot.",
+      "override": "Use for this bot",
+      "useSpace": "Use the space models",
+      "usingSpace": "This role uses the space models again"
     }
   },
   "setup": {
@@ -634,7 +639,9 @@
     "deleteLabel": "Type the name of the bot",
     "deleted": "Deleted {name}.",
     "isPrimary": "This is the primary bot. Make another bot primary before you archive or delete it.",
-    "isArchived": "This bot is archived."
+    "isArchived": "This bot is archived.",
+    "models": "Models",
+    "modelsBody": "Each role of this bot uses the models of the space. Choose other models for a role to use them only for this bot."
   },
   "settings": {
     "nav": "Settings pages",

@@ -64,13 +64,6 @@ export function ModelPicker({
           <CommandInput value={search} onValueChange={setSearch} placeholder={t("models.searchModel")} />
           <CommandList>
             <CommandEmpty>{t("models.noModels")}</CommandEmpty>
-            {typed && !exact && (
-              <CommandGroup>
-                <CommandItem value={`custom:${typed}`} onSelect={() => pick(typed)}>
-                  <span className="text-sm">{t("models.useTyped", { model: typed })}</span>
-                </CommandItem>
-              </CommandGroup>
-            )}
             <CommandGroup>
               {models.map((m) => (
                 <CommandItem key={m.id} value={m.id} onSelect={() => pick(m.id)}>
@@ -80,6 +73,14 @@ export function ModelPicker({
                 </CommandItem>
               ))}
             </CommandGroup>
+            {/* The typed name comes last, so Enter picks a listed match first. */}
+            {typed && !exact && (
+              <CommandGroup>
+                <CommandItem value={`custom:${typed}`} onSelect={() => pick(typed)}>
+                  <span className="text-sm">{t("models.useTyped", { model: typed })}</span>
+                </CommandItem>
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

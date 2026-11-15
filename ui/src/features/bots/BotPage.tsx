@@ -24,6 +24,7 @@ import type { SchemaBotBody, SchemaBotView } from "@/api/schema";
 import { Notice, Page, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import { BotMark } from "@/features/chat/BotMark";
+import { ModelRoles } from "@/features/settings/ModelsPage";
 import { t } from "@/lib/copy";
 import { formatClock, formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -373,6 +374,7 @@ export function BotPage() {
   const bot = useBot(botId);
   const memory = useBotMemory(botId);
   const putMemory = usePutBotMemory(botId);
+  const { isOwner } = useSession();
 
   useEffect(() => {
     if (bot.isSuccess && window.location.hash === "#memory") {
@@ -432,6 +434,12 @@ export function BotPage() {
       <Section id="versions" title={t("botPage.versions")}>
         <Versions botId={b.id} />
       </Section>
+      {isOwner && (
+        <Section id="models" title={t("botPage.models")}>
+          <p className="mb-2 text-sm text-ink-soft">{t("botPage.modelsBody")}</p>
+          <ModelRoles bot={b.id} />
+        </Section>
+      )}
       <Section id="skills" title={t("botPage.skills")}>
         <p className="mb-2 text-sm text-ink-soft">{t("botPage.skillsBody")}</p>
         <BotSkills botId={b.id} />
