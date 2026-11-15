@@ -41,8 +41,8 @@ var (
 )
 
 type shell struct {
-	data string
-	cfg  desktop.Config
+	data  string
+	cfg   desktop.Config
 	wails *application.App
 	win   *application.WebviewWindow
 	notes *notifications.NotificationService
@@ -131,8 +131,8 @@ func (s *shell) start() error {
 	a.Desktop = &app.Desktop{
 		OpenURL:    func(u string) error { return s.openURL(u) },
 		OpenWindow: s.openWindow,
-		Connect: s.connect,
-		Notify:  s.notify,
+		Connect:    s.connect,
+		Notify:     s.notify,
 		FirstRun: func() bool {
 			s.mu.Lock()
 			defer s.mu.Unlock()
