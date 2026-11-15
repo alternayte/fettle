@@ -13,7 +13,7 @@ while IFS= read -r f; do
     echo "ee-boundary: $f imports ee without the ee build tag"
     bad=1
   fi
-done < <(git ls-files -co --exclude-standard '*.go' | xargs grep -l '"github.com/alternayte/fettle/ee' 2>/dev/null || true)
+done < <(git ls-files -co --exclude-standard '*.go' | xargs grep -lE '^[[:space:]]*(import[[:space:]]+)?([A-Za-z_.]+[[:space:]]+)?"github.com/alternayte/fettle/ee' 2>/dev/null || true)
 if go list -deps ./cmd/fettle | grep -q '^github.com/alternayte/fettle/ee'; then
   echo "ee-boundary: the default fettle binary links an ee package"
   bad=1
