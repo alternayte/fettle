@@ -126,6 +126,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		return nil
 	}
 	a.Agent.Checker = a.checker
+	a.Agent.Hire = a.hire
 	a.Agent.CopyShared = func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error {
 		src, err := a.Computers.Acquire(ctx, fromZone)
 		if err != nil {

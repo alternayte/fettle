@@ -107,3 +107,71 @@ func TestSCN_TEAM_002_RouterRulesAndCostCap(t *testing.T) {
 		}
 	}
 }
+
+func TestSCN_TEAM_009_ProposalsCreateOnlyOnCreate(t *testing.T) {
+	e := apptest.Start(t, "sqlite")
+	e.SetupModel("openai-chat", "", 128000)
+	proposal := map[string]any{
+		"name": "Writer", "job": "Writes the weekly note", "instructions": "Write short notes.", "zone": "personal",
+		"routines": []map[string]any{{"name": "Weekly note", "cron": "0 9 * * 1", "prompt": "Write the weekly note."}},
+	}
+	chief := scripted(e, fakemodel.Step{ToolCalls: calls("propose_bot", proposal)}, fakemodel.Step{Text: "I proposed Writer."})
+	run, _ := e.Post(chief.ChatID, "We need someone for the weekly note.")
+	if r := e.WaitRun(run, "done", "failed", "escalated"); r.Line.State != "done" {
+		t.Fatalf("run %s: %s", r.Line.State, r.EventTypes())
+	}
+	var bots struct{ Bots []apptest.Bot }
+	e.MustDo("GET", e.SP("/bots"), nil, &bots)
+	if len(bots.Bots) != 1 {
+		t.Fatalf("a bot exists before Create: %+v", bots.Bots)
+	}
+	var cardID string
+	for _, m := range e.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "proposal" && c["status"] == "pending" {
+			cardID = c["id"].(string)
+		}
+	}
+	if cardID == "" {
+		t.Fatal("no proposal card")
+	}
+	e.MustDo("POST", e.SP("/cards/%s/answer", cardID), map[string]any{"action": "create"}, nil)
+	e.MustDo("GET", e.SP("/bots"), nil, &bots)
+	var writer apptest.Bot
+	for _, b := range bots.Bots {
+		if b.Name == "Writer" {
+			writer = b
+		}
+	}
+	if writer.ID == "" {
+		t.Fatalf("Create made no Writer: %+v", bots.Bots)
+	}
+	var rs struct {
+		Routines []struct {
+			BotID   string `json:"bot_id"`
+			Enabled bool   `json:"enabled"`
+		} `json:"routines"`
+	}
+	e.MustDo("GET", e.SP("/routines"), nil, &rs)
+	if len(rs.Routines) != 1 || rs.Routines[0].BotID != writer.ID || rs.Routines[0].Enabled {
+		t.Fatalf("routines %+v", rs.Routines)
+	}
+
+	// A bot that is not primary cannot propose bots.
+	marker := "writer-proposes"
+	e.Fake.AddScript(fakemodel.Script{Name: marker, Match: fakemodel.Match{System: "[[script:" + marker + "]]"}, Steps: []fakemodel.Step{
+		{ToolCalls: calls("propose_bot", map[string]any{"name": "Helper", "job": "Helps", "instructions": "Help."})}, {Text: "Tried."},
+	}})
+	setInstructions(e, writer.ID, "[[script:"+marker+"]]")
+	e.MustDo("GET", e.SP("/bots/%s", writer.ID), nil, &writer)
+	run, _ = e.Post(writer.ChatID, "Hire a helper.")
+	r := e.WaitRun(run, "done", "failed", "escalated")
+	var res string
+	for _, ev := range r.Events {
+		if ev.Type == "tool_call" && strings.Contains(string(ev.Data), "propose_bot") {
+			res = string(ev.Data)
+		}
+	}
+	if !strings.Contains(res, "Only the primary bot proposes bots") {
+		t.Fatalf("Writer's proposal: %s", res)
+	}
+}

@@ -150,6 +150,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"warning":      {"dismiss"},
 		"verification": {"accept", "retry", "stop"},
 		"check":        {"pass", "fail"},
+		"proposal":     {"create", "decline"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -182,6 +183,11 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		out = m
 		if err := a.Audit.Record(ctx, user, &spaceID, "card.decide", "card:"+cardID, map[string]string{"kind": card.Kind, "action": action, "value": value}); err != nil {
 			return err
+		}
+		if card.Kind == "proposal" && action == "create" {
+			if err := a.applyProposal(ctx, user, spaceID, card, value); err != nil {
+				return err
+			}
 		}
 		if card.Kind == "change" && action == "allow" {
 			if err := a.applyChange(ctx, user, spaceID, card); err != nil {
@@ -260,6 +266,10 @@ func cardAnswerText(kind, action, value string) string {
 		return "Added $" + value
 	case action == "answer":
 		return value
+	case action == "create":
+		return "Created"
+	case action == "decline":
+		return "Declined"
 	case action == "accept":
 		return "Accepted anyway"
 	case action == "retry":

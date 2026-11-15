@@ -43,6 +43,9 @@ type Agent struct {
 	Policy    *policy.Service
 	// Checker opens the zone computer of a bot for file, command and citations checks.
 	Checker func(ctx context.Context, spaceID, botID uuid.UUID) (Checker, error)
+	// Hire creates the bots of an allowed proposal card: bots, paused routines, skills and
+	// grant cards (§9.8).
+	Hire func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, list []Proposal) error
 	// CopyShared copies one file from a zone's shared folder to another zone (handoff, §9.7).
 	CopyShared func(ctx context.Context, fromZone, toZone uuid.UUID, from, to string) error
 	// SubagentEnded frees what a sub-agent run used on the computer (its browser context).
@@ -104,6 +107,7 @@ func New(a Agent) *Agent {
 	ag.registerTakeover()
 	ag.registerSubagentTools()
 	ag.registerHandoff()
+	ag.registerPropose()
 	return ag
 }
 

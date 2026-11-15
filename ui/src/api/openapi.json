@@ -133,12 +133,14 @@
               "accept",
               "retry",
               "pass",
-              "fail"
+              "fail",
+              "create",
+              "decline"
             ],
             "type": "string"
           },
           "value": {
-            "maxLength": 2000,
+            "maxLength": 20000,
             "type": "string"
           }
         },

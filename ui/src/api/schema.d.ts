@@ -1209,7 +1209,9 @@ export interface components {
         | "accept"
         | "retry"
         | "pass"
-        | "fail";
+        | "fail"
+        | "create"
+        | "decline";
       value?: string;
     };
     "Assign-skillRequest": {

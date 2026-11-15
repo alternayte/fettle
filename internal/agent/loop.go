@@ -624,6 +624,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
 	}
+	if call.Name == "propose_bot" || call.Name == "propose_team" {
+		return x.propose(ctx, call)
+	}
 	if call.Name == "handoff" {
 		return x.handoff(ctx, st, call)
 	}
