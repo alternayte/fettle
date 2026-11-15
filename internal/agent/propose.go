@@ -188,7 +188,7 @@ func (a *Agent) applyProposal(ctx context.Context, user audit.Actor, spaceID uui
 	}
 	for i := range list {
 		if err := list[i].Validate(); err != nil {
-			return fmt.Errorf("%w: %v", ErrBadAction, err)
+			return fmt.Errorf("%w: %w", ErrBadAction, err)
 		}
 	}
 	if a.Hire == nil {

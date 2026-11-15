@@ -35,7 +35,7 @@ func (a *App) hire(ctx context.Context, user audit.Actor, spaceID uuid.UUID, lis
 		zid := z.ID()
 		b, err := a.Bots.Create(ctx, user, spaceID, bots.Input{Name: p.Name, Job: p.Job, PublicDesc: p.Job, Instructions: p.Instructions, ZoneID: &zid})
 		if err != nil {
-			return fmt.Errorf("%w: %v", agent.ErrBadAction, err)
+			return fmt.Errorf("%w: %w", agent.ErrBadAction, err)
 		}
 		if _, err := a.Chats.CreateDirect(ctx, spaceID, b.ID(), b.Name); err != nil {
 			return err
@@ -46,7 +46,7 @@ func (a *App) hire(ctx context.Context, user audit.Actor, spaceID uuid.UUID, lis
 				tz = sp.TimeZone
 			}
 			if _, _, err := a.Routines.Create(ctx, user, spaceID, routines.Input{BotID: b.ID(), Name: r.Name, Prompt: r.Prompt, Trigger: "cron", Cron: r.Cron, TZ: tz, Notify: "on_failure", Enabled: false}); err != nil {
-				return fmt.Errorf("%w: routine %s: %v", agent.ErrBadAction, r.Name, err)
+				return fmt.Errorf("%w: routine %s: %w", agent.ErrBadAction, r.Name, err)
 			}
 		}
 		for _, name := range p.Skills {
