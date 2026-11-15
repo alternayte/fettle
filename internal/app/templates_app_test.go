@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/alternayte/fettle/internal/apptest"
@@ -55,18 +56,18 @@ func TestSCN_UX_005_TemplatesCreateBotsWhoseEvalsPass(t *testing.T) {
 				Skills []struct {
 					ID   string   `json:"id"`
 					Name string   `json:"name"`
-					Bots []string `json:"bot_ids"`
+					Bots []string `json:"bots"`
 				} `json:"skills"`
 			}
 			e.MustDo("GET", e.SP("/skills"), nil, &lib)
 			skillID := ""
 			for _, s := range lib.Skills {
-				if s.Name == tp.Skill {
+				if s.Name == tp.Skill && slices.Contains(s.Bots, bot.ID) {
 					skillID = s.ID
 				}
 			}
 			if skillID == "" {
-				t.Fatalf("no skill %s: %+v", tp.Skill, lib.Skills)
+				t.Fatalf("%s has no skill %s: %+v", tp.Name, tp.Skill, lib.Skills)
 			}
 
 			var rs struct {

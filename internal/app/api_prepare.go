@@ -7,6 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/alternayte/fettle/internal/auth"
 	"github.com/alternayte/fettle/internal/computers"
 )
 
@@ -15,6 +16,8 @@ type ProviderAvailability struct {
 	Kind      string `json:"kind"`
 	Available bool   `json:"available"`
 	Reason    string `json:"reason,omitempty"`
+	// Status is the background preparation of this provider.
+	Status computers.PrepareStatus `json:"status"`
 }
 
 // ComputerSetup is the computer step of the first run (§15.3, step 2).
@@ -36,8 +39,8 @@ func (a *App) computerSetup(ctx context.Context) ComputerSetup {
 	}
 	sort.Strings(kinds)
 	for _, k := range kinds {
-		av := ProviderAvailability{Kind: k, Available: true}
 		st := a.Computers.PrepareStatusOf(k)
+		av := ProviderAvailability{Kind: k, Available: true, Status: st}
 		// A provider that still prepares (its runtime is not here yet) counts as available.
 		if p, ok := a.Computers.Providers[k].(pinger); ok && st.State != "ready" && st.State != "running" && k != "applecontainer" {
 			if err := p.Ping(ctx); err != nil {
@@ -66,12 +69,29 @@ func (a *App) registerPrepare(api huma.API) {
 	huma.Register(api, op("get-computer-setup", http.MethodGet, "/computer-setup", "The default computer provider, what works on this server, and the preparation progress", "computers"), func(ctx context.Context, _ *struct{}) (*struct{ Body ComputerSetup }, error) {
 		return &struct{ Body ComputerSetup }{Body: a.computerSetup(ctx)}, nil
 	})
-	huma.Register(api, op("prepare-computers", http.MethodPost, "/computer-setup/prepare", "Prepare the default provider in the background: its runtime and the computer image", "computers"), func(ctx context.Context, _ *struct{}) (*struct{ Body ComputerSetup }, error) {
+	huma.Register(api, op("prepare-computers", http.MethodPost, "/computer-setup/prepare", "Prepare a provider in the background, the default one unless provider names another: its runtime and the computer image", "computers"), func(ctx context.Context, in *struct {
+		Provider string `query:"provider" doc:"A provider kind. Default: the default provider."`
+	}) (*struct{ Body ComputerSetup }, error) {
+		if p := auth.From(ctx); p == nil || !p.IsAdmin {
+			return nil, huma.Error403Forbidden("only an instance admin prepares computer providers")
+		}
 		s := a.computerSetup(ctx)
-		if s.Default == "" {
+		kind := s.Default
+		if in.Provider != "" {
+			kind = ""
+			for _, pv := range s.Providers {
+				if pv.Kind == in.Provider && pv.Available {
+					kind = pv.Kind
+				}
+			}
+			if kind == "" {
+				return nil, huma.Error409Conflict("the " + in.Provider + " provider does not work on this server")
+			}
+		}
+		if kind == "" {
 			return nil, huma.Error409Conflict("no computer provider works on this server")
 		}
-		if err := a.Computers.StartPrepare(s.Default); err != nil {
+		if err := a.Computers.StartPrepare(kind); err != nil {
 			return nil, err
 		}
 		return &struct{ Body ComputerSetup }{Body: a.computerSetup(ctx)}, nil

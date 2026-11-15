@@ -634,6 +634,48 @@
         ],
         "type": "object"
       },
+      "ComputerTest": {
+        "additionalProperties": false,
+        "properties": {
+          "computer_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "exec_ms": {
+            "description": "Time of the test command.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "output": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "start_ms": {
+            "description": "Time to get a running computer.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "zone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone",
+          "provider",
+          "pass",
+          "output",
+          "start_ms",
+          "exec_ms"
+        ],
+        "type": "object"
+      },
       "Connector-catalogResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1901,11 +1943,15 @@
           },
           "reason": {
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PrepareStatus"
           }
         },
         "required": [
           "kind",
-          "available"
+          "available",
+          "status"
         ],
         "type": "object"
       },
@@ -3704,6 +3750,18 @@
     "/api/v1/computer-setup/prepare": {
       "post": {
         "operationId": "prepare-computers",
+        "parameters": [
+          {
+            "description": "A provider kind. Default: the default provider.",
+            "explode": false,
+            "in": "query",
+            "name": "provider",
+            "schema": {
+              "description": "A provider kind. Default: the default provider.",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -3726,7 +3784,7 @@
             "description": "Error"
           }
         },
-        "summary": "Prepare the default provider in the background: its runtime and the computer image",
+        "summary": "Prepare a provider in the background, the default one unless provider names another: its runtime and the computer image",
         "tags": [
           "computers"
         ]
@@ -8938,6 +8996,108 @@
           }
         },
         "summary": "Change a zone. A change of the provider or the network replaces its computer.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}/computer/stop": {
+      "post": {
+        "operationId": "stop-zone-computer",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Put the zone's computer to sleep. Its workspace stays; the next work wakes it.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}/computer/test": {
+      "post": {
+        "operationId": "test-zone-computer",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComputerTest"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start or wake the zone's computer and run one command through agentd",
         "tags": [
           "computers"
         ]

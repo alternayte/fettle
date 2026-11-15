@@ -13,6 +13,7 @@ linters:
         - (*github.com/jackc/pgx/v5.Conn).Close
         - fmt.Fprintf
         - fmt.Fprint
+        - fmt.Fprintln
         - fmt.Sscanf
     gocritic:
       disabled-checks: [ifElseChain, singleCaseSwitch, appendAssign, exitAfterDefer]

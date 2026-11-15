@@ -82,7 +82,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Prepare the default provider in the background: its runtime and the computer image */
+    /** Prepare a provider in the background, the default one unless provider names another: its runtime and the computer image */
     post: operations["prepare-computers"];
     delete?: never;
     options?: never;
@@ -1418,6 +1418,40 @@ export interface paths {
     patch: operations["update-zone"];
     trace?: never;
   };
+  "/api/v1/spaces/{space}/zones/{zone}/computer/stop": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Put the zone's computer to sleep. Its workspace stays; the next work wakes it. */
+    post: operations["stop-zone-computer"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/zones/{zone}/computer/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start or wake the zone's computer and run one command through agentd */
+    post: operations["test-zone-computer"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/zones/{zone}/grants": {
     parameters: {
       query?: never;
@@ -1633,6 +1667,24 @@ export interface components {
       default: string;
       providers: components["schemas"]["ProviderAvailability"][] | null;
       status: components["schemas"]["PrepareStatus"];
+    };
+    ComputerTest: {
+      computer_id?: string;
+      error?: string;
+      /**
+       * Format: int64
+       * @description Time of the test command.
+       */
+      exec_ms: number;
+      output: string;
+      pass: boolean;
+      provider: string;
+      /**
+       * Format: int64
+       * @description Time to get a running computer.
+       */
+      start_ms: number;
+      zone: string;
     };
     "Connector-catalogResponse": {
       connectors: components["schemas"]["Entry"][] | null;
@@ -1952,6 +2004,7 @@ export interface components {
       available: boolean;
       kind: string;
       reason?: string;
+      status: components["schemas"]["PrepareStatus"];
     };
     ProviderBody: {
       /** @enum {string} */
@@ -2408,6 +2461,7 @@ export type SchemaCheck = components["schemas"]["Check"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
 export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
 export type SchemaComputerSetup = components["schemas"]["ComputerSetup"];
+export type SchemaComputerTest = components["schemas"]["ComputerTest"];
 export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-catalogResponse"];
 export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
@@ -2672,7 +2726,10 @@ export interface operations {
   };
   "prepare-computers": {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description A provider kind. Default: the default provider. */
+        provider?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -6059,6 +6116,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ZoneView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "stop-zone-computer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        zone: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ZoneView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "test-zone-computer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        zone: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ComputerTest"];
         };
       };
       /** @description Error */
