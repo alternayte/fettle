@@ -63,6 +63,10 @@ type exec struct {
 	fence int64
 	jobID int64
 	queue string
+	// st is the state of the current step, for paths that end the run from a helper.
+	st *state
+	// forkDiff is the diff of a forked sub-agent, reported to its owner.
+	forkDiff []FileDiff
 }
 
 // Work runs steps until the run finishes or waits (§7.2).
@@ -176,6 +180,16 @@ func (x *exec) loop(ctx context.Context) error {
 		if st.openCard != nil {
 			return x.wait(ctx, "card")
 		}
+		x.st = st
+		if x.run.Kind == "owner" && st.step == "fanout" && !st.subStarted {
+			if err := x.startFanout(ctx, st); err != nil {
+				return err
+			}
+			continue
+		}
+		if st.subStarted && len(st.subResults) < len(st.subRuns) {
+			return x.wait(ctx, "subagents")
+		}
 		if len(st.uncertain) > 0 {
 			if err := x.resolveUncertain(ctx, st); err != nil {
 				return err
@@ -231,6 +245,9 @@ func (x *exec) finish(ctx context.Context, st *state, status, summary string) er
 		if _, err := x.append(ctx, &runs.Update{Status: strp(status), Finished: status != runs.StatusEscalated}, runs.New{Type: runs.EvRunFinished, Data: evFinished{Status: status, Summary: truncate(summary, 2000)}}); err != nil {
 			return err
 		}
+		if err := x.tellParent(ctx, st, status, summary); err != nil {
+			return err
+		}
 		var res *envelopes.Result
 		if status == runs.StatusDone {
 			res = &envelopes.Result{Summary: truncate(summary, 8000), Artifacts: []string{}, Evidence: []string{}, OpenItems: []string{}}
@@ -240,10 +257,15 @@ func (x *exec) finish(ctx context.Context, st *state, status, summary string) er
 	if err != nil {
 		return err
 	}
-	if a.Metrics != nil {
+	if a.Metrics != nil && st != nil {
 		a.Metrics.RunFinished(status, st.step)
 	}
-	x.notifyFinished(ctx, status, summary)
+	if x.run.Kind == "owner" {
+		x.notifyFinished(ctx, status, summary)
+	}
+	if x.run.Kind == "subagent" && st != nil && st.computer && a.SubagentEnded != nil {
+		a.SubagentEnded(context.WithoutCancel(ctx), x.run.SpaceID, x.run.BotID, x.run.ID())
+	}
 	return nil
 }
 
@@ -341,6 +363,7 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 		Now: a.now(), TimeZone: sp.TimeZone,
 		Goal: x.env.Goal, GoalOrigin: origin, Acceptance: accept, BudgetLeftUSD: x.env.Budget.USD - spent, Capabilities: x.env.Capabilities,
 		Conversation: conv, Turns: st.turns, Steers: st.steers, ContextWindow: window,
+		Helper: x.run.Kind == "subagent", Brief: x.env.Decision.Brief,
 	}
 	if x.env.Deadline != nil && a.now().Sub(*x.env.Deadline) >= 15*time.Minute {
 		in.DueAt = x.env.Deadline
@@ -571,6 +594,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
 	}
+	if call.Name == "report_result" && x.run.Kind == "subagent" {
+		return x.reportResult(ctx, st, call)
+	}
 	if call.Name == "request_takeover" {
 		return x.requestTakeover(ctx, st, call)
 	}
@@ -717,6 +743,10 @@ func (x *exec) resolveUncertain(ctx context.Context, st *state) error {
 // postCard posts a card from this run and makes the run wait or escalate.
 func (x *exec) postCard(ctx context.Context, card chats.Card, status string) error {
 	a := x.a
+	// Sub-agents cannot use cards (§9.4): the part fails and the owner decides.
+	if x.run.Kind == "subagent" {
+		return x.finish(ctx, x.st, runs.StatusFailed, "The helper stopped because it needed a person: "+card.Title+". "+card.Detail)
+	}
 	if card.ID == "" {
 		card.ID = uuid.NewString()
 	}

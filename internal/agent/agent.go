@@ -41,6 +41,8 @@ type Agent struct {
 	Vault     *vault.Vault
 	Tools     *Registry
 	Policy    *policy.Service
+	// SubagentEnded frees what a sub-agent run used on the computer (its browser context).
+	SubagentEnded func(ctx context.Context, spaceID, botID, runID uuid.UUID)
 	// CanFork reports whether the zone of a bot can fork: native fork support or a
 	// workspace small enough to copy (rule R3).
 	CanFork func(ctx context.Context, spaceID, botID uuid.UUID) bool
@@ -96,6 +98,7 @@ func New(a Agent) *Agent {
 	}
 	ag.registerMemoryTools()
 	ag.registerTakeover()
+	ag.registerSubagentTools()
 	return ag
 }
 

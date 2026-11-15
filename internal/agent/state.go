@@ -112,6 +112,10 @@ type state struct {
 	approvedAs   map[string]string  // call ID -> the class that the decision saw
 	intent       []string           // user items of this run: the goal and steer texts
 	sleepUntil   *time.Time         // the last sleep_until time
+	subStarted   bool
+	subRuns      []evSubStart
+	subResults   map[string]evSubResult
+	reported     *PartResult // the report_result of a sub-agent run
 	takeoverCard map[string]string  // call ID of request_takeover to its card ID
 	takeoverDone map[string]*evCard // card ID to the answer that returned control
 	computer     bool               // a computer_acquired event exists
@@ -119,7 +123,7 @@ type state struct {
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}}
+	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}, subResults: map[string]evSubResult{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -211,6 +215,19 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			u := d.Until
 			st.sleepUntil = &u
+		case runs.EvSubagentsStarted:
+			var d evSubStarted
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.subStarted, st.subRuns = true, d.Runs
+		case runs.EvSubagentResult:
+			var d evSubResult
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			if _, dup := st.subResults[d.RunID]; !dup {
+				st.subResults[d.RunID] = d
+				st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "helper", Text: renderHelperResult(len(st.subResults), d), Origin: OriginWeb})
+				// Helper results carry web content, so provenance applies (§11.3).
+				st.readData = true
+			}
 		case runs.EvComputerAcquired:
 			st.computer, st.computerWait = true, false
 		case runs.EvComputerWait:

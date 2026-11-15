@@ -23,8 +23,14 @@ type Browser struct {
 	Models *models.Service
 }
 
-// browserID is the persistent browser context of a bot. Its profile lives in the bot home.
-func browserID(env *agent.ToolEnv) string { return "bot-" + env.BotID.String() }
+// browserID is the persistent browser context of a bot, whose profile lives in the bot
+// home, or the ephemeral context of one sub-agent run (§9.4).
+func browserID(env *agent.ToolEnv) string {
+	if env.Subagent {
+		return "sub-" + env.RunID.String()
+	}
+	return "bot-" + env.BotID.String()
+}
 
 // BrowserRequest is the persistent browser context of a bot. In the desktop size, the
 // browser shows on the bot's screen, whose ID is the bot ID (§10.8).
@@ -43,7 +49,11 @@ func (b *Browser) open(ctx context.Context, env *agent.ToolEnv) (*computers.Leas
 	if err != nil {
 		return nil, "", err
 	}
-	err = l.Client.BrowserOpen(ctx, BrowserRequest(l, env.BotID))
+	req := BrowserRequest(l, env.BotID)
+	if env.Subagent {
+		req = client.BrowserContextRequest{ID: browserID(env), Ephemeral: true}
+	}
+	err = l.Client.BrowserOpen(ctx, req)
 	if err != nil {
 		l.Release()
 		return nil, "", err

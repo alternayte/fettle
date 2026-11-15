@@ -878,3 +878,24 @@ func (m *Manager) kindOf(ctx context.Context, providerID uuid.UUID) string {
 	_ = m.E.QueryRow(ctx, "SELECT kind FROM providers WHERE id = $1", providerID).Scan(&kind)
 	return kind
 }
+
+// CanFork reports whether a zone can fork its computer: the provider forks natively, or
+// the stored workspaces of the zone are 1 GiB or less, so a copy fork is cheap (rule R3).
+func (m *Manager) CanFork(ctx context.Context, zoneID uuid.UUID) bool {
+	z, err := m.Zones.Find(ctx, zoneID)
+	if err != nil {
+		return false
+	}
+	prov, _, err := m.providerFor(ctx, z)
+	if err != nil {
+		return false
+	}
+	if prov.Caps().NativeFork {
+		return true
+	}
+	var size int64
+	if err := m.E.QueryRow(ctx, "SELECT COALESCE(SUM(w.size), 0) FROM workspaces w LEFT JOIN bots b ON b.id = w.bot_id WHERE w.zone_id = $1 OR b.zone_id = $2", zoneID, zoneID).Scan(&size); err != nil {
+		return false
+	}
+	return size <= 1<<30
+}

@@ -125,6 +125,22 @@ func (a *App) setupComputers(ctx context.Context) {
 		l.Release()
 		return nil
 	}
+	a.Agent.CanFork = func(ctx context.Context, spaceID, botID uuid.UUID) bool {
+		b, err := a.Bots.Get(ctx, spaceID, botID)
+		return err == nil && b.ZoneID != nil && a.Computers.CanFork(ctx, *b.ZoneID)
+	}
+	a.Agent.SubagentEnded = func(ctx context.Context, spaceID, botID, runID uuid.UUID) {
+		b, err := a.Bots.Get(ctx, spaceID, botID)
+		if err != nil || b.ZoneID == nil {
+			return
+		}
+		l, err := a.Computers.Acquire(ctx, *b.ZoneID)
+		if err != nil {
+			return
+		}
+		defer l.Release()
+		_ = l.Client.BrowserClose(ctx, "sub-"+runID.String())
+	}
 	c := &tools.Computer{Bots: a.Bots, Computers: a.Computers}
 	c.Register(a.Agent.Tools)
 	br := &tools.Browser{Computer: c, Agent: a.Agent, Models: a.Models}

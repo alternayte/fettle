@@ -50,6 +50,9 @@ type Step struct {
 	Cost *float64 `yaml:"cost"`
 	// Repeat makes the step answer every later turn too.
 	Repeat bool `yaml:"repeat"`
+	// Plain answers a structured request with Text as it is, so a test can send output
+	// that does not match the schema.
+	Plain bool `yaml:"plain"`
 	// ChunkMS paces the stream of this step, as the chunkms flag does for all steps.
 	ChunkMS int `yaml:"chunk_ms"`
 }
@@ -435,7 +438,7 @@ func (s *Server) fill(st Step, req nreq) Step {
 		calls[i] = ScriptCall{Name: tc.Name, Args: args}
 	}
 	st.ToolCalls = calls
-	if st.JSON == nil && req.schema != nil && len(st.ToolCalls) == 0 {
+	if st.JSON == nil && req.schema != nil && len(st.ToolCalls) == 0 && !st.Plain {
 		st.JSON = synth(req.schema)
 	}
 	return st

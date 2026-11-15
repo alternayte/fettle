@@ -95,6 +95,9 @@ type Input struct {
 	Turns         []TurnRecord
 	Steers        []string
 	ContextWindow int
+	// Helper marks a sub-agent run; Brief is the context brief from its owner (§9.4).
+	Helper bool
+	Brief  string
 }
 
 // Context is the assembled model input.
@@ -169,6 +172,9 @@ func Assemble(in Input) Context {
 	if origin == "" {
 		origin = OriginUser
 	}
+	if in.Helper {
+		add(Item{Section: SecEnvelope, Name: "brief", Origin: OriginBot, Role: "user", Text: "You are a helper. Do only the part in the envelope. You cannot ask the user, hand off or start helpers. When you are done, call report_result with your summary, your findings and their sources.\nContext brief from the owner of the work:\n" + dataTag(OriginBot, "brief", in.Brief)})
+	}
 	add(Item{Section: SecEnvelope, Name: "envelope", Origin: origin, Role: "user", Text: env})
 
 	// Conversation window: newest messages until half of the context window (§8.1).
@@ -212,6 +218,8 @@ func Assemble(in Input) Context {
 		switch t.Kind {
 		case "summary":
 			add(Item{Section: SecRunEvents, Name: "summary", Origin: OriginSystem, Role: "user", Text: "Summary of your earlier steps in this run:\n" + t.Text})
+		case "helper":
+			add(Item{Section: SecRunEvents, Name: "helper", Origin: OriginWeb, Role: "user", Text: "Result from one of your helpers:\n" + dataTag(OriginWeb, "helper", t.Text)})
 		case "model":
 			add(Item{Section: SecRunEvents, Name: "model_turn", Origin: OriginBot, Role: "assistant", Text: t.Text, toolCalls: t.ToolCalls})
 		case "tool":
