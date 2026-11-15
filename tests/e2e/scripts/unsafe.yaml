@@ -3,4 +3,4 @@ name: unsafe_output
 match:
   user: "[[unsafe-output]]"
 steps:
-  - text: "Here is <script>window.__fettleXSS = 1</script> and <img src=x onerror=\"window.__fettleXSS = 2\"> with [click me](javascript:window.__fettleXSS=3) and [docs](https://docs.test/)."
+  - text: 'Here is <script>window.__fettleXSS = 1</script> and <img src=x onerror="window.__fettleXSS = 2"> with [click me](javascript:window.__fettleXSS=3) and [docs](https://docs.test/).'
