@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -35,6 +36,9 @@ type Mail struct {
 	URL string
 	// ShowHost adds the host name to list_inbox, so a test sees where the server runs.
 	ShowHost bool
+	// SendDelay holds send_email after it records the call, so a test can stop Fettle
+	// while the send is in flight.
+	SendDelay time.Duration
 }
 
 // Calls returns the recorded calls.
@@ -79,7 +83,10 @@ func (m *Mail) Server(account func(ctx context.Context) string) *mcp.Server {
 			return out
 		})
 	add(&mcp.Tool{Name: "send_email", Description: "Send an email.", InputSchema: obj(`"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}`, "to", "subject", "body")},
-		func(a map[string]any) string { return fmt.Sprintf("Sent to %v.", a["to"]) })
+		func(a map[string]any) string {
+			time.Sleep(m.SendDelay)
+			return fmt.Sprintf("Sent to %v.", a["to"])
+		})
 	add(&mcp.Tool{Name: "delete_email", Description: "Delete an email by its number.", InputSchema: obj(`"id":{"type":"integer"}`, "id"), Annotations: &mcp.ToolAnnotations{DestructiveHint: boolp(true)}},
 		func(a map[string]any) string { return fmt.Sprintf("Deleted email %v.", a["id"]) })
 	return s

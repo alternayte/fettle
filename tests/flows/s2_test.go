@@ -4,6 +4,7 @@ package flows
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alternayte/fettle/internal/apptest"
+	fakemcp "github.com/alternayte/fettle/internal/fakes/mcp"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 	"github.com/alternayte/fettle/internal/fakes/web"
 )
@@ -422,6 +424,65 @@ func TestSCN_RUN_005_UncertainSendIsNeverRepeated(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	if n := strings.Count(s2.fixtureLog("slow.test"), "POST slow.test/posted"); n != 1 {
 		t.Fatalf("the post reached the site %d times, want 1", n)
+	}
+}
+
+// The send_email case of SCN-RUN-005: the server stops while a connector send is in flight.
+func TestSCN_RUN_005_UncertainSendEmailIsNeverRepeated(t *testing.T) {
+	mail := &fakemcp.Mail{HeaderKey: "acme-mail-key-9901", SendDelay: 4 * time.Second}
+	srv := httptest.NewServer(mail.Handler())
+	t.Cleanup(srv.Close)
+	mail.URL = srv.URL
+	s := startComputers(t, "sqlite", "FETTLE_RESCUE_AFTER_S=2")
+	s.neverMode()
+	var c, acc struct {
+		ID string `json:"id"`
+	}
+	s.MustDo("POST", s.SP("/connectors"), map[string]any{"name": "fakemail", "url": srv.URL + "/mcp", "auth": "header", "header_name": "X-Api-Key"}, &c)
+	s.MustDo("POST", s.SP("/connectors/%s/accounts", c.ID), map[string]any{"label": "work", "value": "acme-mail-key-9901"}, &acc)
+	grantTo(s.Env, "personal", acc.ID)
+	marker := "uncertain-mail"
+	s.script(marker,
+		fakemodel.Step{ToolCalls: call("fakemail__send_email", map[string]any{"to": "ana@acme.test", "subject": "Q3", "body": "The numbers are ready."})},
+		fakemodel.Step{Text: "Sent."})
+	chief := s.Chief()
+	s.instruct(chief.ID, marker)
+	run, _ := s.Post(chief.ChatID, "Send Ana the Q3 note.")
+	r := s.waitEvent(run, "tool_intent", 60*time.Second)
+	for _, ev := range r.Events {
+		if ev.Type == "tool_intent" && !strings.Contains(string(ev.Data), `"class":"send"`) {
+			t.Fatalf("send_email is not class send: %s", ev.Data)
+		}
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for len(mail.Calls()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	s.kill() // the send is in flight: it has an intent and no result
+	s2 := s.restart()
+	s2.waitEvent(run, "tool_uncertain", 3*time.Minute)
+	r = s2.waitState(run, 30*time.Second, "waiting")
+	if strings.Contains(r.EventTypes(), "tool_result") {
+		t.Fatalf("the uncertain send has a result: %s", r.EventTypes())
+	}
+	var card map[string]any
+	for _, m := range s2.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "uncertain" {
+			card = c
+		}
+	}
+	if card == nil || card["status"] != "pending" || card["title"] != "Uncertain action" {
+		t.Fatalf("no pending Uncertain action card: %v", card)
+	}
+	time.Sleep(5 * time.Second)
+	n := 0
+	for _, call := range mail.Calls() {
+		if call.Tool == "send_email" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("send_email ran %d times, want 1", n)
 	}
 }
 
