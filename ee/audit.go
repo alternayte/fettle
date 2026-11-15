@@ -31,6 +31,7 @@ import (
 func init() {
 	settings.Register(settings.Def{Key: "ee.audit_retention_days", Scope: "instance", Default: 365, Doc: "Days that exported audit files stay in the audit bucket. Older files are deleted."})
 	settings.Register(settings.Def{Key: "ee.audit_cursor", Scope: "instance", Default: "", Doc: "The last audit row that the export sent (set by Fettle)."})
+	settings.Register(settings.Def{Key: "ee.audit_sent", Scope: "instance", Default: "", Internal: true, Doc: "The audit rows of the last minute that the export sent, as JSON (set by Fettle)."})
 	settings.Register(settings.Def{Key: "ee.audit_retention_at", Scope: "instance", Default: "", Doc: "When the audit retention last ran (set by Fettle)."})
 }
 
@@ -115,21 +116,29 @@ func (x *Enterprise) exportAudit(ctx context.Context, now bool) {
 	}
 }
 
+// auditLag is how far back each export reads again. A row whose transaction commits after
+// a newer row is behind the cursor; the export still finds it within this window.
+const auditLag = time.Minute
+
 func (x *Enterprise) exportBatch(ctx context.Context, cfg AuditConfig, store *objects.S3) (int, error) {
-	afterAt, afterID := time.Unix(0, 0).UTC(), uuid.Nil.String()
+	cursor := time.Unix(0, 0).UTC()
 	if c := x.a.Settings.String(ctx, nil, "ee.audit_cursor"); c != "" {
-		at, id, ok := strings.Cut(c, "|")
-		if t, err := time.Parse(time.RFC3339Nano, at); ok && err == nil {
-			afterAt, afterID = t, id
+		at, _, _ := strings.Cut(c, "|")
+		if t, err := time.Parse(time.RFC3339Nano, at); err == nil {
+			cursor = t.UTC()
 		}
 	}
+	// sent holds the rows of the window that earlier exports sent: id -> created_at.
+	sent := map[string]time.Time{}
+	_ = json.Unmarshal([]byte(x.a.Settings.String(ctx, nil, "ee.audit_sent")), &sent)
+	from := cursor.Add(-auditLag)
 	rows, err := x.a.DB.Engine.Query(ctx, `SELECT id, created_at, actor_kind, actor_id, space_id, action, target, details FROM audit_log
-		WHERE created_at > $1 OR (created_at = $2 AND id > $3) ORDER BY created_at, id LIMIT 1000`, afterAt, afterAt, afterID)
+		WHERE created_at > $1 ORDER BY created_at, id LIMIT $2`, from, 1000+len(sent))
 	if err != nil {
 		return 0, err
 	}
 	var lines []auditLine
-	for rows.Next() {
+	for rows.Next() && len(lines) < 1000 {
 		var l auditLine
 		var id uuid.UUID
 		var details any
@@ -138,6 +147,9 @@ func (x *Enterprise) exportBatch(ctx context.Context, cfg AuditConfig, store *ob
 			return 0, err
 		}
 		l.ID, l.At = id.String(), l.At.UTC()
+		if _, done := sent[l.ID]; done {
+			continue
+		}
 		switch d := details.(type) {
 		case string:
 			_ = json.Unmarshal([]byte(d), &l.Details)
@@ -187,8 +199,23 @@ func (x *Enterprise) exportBatch(ctx context.Context, cfg AuditConfig, store *ob
 			return 0, fmt.Errorf("audit webhook answered %d", resp.StatusCode)
 		}
 	}
+	for _, l := range lines {
+		sent[l.ID] = l.At
+		if l.At.After(cursor) {
+			cursor = l.At
+		}
+	}
+	for id, at := range sent {
+		if !at.After(cursor.Add(-auditLag)) {
+			delete(sent, id)
+		}
+	}
+	b, _ := json.Marshal(sent)
+	if _, err := x.a.Settings.Set(ctx, audit.System, nil, "ee.audit_sent", string(b)); err != nil {
+		return 0, err
+	}
 	last := lines[len(lines)-1]
-	if _, err := x.a.Settings.Set(ctx, audit.System, nil, "ee.audit_cursor", last.At.Format(time.RFC3339Nano)+"|"+last.ID); err != nil {
+	if _, err := x.a.Settings.Set(ctx, audit.System, nil, "ee.audit_cursor", cursor.Format(time.RFC3339Nano)+"|"+last.ID); err != nil {
 		return 0, err
 	}
 	return len(lines), nil

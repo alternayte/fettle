@@ -351,5 +351,19 @@ func TestSCN_EE_005_AuditExportToBucketAndWebhook(t *testing.T) {
 		if again > n+1 {
 			t.Fatalf("a second run sent the old rows again: %d -> %d", n, again)
 		}
+
+		// A row that commits late, with a time before the cursor, still goes out, once.
+		late := time.Now().UTC().Add(-10 * time.Second)
+		if _, err := a.DB.Engine.Exec(ctx, `INSERT INTO audit_log (id, actor_kind, actor_id, action, target, details, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			uuid.New(), "user", "acme-auditor", "acme.late_event", "acme:2", `{"k":"late"}`, late, late); err != nil {
+			t.Fatal(err)
+		}
+		admin.must("POST", "/api/v1/admin/audit-export/run", nil, nil)
+		mu.Lock()
+		all := string(bytes.Join(deliveries, nil))
+		mu.Unlock()
+		if strings.Count(all, `"action":"acme.late_event"`) != 1 || strings.Count(all, `"action":"acme.test_event"`) != 1 {
+			t.Fatalf("a late row is missing or a row went out twice: %s", all)
+		}
 	})
 }
