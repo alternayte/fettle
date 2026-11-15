@@ -1283,6 +1283,52 @@
         ],
         "type": "object"
       },
+      "FileView": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_id": {
+            "type": "string"
+          },
+          "bot_name": {
+            "type": "string"
+          },
+          "chat_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size",
+          "type",
+          "chat_id",
+          "message_id",
+          "bot_id",
+          "bot_name",
+          "sent_at"
+        ],
+        "type": "object"
+      },
       "Get-skillResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1527,6 +1573,27 @@
         ],
         "type": "object"
       },
+      "List-filesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/FileView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "next": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "type": "object"
+      },
       "List-instruction-versionsResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1704,6 +1771,24 @@
         },
         "required": [
           "templates"
+        ],
+        "type": "object"
+      },
+      "List-usersResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/UserView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "users"
         ],
         "type": "object"
       },
@@ -3910,6 +3995,44 @@
         ],
         "type": "object"
       },
+      "UserView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_admin": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "spaces": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "status",
+          "is_admin",
+          "spaces",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "VaultBody": {
         "additionalProperties": false,
         "properties": {
@@ -4293,6 +4416,37 @@
           }
         },
         "summary": "Turn telemetry on or off",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "list-users",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-usersResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The accounts of this instance (instance admins)",
         "tags": [
           "admin"
         ]
@@ -7258,6 +7412,80 @@
         "summary": "Change the class of a connector tool, or turn it off. It applies to the next run.",
         "tags": [
           "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/files": {
+      "get": {
+        "operationId": "list-files",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Return files sent before this time (RFC 3339), for the next page.",
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "description": "Return files sent before this time (RFC 3339), for the next page.",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "format": "int64",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-filesResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The files that bots sent in the chats of the space, newest first. q searches the file names.",
+        "tags": [
+          "chats"
         ]
       }
     },

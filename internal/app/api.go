@@ -93,6 +93,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerPatches(api)
 	a.registerMembers(api)
 	a.registerEdition(api)
+	a.registerFiles(api)
 	for _, x := range extensions {
 		x.Routes(api)
 	}

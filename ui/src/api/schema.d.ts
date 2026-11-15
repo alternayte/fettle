@@ -56,6 +56,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The accounts of this instance (instance admins) */
+    get: operations["list-users"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/auth/local": {
     parameters: {
       query?: never;
@@ -874,6 +891,23 @@ export interface paths {
     get?: never;
     /** Change the class of a connector tool, or turn it off. It applies to the next run. */
     put: operations["set-connector-tool"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The files that bots sent in the chats of the space, newest first. q searches the file names. */
+    get: operations["list-files"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -2086,6 +2120,19 @@ export interface components {
       /** @description The feature can change data; false after the licence grace ends. */
       writable: boolean;
     };
+    FileView: {
+      bot_id: string;
+      bot_name: string;
+      chat_id: string;
+      id: string;
+      message_id: string;
+      name: string;
+      /** Format: date-time */
+      sent_at: string;
+      /** Format: int64 */
+      size: number;
+      type: string;
+    };
     "Get-skillResponse": {
       skill: components["schemas"]["SkillView"];
       versions: components["schemas"]["SkillVersionView"][] | null;
@@ -2146,6 +2193,10 @@ export interface components {
     "List-chatsResponse": {
       chats: components["schemas"]["ChatView"][] | null;
     };
+    "List-filesResponse": {
+      files: components["schemas"]["FileView"][] | null;
+      next?: string;
+    };
     "List-instruction-versionsResponse": {
       versions: components["schemas"]["VersionView"][] | null;
     };
@@ -2175,6 +2226,9 @@ export interface components {
     };
     "List-templatesResponse": {
       templates: components["schemas"]["TemplateView"][] | null;
+    };
+    "List-usersResponse": {
+      users: components["schemas"]["UserView"][] | null;
     };
     "List-vault-itemsResponse": {
       items: components["schemas"]["VaultItemView"][] | null;
@@ -2749,6 +2803,17 @@ export interface components {
     "Usage-viewResponse": {
       rows: components["schemas"]["Row"][] | null;
     };
+    UserView: {
+      /** Format: date-time */
+      created_at: string;
+      email: string;
+      id: string;
+      is_admin: boolean;
+      name: string;
+      /** Format: int64 */
+      spaces: number;
+      status: string;
+    };
     VaultBody: {
       /** @enum {string} */
       kind?: "login" | "secret" | "totp";
@@ -2864,6 +2929,7 @@ export type SchemaEvalResult = components["schemas"]["EvalResult"];
 export type SchemaEventView = components["schemas"]["EventView"];
 export type SchemaExpectation = components["schemas"]["Expectation"];
 export type SchemaFeatureView = components["schemas"]["FeatureView"];
+export type SchemaFileView = components["schemas"]["FileView"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
@@ -2873,6 +2939,7 @@ export type SchemaInviteView = components["schemas"]["InviteView"];
 export type SchemaLicenseView = components["schemas"]["LicenseView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
+export type SchemaListFilesResponse = components["schemas"]["List-filesResponse"];
 export type SchemaListInstructionVersionsResponse = components["schemas"]["List-instruction-versionsResponse"];
 export type SchemaListInvitesResponse = components["schemas"]["List-invitesResponse"];
 export type SchemaListMembersResponse = components["schemas"]["List-membersResponse"];
@@ -2883,6 +2950,7 @@ export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
 export type SchemaListSignalsResponse = components["schemas"]["List-signalsResponse"];
 export type SchemaListTemplatesResponse = components["schemas"]["List-templatesResponse"];
+export type SchemaListUsersResponse = components["schemas"]["List-usersResponse"];
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
 export type SchemaListOutBody1 = components["schemas"]["ListOutBody1"];
@@ -2963,6 +3031,7 @@ export type SchemaToolInfo = components["schemas"]["ToolInfo"];
 export type SchemaToolSetting = components["schemas"]["ToolSetting"];
 export type SchemaUpdateMeRequest = components["schemas"]["Update-meRequest"];
 export type SchemaUsageViewResponse = components["schemas"]["Usage-viewResponse"];
+export type SchemaUserView = components["schemas"]["UserView"];
 export type SchemaVaultBody = components["schemas"]["VaultBody"];
 export type SchemaVaultItemView = components["schemas"]["VaultItemView"];
 export type SchemaVersionView = components["schemas"]["VersionView"];
@@ -3078,6 +3147,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TelemetryView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-usersResponse"];
         };
       };
       /** @description Error */
@@ -5050,6 +5148,43 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-files": {
+    parameters: {
+      query?: {
+        q?: string;
+        /** @description Return files sent before this time (RFC 3339), for the next page. */
+        before?: string;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-filesResponse"];
+        };
       };
       /** @description Error */
       default: {
