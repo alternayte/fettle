@@ -29,6 +29,12 @@ async function routes(): Promise<string[]> {
     "/settings/connectors",
     "/settings/vault",
     "/settings/usage",
+    "/bots",
+    "/files",
+    "/settings/budgets",
+    "/settings/members",
+    "/settings/account",
+    "/admin",
   ];
   if (runs.runs?.length) list.push(`/runs/${runs.runs[0].line.run_id}`);
   return list;
