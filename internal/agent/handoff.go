@@ -163,7 +163,7 @@ func (x *exec) handoff(ctx context.Context, st *state, call models.ToolCall) err
 		ParentID: ptr(x.env.ID()), RootID: x.env.RootID, SpaceID: x.run.SpaceID, Kind: "handoff", Origin: x.env.Origin,
 		Requester: envelopes.Requester{Type: "bot", ID: x.run.BotID.String()}, OwnerBotID: ptr(target.ID()), ChatID: x.env.ChatID,
 		Goal: strings.TrimSpace(in.Goal), Acceptance: []envelopes.Check{check}, Capabilities: x.env.Capabilities,
-		Budget: envelopes.Budget{USD: left * share, Tokens: int64(float64(x.env.Budget.Tokens) * share), WallMS: x.env.Budget.WallMS, HopsRemaining: x.env.Budget.HopsRemaining - 1, MaxSubagents: x.env.Budget.MaxSubagents},
+		Budget:         envelopes.Budget{USD: left * share, Tokens: int64(float64(x.env.Budget.Tokens) * share), WallMS: x.env.Budget.WallMS, HopsRemaining: x.env.Budget.HopsRemaining - 1, MaxSubagents: x.env.Budget.MaxSubagents},
 		IdempotencyKey: fmt.Sprintf("%s:handoff:%s", x.run.ID(), call.ID),
 		Decision:       envelopes.Decision{FromRun: x.run.ID().String(), FromCall: call.ID, Wait: wait},
 	}
