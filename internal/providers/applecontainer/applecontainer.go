@@ -136,7 +136,19 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 		}
 	}
 	report(computers.Progress{Step: "runtime", State: "pass", Detail: "Apple container " + Version})
-	if out, err := p.cli(ctx, "system", "status"); err != nil || !strings.Contains(string(out), "running") {
+	out, err := p.cli(ctx, "system", "status")
+	running := err == nil && strings.Contains(string(out), "running")
+	if running && !p.ownsService(string(out)) {
+		// The service of this user runs on other folders (another data folder, or a
+		// deleted one). Its kernel and images are not ours, so it restarts on ours.
+		report(computers.Progress{Step: "service", State: "running", Detail: "restart on this data folder"})
+		if _, err := p.cli(ctx, "system", "stop"); err != nil {
+			report(computers.Progress{Step: "service", State: "fail", Detail: err.Error()})
+			return err
+		}
+		running = false
+	}
+	if !running {
 		report(computers.Progress{Step: "service", State: "running"})
 		if _, err := p.cli(ctx, "system", "start", "--install-root", p.install(), "--app-root", p.app(), "--enable-kernel-install", "--timeout", "120"); err != nil {
 			report(computers.Progress{Step: "service", State: "fail", Detail: err.Error()})
@@ -155,6 +167,20 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 	}
 	report(computers.Progress{Step: "image", State: "pass", Detail: p.Image})
 	return nil
+}
+
+// ownsService reports whether the running service (system status output) uses this
+// provider's app root.
+func (p *Provider) ownsService(status string) bool {
+	for _, line := range strings.Split(status, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 2 && f[0] == "paths.appRoot" {
+			want, _ := filepath.EvalSymlinks(p.app())
+			got, _ := filepath.EvalSymlinks(strings.TrimSuffix(f[1], "/"))
+			return want != "" && want == got
+		}
+	}
+	return false
 }
 
 // loadImage pulls the image from its registry, or, for a local build without a registry
