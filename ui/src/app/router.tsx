@@ -4,7 +4,6 @@ import {
   createRouter,
   Link,
   lazyRouteComponent,
-  redirect,
   type AnyRoute,
 } from "@tanstack/react-router";
 import { ChatPage } from "@/features/chat/ChatPage";
@@ -97,9 +96,7 @@ export async function createAppRouter() {
   const settingsIndex = createRoute({
     getParentRoute: () => settings,
     path: "/",
-    beforeLoad: () => {
-      throw redirect({ to: "/settings/models", replace: true });
-    },
+    component: lazyRouteComponent(() => import("@/features/settings/SettingsLayout"), "SettingsIndex"),
   });
   const sub = (path: string, load: () => Promise<Record<string, unknown>>, name: string) =>
     createRoute({
@@ -108,6 +105,21 @@ export async function createAppRouter() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       component: lazyRouteComponent(load as () => Promise<any>, name),
     });
+  const botsRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/bots",
+    component: lazyRouteComponent(() => import("@/features/bots/BotsPage"), "BotsPage"),
+  });
+  const filesRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/files",
+    component: lazyRouteComponent(() => import("@/features/files/FilesPage"), "FilesPage"),
+  });
+  const inviteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/invite/$token",
+    component: lazyRouteComponent(() => import("@/features/invite/InvitePage"), "InvitePage"),
+  });
   const admin = createRoute({
     getParentRoute: () => app,
     path: "/admin",
@@ -117,6 +129,7 @@ export async function createAppRouter() {
   const routes: AnyRoute[] = [
     indexRoute,
     setupRoute,
+    inviteRoute,
     app.addChildren([
       chat,
       runs,
@@ -126,7 +139,9 @@ export async function createAppRouter() {
       skillsRoute,
       skillRoute,
       screenRoute,
+      botsRoute,
       bot,
+      filesRoute,
       settings.addChildren([
         settingsIndex,
         sub("models", () => import("@/features/settings/ModelsPage"), "ModelsPage"),
@@ -135,6 +150,9 @@ export async function createAppRouter() {
         sub("connectors", () => import("@/features/settings/ConnectorsPage"), "ConnectorsPage"),
         sub("approvals", () => import("@/features/settings/ApprovalsPage"), "ApprovalsPage"),
         sub("space", () => import("@/features/settings/SpacePage"), "SpacePage"),
+        sub("budgets", () => import("@/features/settings/BudgetsPage"), "BudgetsPage"),
+        sub("members", () => import("@/features/settings/MembersPage"), "MembersPage"),
+        sub("account", () => import("@/features/settings/AccountPage"), "AccountPage"),
         sub("usage", () => import("@/features/settings/UsagePage"), "UsagePage"),
         sub("audit", () => import("@/features/settings/AuditPage"), "AuditPage"),
         sub("tokens", () => import("@/features/settings/TokensPage"), "TokensPage"),

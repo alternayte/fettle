@@ -2,18 +2,13 @@ import { memo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { CornerUpLeft, Paperclip, SmilePlus } from "lucide-react";
 import { t } from "@/lib/copy";
-import { formatClock } from "@/lib/format";
+import { formatClock, formatSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BotMark } from "./BotMark";
 import { CardView, type CardAnswer } from "./CardView";
 import { Markdown } from "./Markdown";
 import { RunLine } from "./RunLine";
 import type { Bot, Message } from "./types";
-
-function formatSize(n: number) {
-  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
 
 const QUICK = ["👍", "👎", "✅", "❤️", "👀"];
 

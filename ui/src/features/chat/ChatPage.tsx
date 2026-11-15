@@ -7,6 +7,7 @@ import { Notice, Page } from "@/app/Page";
 import { useShell } from "@/app/shell-context";
 import { Btn } from "@/components/form";
 import { t } from "@/lib/copy";
+import { attachmentHref } from "@/lib/format";
 import { toast } from "sonner";
 import { ChatView } from "./ChatView";
 import { toBot } from "./map";
@@ -121,7 +122,7 @@ function ChatScreen({ chatId }: { chatId: string }) {
       members={chat?.kind === "group" ? (chat.bot_ids ?? []).map((id) => botMap[id]).filter(Boolean) : undefined}
       onUpload={(file) => uploadAttachment(space.id, chatId, file)}
       onReact={c.react}
-      fileHref={(id) => `/api/v1/spaces/${space.id}/chats/${chatId}/attachments/${id}`}
+      fileHref={(id) => attachmentHref(space.id, chatId, id)}
       onReachTop={c.hasOlder ? c.loadOlder : undefined}
       loadingOlder={c.loadingOlder}
       empty={empty}

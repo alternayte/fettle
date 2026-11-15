@@ -38,3 +38,13 @@ export function formatDay(iso: string): string {
   if (d.toDateString() === y.toDateString()) return t("units.yesterday");
   return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
 }
+
+export function formatSize(n: number): string {
+  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** attachmentHref is the download address of one file of a chat. */
+export function attachmentHref(space: string, chat: string, id: string): string {
+  return `/api/v1/spaces/${space}/chats/${chat}/attachments/${id}`;
+}

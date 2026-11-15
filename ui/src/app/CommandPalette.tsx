@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Activity, Moon, Settings, Sun } from "lucide-react";
+import { Activity, FileText, List, Moon, Settings, Sun } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -34,14 +34,12 @@ export function CommandPalette({
   bots,
   chats,
   onNavigate,
-  isOwner,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   bots: Bot[];
   chats: ChatSummary[];
   onNavigate: (to: NavTarget) => void;
-  isOwner: boolean;
 }) {
   const { setPref } = useTheme();
   const go = (to: NavTarget) => {
@@ -79,15 +77,19 @@ export function CommandPalette({
             })}
         </CommandGroup>
         <CommandGroup heading={t("palette.go")}>
+          <CommandItem onSelect={() => go({ kind: "page", page: "bots" })}>
+            <List aria-hidden /> {t("palette.bots")}
+          </CommandItem>
+          <CommandItem onSelect={() => go({ kind: "page", page: "files" })}>
+            <FileText aria-hidden /> {t("shell.files")}
+          </CommandItem>
           <CommandItem onSelect={() => go({ kind: "page", page: "runs" })}>
             <Activity aria-hidden /> {t("shell.runs")}
           </CommandItem>
-          {isOwner && (
-            <CommandItem onSelect={() => go({ kind: "page", page: "settings" })}>
-              <Settings aria-hidden /> {t("shell.settings")}
-              <CommandShortcut>⌘,</CommandShortcut>
-            </CommandItem>
-          )}
+          <CommandItem onSelect={() => go({ kind: "page", page: "settings" })}>
+            <Settings aria-hidden /> {t("shell.settings")}
+            <CommandShortcut>⌘,</CommandShortcut>
+          </CommandItem>
         </CommandGroup>
         <CommandGroup heading={t("palette.appearance")}>
           <CommandItem
