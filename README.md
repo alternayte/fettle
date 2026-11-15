@@ -159,7 +159,7 @@ Read [docs/security.md](docs/security.md).
 
 The `ee` directory holds the Enterprise features. Only a build with the Go build tag `ee` includes them.
 
-- Single sign-on with OIDC and SAML. The licence names the `sso` feature. This version has no OIDC or SAML sign-in yet.
+- Single sign-on with OIDC and SAML, with group-to-role mapping. The licence names the `sso` feature.
 - SCIM 2.0 provisioning of users and groups.
 - Audit log export to S3-compatible storage and to a signed webhook.
 - Organization policy packs: rules for every space, and allowlists for zone hosts, providers and models.

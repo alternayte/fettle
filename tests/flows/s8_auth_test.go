@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/alternayte/auth-all/plugins/passkeys/passkeystest"
 )
 
 // signInAs signs a person in to a server-mode server and keeps the session cookie.
@@ -102,6 +104,51 @@ func TestSCN_AUTH_001_InviteLinkMakesAMemberOfOneSpace(t *testing.T) {
 	// A member cannot invite or change roles.
 	if code, _, _ = s.do("POST", "/api/v1/spaces/"+acme.ID+"/invites", map[string]any{"role": "owner"}, s.baseURL); code != 403 {
 		t.Fatalf("a member made an invite: %d", code)
+	}
+
+	// The member registers a passkey, signs out, and signs in with it.
+	device := passkeystest.New("fettle.test", s.baseURL)
+	var ceremony struct {
+		Ceremony string          `json:"ceremony"`
+		Options  json.RawMessage `json:"options"`
+	}
+	code, _, body = s.do("POST", "/api/auth/passkeys/register/begin", map[string]any{}, s.baseURL)
+	if code != 200 {
+		t.Fatalf("passkey register begin: %d %s", code, body)
+	}
+	_ = json.Unmarshal([]byte(body), &ceremony)
+	cred, err := device.Register(ceremony.Options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code, _, body = s.do("POST", "/api/auth/passkeys/register/finish", map[string]any{"ceremony": ceremony.Ceremony, "name": "Laptop", "credential": cred}, s.baseURL); code/100 != 2 {
+		t.Fatalf("passkey register finish: %d %s", code, body)
+	}
+	if code, _, _ = s.do("POST", "/api/auth/sign-out", nil, s.baseURL); code/100 != 2 {
+		t.Fatalf("sign-out: %d", code)
+	}
+	s.cookie = ""
+	if code, _, _ = s.do("GET", "/api/v1/me", nil, ""); code != 401 {
+		t.Fatalf("after sign-out /me answers %d", code)
+	}
+	code, _, body = s.do("POST", "/api/auth/passkeys/sign-in/begin", map[string]any{}, s.baseURL)
+	if code != 200 {
+		t.Fatalf("passkey sign-in begin: %d %s", code, body)
+	}
+	_ = json.Unmarshal([]byte(body), &ceremony)
+	assertion, err := device.SignIn(ceremony.Options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, h, body = s.do("POST", "/api/auth/passkeys/sign-in/finish", map[string]any{"ceremony": ceremony.Ceremony, "credential": assertion}, s.baseURL)
+	if code != 200 || strings.Contains(body, `"mfaRequired":true`) {
+		t.Fatalf("passkey sign-in: %d %s", code, body)
+	}
+	if s.cookie = sessionCookie(h); s.cookie == "" {
+		t.Fatal("the passkey sign-in set no session cookie")
+	}
+	if m = s.me(); m.Email != "member@acme.test" || len(m.Spaces) != 1 || m.Spaces[0].ID != acme.ID || m.Spaces[0].Role != "member" {
+		t.Fatalf("after the passkey sign-in: %+v", m)
 	}
 
 	// A fresh sign-in with the password works.

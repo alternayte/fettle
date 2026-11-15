@@ -87,6 +87,12 @@ The command needs `FETTLE_MASTER_KEY` and `FETTLE_BASE_URL`, as the server does.
 - A space has the roles `owner` and `member`. A space keeps at least one owner.
 - An instance admin can make a new space. The admin becomes its owner.
 
+## Passkeys
+
+- A person adds a passkey in **Settings**, **Account**, **Passkeys**. The session must be less than 10 minutes old.
+- The sign-in page has a button for a passkey sign-in.
+- A passkey works only for the host of `FETTLE_BASE_URL`. If you change the host, people must add their passkeys again.
+
 ## Sessions and tokens
 
 - A session ends after 12 hours without use, and after 30 days at most.

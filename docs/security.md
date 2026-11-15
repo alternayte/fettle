@@ -35,7 +35,7 @@ This page describes how Fettle keeps secrets, limits bots and records their work
 ## Sign-in
 
 - In local mode, the server listens only on a loopback address. The browser exchanges the local token for a cookie.
-- In server mode, people sign in with an email and a password.
+- In server mode, people sign in with an email and a password, or with a passkey. The Enterprise build adds OIDC and SAML single sign-on.
 - A session ends after 12 hours without use, and after 30 days at most.
 - Fettle limits sign-ins to 10 per minute from one address, and 10 per 15 minutes for one email.
 - Personal access tokens start with `fet_`. Fettle shows a token one time.

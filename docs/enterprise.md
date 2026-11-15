@@ -24,9 +24,6 @@ Production use needs a valid licence key. Development, tests, evaluation and dem
 
 A licence names its features. The name `all` gives all features.
 
-The licence has the `sso` feature, and the group mapping accepts SSO groups.
-This version has no OIDC or SAML sign-in yet. People sign in with an email and a password.
-
 All Enterprise routes are for instance admins.
 
 ## Licence key
@@ -46,6 +43,51 @@ Set the key in one of two ways:
 
 `GET /api/v1/admin/edition` shows the edition, the licence state and each feature.
 The licence states are `missing`, `invalid`, `valid`, `grace` and `read_only`.
+
+## Single sign-on
+
+Server mode signs people in with OpenID Connect, with SAML 2.0, or with both.
+The licence must have the `sso` feature. The sign-in page shows one button for each method.
+Set the variables in the environment of the server, then restart it.
+
+### OpenID Connect
+
+| Variable | Use |
+| --- | --- |
+| `FETTLE_OIDC_ISSUER` | The issuer URL. Fettle reads `<issuer>/.well-known/openid-configuration`. |
+| `FETTLE_OIDC_CLIENT_ID` | The client ID that the identity provider gave to Fettle. |
+| `FETTLE_OIDC_CLIENT_SECRET` | The client secret. |
+| `FETTLE_OIDC_GROUPS_CLAIM` | The ID token claim that holds the groups. The default is `groups`. Fettle also asks for a scope with this name. |
+| `FETTLE_OIDC_NAME` | The name on the sign-in button, for example `Acme ID`. |
+
+Register this redirect URI at the identity provider: `<FETTLE_BASE_URL>/api/auth/oauth/sso/callback`.
+
+Fettle checks the signature, the issuer, the audience, the expiry and the nonce of each ID token.
+A new person gets an account at the first sign-in. A person with a verified email that has an account gets that account.
+
+### SAML 2.0
+
+| Variable | Use |
+| --- | --- |
+| `FETTLE_SAML_IDP_METADATA` | The URL or the file path of the identity provider metadata. |
+| `FETTLE_SAML_GROUPS_ATTRIBUTE` | The attribute that holds the groups. The default is `groups`. |
+| `FETTLE_SAML_NAME` | The name on the sign-in button. |
+
+Give these values to the identity provider:
+
+- Entity ID and metadata: `<FETTLE_BASE_URL>/api/v1/sso/saml/metadata`
+- Assertion consumer service (HTTP-POST): `<FETTLE_BASE_URL>/api/v1/sso/saml/acs`
+- Name ID format: email address
+
+The identity provider must sign the response or the assertion. Fettle does not accept encrypted assertions.
+Fettle accepts only answers to a sign-in that it started. A sign-in that starts at the identity provider does not work.
+Fettle reads the email from the name ID or from the `email` or `mail` attribute.
+
+### Groups
+
+At each single sign-on, Fettle stores the groups of the person.
+The group roles below apply to these groups and to the SCIM groups.
+A person who leaves all mapped groups of a space leaves the space at the next sign-in.
 
 ## SCIM 2.0
 
@@ -72,7 +114,7 @@ SCIM requests use a bearer token.
 }
 ```
 
-Fettle adds the members of a group to the space with the role.
+Fettle adds the members of a group to the space with the role. The groups come from SCIM and from single sign-on.
 
 ## Audit log export
 

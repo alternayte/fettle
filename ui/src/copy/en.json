@@ -550,7 +550,12 @@
       "submit": "Sign in",
       "wrong": "The email or the password is wrong.",
       "limited": "Too many tries. Wait one minute, then try again.",
-      "failed": "Fettle could not sign you in. Try again."
+      "failed": "Fettle could not sign you in. Try again.",
+      "or": "or",
+      "passkey": "Sign in with a passkey",
+      "passkeyFailed": "Fettle could not sign you in with this passkey. Use your password.",
+      "passkeyMfa": "This passkey did not check your PIN or fingerprint. Use your password.",
+      "sso": "Sign in with {name}"
     }
   },
   "notFound": {
@@ -1372,7 +1377,23 @@
     "more": "Access and alerts",
     "tokensBody": "Tokens let the CLI and scripts use the API as you.",
     "notifyBody": "Choose the alerts that this device gets.",
-    "role": "Your role in {space}: {role}."
+    "role": "Your role in {space}: {role}.",
+    "passkeys": {
+      "title": "Passkeys",
+      "intro": "A passkey lets you sign in with your fingerprint, face or device PIN instead of your password.",
+      "name": "Passkey name",
+      "defaultName": "This device",
+      "add": "Add a passkey",
+      "none": "You have no passkeys.",
+      "added": "Passkey added",
+      "removed": "Passkey removed",
+      "remove": "Remove",
+      "failed": "Fettle did not change your passkeys",
+      "stale": "Sign out and sign in again, then add or remove the passkey.",
+      "unsupported": "This browser cannot make passkeys.",
+      "lastUsed": "Last used {when}",
+      "neverUsed": "Not used yet"
+    }
   },
   "invite": {
     "title": "Join {space}",

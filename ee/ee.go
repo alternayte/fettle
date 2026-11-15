@@ -54,6 +54,10 @@ type Enterprise struct {
 	mu    sync.Mutex
 	cache *licensekey.Status
 	until time.Time
+
+	sso sso
+	// groupMu orders the changes of groups and the memberships that follow them.
+	groupMu sync.Mutex
 }
 
 // Pack is an organization policy pack (§18.3): rules for every space and allowlists.
@@ -169,6 +173,7 @@ func (x *Enterprise) Install(a *app.App) error {
 		return fmt.Errorf("%w: %s", ErrModel, model)
 	}
 	a.Agent.OrgBudget = x.orgBudget
+	x.installSSO()
 	return nil
 }
 
@@ -262,6 +267,7 @@ func (x *Enterprise) Edition(ctx context.Context) app.EditionView {
 // Public mounts the routes that need no Fettle sign-in.
 func (x *Enterprise) Public(r chi.Router) {
 	x.publicSCIM(r)
+	x.publicSSO(r)
 }
 
 // Tick runs on the maintenance tick.

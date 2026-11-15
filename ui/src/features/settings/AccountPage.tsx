@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, KeyRound } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, ChevronRight, Fingerprint, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
+import { PasskeyError, addPasskey, deletePasskey, listPasskeys, passkeysSupported } from "@/api/signin";
 import { useSession, useUpdateMe } from "@/api/hooks";
 import { Section } from "@/app/Page";
 import { Btn, Field, inputCls } from "@/components/form";
 import { has, t } from "@/lib/copy";
+import { formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function NameForm() {
@@ -63,11 +66,97 @@ function NameForm() {
   );
 }
 
+function passkeyError(err: unknown) {
+  if (err instanceof PasskeyError && err.code === "CANCELLED") return;
+  if (err instanceof DOMException && err.name === "NotAllowedError") return;
+  const stale = err instanceof PasskeyError && err.code === "SESSION_NOT_FRESH";
+  toast.error(t("account.passkeys.failed"), { description: stale ? t("account.passkeys.stale") : errorText(err) });
+}
+
+function Passkeys() {
+  const qc = useQueryClient();
+  const keys = useQuery({ queryKey: ["passkeys"], queryFn: listPasskeys });
+  const [name, setName] = useState(t("account.passkeys.defaultName"));
+  const [busy, setBusy] = useState(false);
+  const supported = passkeysSupported();
+  return (
+    <Section id="passkeys" title={t("account.passkeys.title")}>
+      <p className="mb-4 max-w-[var(--measure)] text-sm text-ink-soft">{t("account.passkeys.intro")}</p>
+      {supported ? (
+        <form
+          className="mb-4 flex flex-wrap items-end gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            try {
+              await addPasskey(name.trim() || t("account.passkeys.defaultName"));
+              toast.success(t("account.passkeys.added"));
+              void qc.invalidateQueries({ queryKey: ["passkeys"] });
+            } catch (err) {
+              passkeyError(err);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Field id="passkey-name" label={t("account.passkeys.name")} className="w-64">
+            <input
+              id="passkey-name"
+              value={name}
+              maxLength={80}
+              onChange={(e) => setName(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+          <Btn type="submit" busy={busy}>
+            <Fingerprint aria-hidden className="size-4" />
+            {t("account.passkeys.add")}
+          </Btn>
+        </form>
+      ) : (
+        <p className="mb-4 text-sm text-ink-faint">{t("account.passkeys.unsupported")}</p>
+      )}
+      <ul aria-label={t("account.passkeys.title")}>
+        {(keys.data ?? []).length === 0 && (
+          <li className="border-y border-rule py-3 text-sm text-ink-faint">{t("account.passkeys.none")}</li>
+        )}
+        {(keys.data ?? []).map((k) => (
+          <li key={k.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-rule py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-[var(--weight-medium)] text-ink">{k.name}</p>
+              <p className="figures text-ink-faint">
+                {k.lastUsedAt
+                  ? t("account.passkeys.lastUsed", { when: formatDay(k.lastUsedAt) })
+                  : t("account.passkeys.neverUsed")}
+              </p>
+            </div>
+            <Btn
+              kind="danger"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await deletePasskey(k.id);
+                  toast.success(t("account.passkeys.removed"));
+                  void qc.invalidateQueries({ queryKey: ["passkeys"] });
+                } catch (err) {
+                  passkeyError(err);
+                }
+              }}
+            >
+              {t("account.passkeys.remove")}
+            </Btn>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
 const linkCls =
   "grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-rule px-1 py-2.5 hover:bg-surface-sunk sm:px-2";
 
 export function AccountPage() {
-  const { space } = useSession();
+  const { me, space } = useSession();
   const role = has(`members.roles.${space.role}`) ? t(`members.roles.${space.role}`) : space.role;
   return (
     <div className="max-w-3xl">
@@ -77,6 +166,7 @@ export function AccountPage() {
         </p>
         <NameForm />
       </Section>
+      {me.mode === "server" && <Passkeys />}
       <Section id="account-more" title={t("account.more")}>
         <ul className="border-t border-rule">
           <li>

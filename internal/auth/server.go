@@ -12,6 +12,7 @@ import (
 	authall "github.com/alternayte/auth-all"
 	"github.com/alternayte/auth-all/apierr"
 	"github.com/alternayte/auth-all/plugins/apikeys"
+	"github.com/alternayte/auth-all/plugins/passkeys"
 	"github.com/alternayte/auth-all/plugins/roles"
 	"github.com/alternayte/auth-all/ratelimit"
 	"github.com/alternayte/auth-all/ratelimit/storelimit"
@@ -31,9 +32,12 @@ const TokenPrefix = "fet_"
 // Server is the sign-in of server mode (§16): accounts with email and password,
 // database sessions, sign-in rate limits and personal access tokens, through auth-all.
 type Server struct {
-	Auth    *authall.Auth
-	users   *UserStore
-	baseURL string
+	Auth *authall.Auth
+	// Passkeys holds the WebAuthn passkeys of the accounts; the relying party is the host of
+	// FETTLE_BASE_URL.
+	Passkeys *passkeys.Plugin
+	users    *UserStore
+	baseURL  string
 }
 
 // ServerConfig opens the server-mode sign-in on the Fettle database.
@@ -42,6 +46,8 @@ type ServerConfig struct {
 	PGPool  *pgxpool.Pool // PostgreSQL
 	BaseURL string        // FETTLE_BASE_URL
 	Clock   func() time.Time
+	// Options adds sign-in methods of another edition, such as single sign-on providers.
+	Options []authall.Option
 }
 
 // NewServer builds the sign-in. It changes no schema; Migrate does.
@@ -69,6 +75,7 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 		return nil, err
 	}
 	secure := u.Scheme == "https"
+	pk := passkeys.New(passkeys.RPDisplayName("Fettle"))
 	opts := []authall.Option{
 		authall.WithStore(st),
 		authall.WithBaseURL(strings.TrimRight(c.BaseURL, "/")),
@@ -82,16 +89,18 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 		authall.WithPlugins(
 			roles.New(roles.Hierarchy("user", "admin")),
 			apikeys.New(apikeys.Prefix(TokenPrefix), apikeys.MaxTTL(366*24*time.Hour), apikeys.AllowNoExpiry(), apikeys.AdminRole("admin")),
+			pk,
 		),
 	}
 	if c.Clock != nil {
 		opts = append(opts, authall.WithClock(c.Clock))
 	}
+	opts = append(opts, c.Options...)
 	a, err := authall.New(opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &Server{Auth: a, users: NewUserStore(e), baseURL: strings.TrimRight(c.BaseURL, "/")}, nil
+	return &Server{Auth: a, Passkeys: pk, users: NewUserStore(e), baseURL: strings.TrimRight(c.BaseURL, "/")}, nil
 }
 
 // Migrate applies the auth-all tables. The caller holds the migration lock.
@@ -109,8 +118,8 @@ func (s *Server) CreateUser(ctx context.Context, email, name, password string, a
 	return s.users.Ensure(ctx, au.Email, name, admin)
 }
 
-// Handler serves the auth-all routes under /api/auth. Self sign-up is closed: an owner
-// creates accounts (fettle admin create-user) until invite links exist.
+// Handler serves the auth-all routes under /api/auth, with the passkey routes. Self sign-up
+// is closed: a person signs up through an invite link.
 func (s *Server) Handler() http.Handler {
 	h := s.Auth.Handler()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

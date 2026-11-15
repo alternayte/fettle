@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	authall "github.com/alternayte/auth-all"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -54,6 +55,26 @@ type Extension interface {
 }
 
 var extensions []Extension
+
+// SignInExtension is the optional part of an Extension that adds sign-in methods to server
+// mode, such as an OpenID Connect provider. Core calls it before it builds the sign-in.
+type SignInExtension interface {
+	SignInOptions(cfg Config) ([]authall.Option, error)
+}
+
+func signInOptions(cfg Config) ([]authall.Option, error) {
+	var out []authall.Option
+	for _, x := range extensions {
+		if s, ok := x.(SignInExtension); ok {
+			o, err := s.SignInOptions(cfg)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, o...)
+		}
+	}
+	return out, nil
+}
 
 // Register adds an edition's extension. The ee package calls it from init.
 func Register(x Extension) { extensions = append(extensions, x) }

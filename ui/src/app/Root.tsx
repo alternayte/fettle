@@ -2,9 +2,9 @@ import { useDesktopLinks } from "@/lib/desktop";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { KeyRound, RotateCw } from "lucide-react";
+import { Building2, Fingerprint, KeyRound, RotateCw } from "lucide-react";
 import { api, errorText, isUnauthorized } from "@/api/client";
-import { signIn } from "@/api/signin";
+import { listSSO, passkeySignIn, passkeysSupported, signIn } from "@/api/signin";
 import { SessionContext, useBots, useMe, useSession } from "@/api/hooks";
 import { Btn, Field, inputCls } from "@/components/form";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,7 +27,9 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [error, setError] = useState<string | null>(() => new URLSearchParams(window.location.search).get("sso_error"));
+  const sso = useQuery({ queryKey: ["sso"], queryFn: listSSO, retry: false });
   return (
     <FullPage>
       <h1 className="serif-title text-2xl text-ink">{t("auth.signIn.title")}</h1>
@@ -73,6 +75,40 @@ function SignInForm() {
           {t("auth.signIn.submit")}
         </Btn>
       </form>
+      {((sso.data ?? []).length > 0 || passkeysSupported()) && (
+        <div className="mt-4 space-y-2">
+          <p className="text-center text-xs text-ink-faint">{t("auth.signIn.or")}</p>
+          {(sso.data ?? []).map((m) => (
+            <a
+              key={m.url}
+              href={m.url}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-sm border border-rule-strong bg-surface-raised px-3.5 text-sm font-[var(--weight-medium)] text-ink transition-colors duration-[var(--dur-1)] hover:bg-surface-sunk"
+            >
+              <Building2 aria-hidden className="size-4" />
+              {t("auth.signIn.sso", { name: m.name })}
+            </a>
+          ))}
+          {passkeysSupported() && (
+            <Btn
+              kind="plain"
+              className="w-full"
+              busy={passkeyBusy}
+              onClick={async () => {
+                setError(null);
+                setPasskeyBusy(true);
+                const r = await passkeySignIn();
+                setPasskeyBusy(false);
+                if (r === "ok") return void qc.invalidateQueries();
+                if (r === "mfa") setError(t("auth.signIn.passkeyMfa"));
+                if (r === "failed") setError(t("auth.signIn.passkeyFailed"));
+              }}
+            >
+              <Fingerprint aria-hidden className="size-4" />
+              {t("auth.signIn.passkey")}
+            </Btn>
+          )}
+        </div>
+      )}
     </FullPage>
   );
 }

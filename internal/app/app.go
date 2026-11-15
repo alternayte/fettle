@@ -111,7 +111,12 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.DB = db
 	var extra []func(context.Context) error
 	if cfg.Mode == ModeServer {
-		if a.SignIn, err = auth.NewServer(db.Engine, auth.ServerConfig{SQL: db.SQL, PGPool: db.PGPool, BaseURL: cfg.BaseURL}); err != nil {
+		more, err := signInOptions(*cfg)
+		if err != nil {
+			db.Close()
+			return nil, err
+		}
+		if a.SignIn, err = auth.NewServer(db.Engine, auth.ServerConfig{SQL: db.SQL, PGPool: db.PGPool, BaseURL: cfg.BaseURL, Options: more}); err != nil {
 			db.Close()
 			return nil, err
 		}

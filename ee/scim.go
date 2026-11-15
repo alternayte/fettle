@@ -595,13 +595,27 @@ func (x *Enterprise) scimDeleteGroup(w http.ResponseWriter, r *http.Request) {
 // the mapping added leaves the space when no mapped group of the space holds them any more.
 // People whom an owner added by hand keep their membership.
 func (x *Enterprise) applyGroupRoles(ctx context.Context) error {
+	x.groupMu.Lock()
+	defer x.groupMu.Unlock()
+	return x.applyGroupRolesLocked(ctx)
+}
+
+// applyGroupRolesLocked is applyGroupRoles for a caller that holds groupMu. The groups are
+// the SCIM groups and the identity provider groups of each person at their last single
+// sign-on.
+func (x *Enterprise) applyGroupRolesLocked(ctx context.Context) error {
 	var maps []GroupRole
 	_ = json.Unmarshal([]byte(x.a.Settings.String(ctx, nil, "ee.group_roles")), &maps)
 	managed := map[string][]string{} // space -> users that the mapping added
 	_ = json.Unmarshal([]byte(x.a.Settings.String(ctx, nil, "ee.scim_managed")), &managed)
 	groups := map[string][]string{}
 	for _, g := range x.groups(ctx) {
-		groups[strings.ToLower(g.DisplayName)] = g.Members
+		groups[strings.ToLower(g.DisplayName)] = append(groups[strings.ToLower(g.DisplayName)], g.Members...)
+	}
+	for uid, names := range x.ssoGroups(ctx) {
+		for _, n := range names {
+			groups[strings.ToLower(n)] = append(groups[strings.ToLower(n)], uid)
+		}
 	}
 	want := map[uuid.UUID]map[uuid.UUID]string{} // space -> user -> role
 	for sp := range managed {

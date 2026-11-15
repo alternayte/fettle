@@ -256,10 +256,25 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 	w.a.SendDigests(ctx, time.Now())
 	w.a.RunPatchJobs(ctx, time.Now())
 	w.a.extensionTick(ctx)
+	w.a.cleanupSignIn(ctx)
 	if err := w.a.WakeOpenWork(ctx); err != nil {
 		w.a.Log.Warn("open work wake failed", "error", err)
 	}
 	return nil
+}
+
+// cleanupSignIn removes expired sessions, tokens and passkey ceremonies of server mode;
+// auth-all runs no background work.
+func (a *App) cleanupSignIn(ctx context.Context) {
+	if a.SignIn == nil {
+		return
+	}
+	if err := a.SignIn.Auth.Cleanup(ctx); err != nil {
+		a.Log.Warn("sign-in cleanup", "error", err)
+	}
+	if _, err := a.SignIn.Passkeys.Cleanup(ctx); err != nil {
+		a.Log.Warn("passkey cleanup", "error", err)
+	}
 }
 
 func maintenanceJobs() []*river.PeriodicJob {
