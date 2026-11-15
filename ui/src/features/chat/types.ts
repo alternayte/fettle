@@ -29,7 +29,8 @@ export type CardKind =
   | "verification"
   | "check"
   | "proposal"
-  | "connect";
+  | "connect"
+  | "patch";
 export type CardStatus = "pending" | "allowed" | "denied" | "answered" | "expired";
 
 export interface Card {

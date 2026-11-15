@@ -158,6 +158,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Zones = zones.New(e, a.Audit)
 	a.Learning = learning.New(e, a.Runs, a.Journal, a.Envs)
 	a.Agent = agent.New(agent.Agent{E: e, Learning: a.Learning, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
+	a.Agent.ApplyPatch = a.applyPatch
 	a.Telemetry = NewTelemetry(a)
 
 	a.setupComputers(ctx)

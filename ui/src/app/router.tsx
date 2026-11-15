@@ -57,6 +57,11 @@ export async function createAppRouter() {
     path: "/runs/$runId",
     component: lazyRouteComponent(() => import("@/features/runs/RunsPage"), "RunPage"),
   });
+  const learningRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/learning",
+    component: lazyRouteComponent(() => import("@/features/learning/LearningPage"), "LearningPage"),
+  });
   const routinesRoute = createRoute({
     getParentRoute: () => app,
     path: "/routines",
@@ -117,6 +122,7 @@ export async function createAppRouter() {
       runs,
       run,
       routinesRoute,
+      learningRoute,
       skillsRoute,
       skillRoute,
       screenRoute,

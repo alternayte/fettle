@@ -245,6 +245,7 @@ func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 	}
 	w.a.SyncSkael(ctx)
 	w.a.SendDigests(ctx, time.Now())
+	w.a.RunPatchJobs(ctx, time.Now())
 	if err := w.a.WakeOpenWork(ctx); err != nil {
 		w.a.Log.Warn("open work wake failed", "error", err)
 	}

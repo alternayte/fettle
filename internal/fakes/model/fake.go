@@ -458,6 +458,11 @@ func (s *Server) builtin(req nreq) Step {
 	if strings.HasPrefix(req.system, "You verify a result of a bot") {
 		return Step{JSON: map[string]any{"pass": true, "reason": "The fake model accepts the result."}}
 	}
+	// An unscripted correction check finds no correction, so a scenario has only the
+	// steering signals that it makes.
+	if strings.HasPrefix(req.system, "You read a person's new message to a bot and decide whether it corrects") {
+		return Step{JSON: map[string]any{"correction": false, "reason": "The fake model finds no correction."}}
+	}
 	if req.schema != nil {
 		return Step{JSON: synth(req.schema)}
 	}

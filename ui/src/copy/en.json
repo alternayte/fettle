@@ -29,7 +29,8 @@
       "light": "Light",
       "dark": "Dark"
     },
-    "skills": "Skills"
+    "skills": "Skills",
+    "learning": "Learning"
   },
   "palette": {
     "title": "Command menu",
@@ -111,7 +112,13 @@
       "verification": "Failed checks",
       "check": "Your check",
       "proposal": "Proposal",
-      "connect": "Connect"
+      "connect": "Connect",
+      "patch": "Skill patch"
+    },
+    "patch": {
+      "diff": "Changes to the skill",
+      "apply": "Apply",
+      "decline": "Decline"
     },
     "connect": {
       "open": "Open Connectors",
@@ -204,7 +211,9 @@
       "escalated": "Needs you",
       "cancelled": "Stopped"
     },
-    "stopFailed": "Fettle cannot stop the run"
+    "stopFailed": "Fettle cannot stop the run",
+    "rerun": "Run again",
+    "rerunFailed": "Fettle did not run it again"
   },
   "timeline": {
     "title": "Run timeline",
@@ -555,7 +564,8 @@
     "empty": {
       "title": "No runs yet",
       "body": "A run starts when you send a message to a bot."
-    }
+    },
+    "scoreOf": "Score {score}"
   },
   "memory": {
     "bytes": "{used} of {limit} bytes",
@@ -1075,5 +1085,66 @@
     },
     "create": "Create group",
     "failed": "Fettle cannot create the group"
+  },
+  "learning": {
+    "title": "Learning",
+    "subtitle": "What people corrected, how runs scored, skill patches and the router report.",
+    "loadFailed": "Fettle did not load this part",
+    "router": {
+      "title": "Router report",
+      "older": "Older week",
+      "newer": "Newer week",
+      "period": "{from} to {to}",
+      "empty": "No ended runs in this week.",
+      "step": "Step",
+      "runs": "Runs",
+      "passRate": "Verified",
+      "score": "Score",
+      "cost": "Cost per run",
+      "duration": "Time per run",
+      "apply": "Apply",
+      "applied": "{setting} is now {value}."
+    },
+    "scores": {
+      "title": "Run scores",
+      "summary": "{runs} ended runs in 30 days, average score {avg} of 100.",
+      "empty": "No ended runs in 30 days.",
+      "none": "No runs.",
+      "runs": "{n} runs",
+      "byBot": "By bot",
+      "bySkill": "By skill",
+      "byStep": "By step",
+      "byModel": "By model"
+    },
+    "patches": {
+      "title": "Skill patches",
+      "run": "Look for patches now",
+      "body": "Each day Fettle looks for skills with 3 or more signals in 14 days. It writes a small patch and runs the skill's evals on the old and the new version. A card shows in the primary bot's chat only when the patch passes.",
+      "none": "No skill has enough signals.",
+      "outcome": {
+        "proposed": "Card posted",
+        "rejected": "Rejected by the gate",
+        "skipped": "Skipped"
+      }
+    },
+    "signals": {
+      "title": "Steering signals",
+      "run": "Open the run",
+      "empty": {
+        "title": "No signals in 14 days",
+        "body": "A signal is an action that shows a bot was wrong or incomplete. Examples are a denied approval, an edited draft and a thumbs down."
+      }
+    },
+    "signal": {
+      "correction": "Correction",
+      "draft_edited": "Draft edited",
+      "approval_denied": "Approval denied",
+      "rerun": "Run again",
+      "unrequested_takeover": "Takeover without a request",
+      "thumbs_down": "Thumbs down",
+      "card_declined": "Proposal declined",
+      "escalation_accepted_anyway": "Accepted anyway",
+      "uncertain_confirmed_wrong": "Uncertain action did not happen"
+    }
   }
 }

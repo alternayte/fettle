@@ -813,6 +813,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/learning/patches/run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run the skill patch job now: propose gated patches for skills with 3 or more signals in 14 days */
+    post: operations["run-patch-job"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/learning/router-report": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The weekly router report: per step runs, verifier pass rate, average score, cost and duration, with suggested step settings */
+    get: operations["router-report"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/learning/scores": {
     parameters: {
       query?: never;
@@ -1588,7 +1622,8 @@ export interface components {
         | "fail"
         | "create"
         | "decline"
-        | "skip";
+        | "skip"
+        | "apply";
       value?: string;
     };
     "Assign-skillRequest": {
@@ -2014,6 +2049,17 @@ export interface components {
       run_id?: string;
       started: boolean;
     };
+    PatchOutcome: {
+      card_id?: string;
+      /** Format: double */
+      new_score: number;
+      /** Format: double */
+      old_score: number;
+      /** @enum {string} */
+      outcome: "proposed" | "rejected" | "skipped";
+      reason?: string;
+      skill: string;
+    };
     "Post-messageRequest": {
       /** @description IDs from upload-attachment. */
       attachments?: string[] | null;
@@ -2126,6 +2172,14 @@ export interface components {
       role: string;
       targets: components["schemas"]["Target"][] | null;
     };
+    RouterReport: {
+      /** Format: date-time */
+      from: string;
+      steps: components["schemas"]["StepRow"][] | null;
+      suggestions: components["schemas"]["Suggestion"][] | null;
+      /** Format: date-time */
+      to: string;
+    };
     RoutineBody: {
       bot_id: string;
       cron?: string;
@@ -2194,6 +2248,9 @@ export interface components {
     RulesOutBody: {
       mode: string;
       rules: components["schemas"]["RuleView"][] | null;
+    };
+    "Run-patch-jobResponse": {
+      skills: components["schemas"]["PatchOutcome"][] | null;
     };
     "Run-routineResponse": {
       envelope_id: string;
@@ -2381,6 +2438,24 @@ export interface components {
       name: string;
       role: string;
       time_zone: string;
+    };
+    StepRow: {
+      /** Format: double */
+      avg_cost_usd: number;
+      /** Format: int64 */
+      avg_duration_ms: number;
+      /** Format: double */
+      avg_score: number;
+      /** Format: double */
+      pass_rate: number;
+      /** Format: int64 */
+      runs: number;
+      step: string;
+    };
+    Suggestion: {
+      reason: string;
+      setting: string;
+      value: string;
     };
     SyncResult: {
       /** Format: int64 */
@@ -2596,6 +2671,7 @@ export type SchemaMessagePage = components["schemas"]["MessagePage"];
 export type SchemaMessageView = components["schemas"]["MessageView"];
 export type SchemaModelInfo = components["schemas"]["ModelInfo"];
 export type SchemaOnboardingView = components["schemas"]["OnboardingView"];
+export type SchemaPatchOutcome = components["schemas"]["PatchOutcome"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
 export type SchemaPostMessageResponse = components["schemas"]["Post-messageResponse"];
 export type SchemaPrepareStatus = components["schemas"]["PrepareStatus"];
@@ -2614,12 +2690,14 @@ export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-mem
 export type SchemaReactRequest = components["schemas"]["ReactRequest"];
 export type SchemaRerunRunResponse = components["schemas"]["Rerun-runResponse"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
+export type SchemaRouterReport = components["schemas"]["RouterReport"];
 export type SchemaRoutineBody = components["schemas"]["RoutineBody"];
 export type SchemaRoutineRunView = components["schemas"]["RoutineRunView"];
 export type SchemaRoutineView = components["schemas"]["RoutineView"];
 export type SchemaRow = components["schemas"]["Row"];
 export type SchemaRuleView = components["schemas"]["RuleView"];
 export type SchemaRulesOutBody = components["schemas"]["RulesOutBody"];
+export type SchemaRunPatchJobResponse = components["schemas"]["Run-patch-jobResponse"];
 export type SchemaRunRoutineResponse = components["schemas"]["Run-routineResponse"];
 export type SchemaRunSkillEvalsRequest = components["schemas"]["Run-skill-evalsRequest"];
 export type SchemaRunLine = components["schemas"]["RunLine"];
@@ -2645,6 +2723,8 @@ export type SchemaSkillView = components["schemas"]["SkillView"];
 export type SchemaSmoke = components["schemas"]["Smoke"];
 export type SchemaSpaceInBody = components["schemas"]["SpaceInBody"];
 export type SchemaSpaceView = components["schemas"]["SpaceView"];
+export type SchemaStepRow = components["schemas"]["StepRow"];
+export type SchemaSuggestion = components["schemas"]["Suggestion"];
 export type SchemaSyncResult = components["schemas"]["SyncResult"];
 export type SchemaTarget = components["schemas"]["Target"];
 export type SchemaTelemetryCounts = components["schemas"]["TelemetryCounts"];
@@ -4620,6 +4700,73 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "run-patch-job": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Run-patch-jobResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "router-report": {
+    parameters: {
+      query?: {
+        /** @description 0 is the last 7 days. */
+        weeks_ago?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RouterReport"];
+        };
       };
       /** @description Error */
       default: {

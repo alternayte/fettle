@@ -77,9 +77,11 @@ export function AppLayout() {
         ? { kind: "page", page: "routines" }
         : pathname.startsWith("/skills")
           ? { kind: "page", page: "skills" }
-          : pathname.startsWith("/settings") || pathname.startsWith("/admin")
-            ? { kind: "page", page: "settings" }
-            : null;
+          : pathname.startsWith("/learning")
+            ? { kind: "page", page: "learning" }
+            : pathname.startsWith("/settings") || pathname.startsWith("/admin")
+              ? { kind: "page", page: "settings" }
+              : null;
 
   const onNavigate = useCallback(
     (to: NavTarget) => {
@@ -88,6 +90,7 @@ export function AppLayout() {
       else if (to.page === "runs") void navigate({ to: "/runs" });
       else if (to.page === "routines") void navigate({ to: "/routines" });
       else if (to.page === "skills") void navigate({ to: "/skills" });
+      else if (to.page === "learning") void navigate({ to: "/learning" });
       else void navigate({ to: "/settings/models" });
     },
     [navigate],

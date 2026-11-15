@@ -331,6 +331,16 @@ export function useStopRun() {
   });
 }
 
+export function useRerun() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: async (run: string) =>
+      (await must(api.POST("/api/v1/spaces/{space}/runs/{run}/rerun", { params: { path: { space, run } } }))).run_id,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.runs(space), exact: false }),
+  });
+}
+
 // ---------------------------------------------------------------- models
 
 export function usePresets() {

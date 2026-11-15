@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { Activity, BookOpen, CircleAlert, Square } from "lucide-react";
+import { Activity, BookOpen, CircleAlert, RotateCcw, Square } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
-import { LIVE_STATES, useBots, useRun, useRuns, useSession, useStopRun } from "@/api/hooks";
+import { LIVE_STATES, useBots, useRun, useRuns, useRerun, useSession, useStopRun } from "@/api/hooks";
 import { Notice, Page } from "@/app/Page";
 import { useShell } from "@/app/shell-context";
 import { Btn } from "@/components/form";
@@ -85,6 +85,9 @@ export function RunsPage() {
                   </span>
                   <span className="figures order-3 pt-0.5 text-ink-faint sm:order-none sm:text-right">
                     {formatDuration(line.duration_ms)} · {formatUSD(line.cost_usd)}
+                    {r.score != null && (
+                      <span className="text-ink-soft"> · {t("runs.scoreOf", { score: r.score })}</span>
+                    )}
                   </span>
                   <span className="figures order-4 pt-0.5 text-right text-ink-faint sm:order-none">
                     {started ? `${formatDay(started)} ${formatClock(started)}` : t("run.state.queued")}
@@ -105,6 +108,7 @@ export function RunPage() {
   const navigate = useNavigate();
   const q = useRun(runId);
   const stop = useStopRun();
+  const rerun = useRerun();
   const { isOwner } = useSession();
   const detail = useMemo(() => (q.data ? toRunDetail(q.data) : null), [q.data]);
   const live = !!q.data && LIVE_STATES.has(q.data.line.state);
@@ -124,6 +128,25 @@ export function RunPage() {
             <Square aria-hidden className="size-3 fill-current" />
             {t("chat.composer.stop")}
           </Btn>
+        )}
+        {!live && q.data?.kind === "owner" && (
+          <Btn
+            size="sm"
+            kind="quiet"
+            busy={rerun.isPending}
+            onClick={() =>
+              rerun.mutate(runId, {
+                onSuccess: (id) => void navigate({ to: "/runs/$runId", params: { runId: id } }),
+                onError: (err) => toast.error(t("run.rerunFailed"), { description: errorText(err) }),
+              })
+            }
+          >
+            <RotateCcw aria-hidden className="size-3.5" />
+            {t("run.rerun")}
+          </Btn>
+        )}
+        {q.data?.score != null && (
+          <span className="figures text-xs text-ink-faint">{t("runs.scoreOf", { score: q.data.score })}</span>
         )}
         {q.data?.line.state === "done" && isOwner && (
           <Btn size="sm" kind="quiet" onClick={() => void navigate({ to: "/skills", search: { from_run: runId } })}>

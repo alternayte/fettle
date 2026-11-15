@@ -136,7 +136,8 @@
               "fail",
               "create",
               "decline",
-              "skip"
+              "skip",
+              "apply"
             ],
             "type": "string"
           },
@@ -1789,6 +1790,43 @@
         ],
         "type": "object"
       },
+      "PatchOutcome": {
+        "additionalProperties": false,
+        "properties": {
+          "card_id": {
+            "type": "string"
+          },
+          "new_score": {
+            "format": "double",
+            "type": "number"
+          },
+          "old_score": {
+            "format": "double",
+            "type": "number"
+          },
+          "outcome": {
+            "enum": [
+              "proposed",
+              "rejected",
+              "skipped"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "skill": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill",
+          "outcome",
+          "old_score",
+          "new_score"
+        ],
+        "type": "object"
+      },
       "Post-messageRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2240,6 +2278,44 @@
         ],
         "type": "object"
       },
+      "RouterReport": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepRow"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "steps",
+          "suggestions"
+        ],
+        "type": "object"
+      },
       "RoutineBody": {
         "additionalProperties": false,
         "properties": {
@@ -2488,6 +2564,24 @@
         "required": [
           "mode",
           "rules"
+        ],
+        "type": "object"
+      },
+      "Run-patch-jobResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/PatchOutcome"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "skills"
         ],
         "type": "object"
       },
@@ -3194,6 +3288,63 @@
           "name",
           "time_zone",
           "role"
+        ],
+        "type": "object"
+      },
+      "StepRow": {
+        "additionalProperties": false,
+        "properties": {
+          "avg_cost_usd": {
+            "format": "double",
+            "type": "number"
+          },
+          "avg_duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "avg_score": {
+            "format": "double",
+            "type": "number"
+          },
+          "pass_rate": {
+            "format": "double",
+            "type": "number"
+          },
+          "runs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "step": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "runs",
+          "pass_rate",
+          "avg_score",
+          "avg_cost_usd",
+          "avg_duration_ms"
+        ],
+        "type": "object"
+      },
+      "Suggestion": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "setting",
+          "value",
+          "reason"
         ],
         "type": "object"
       },
@@ -6674,6 +6825,106 @@
         "summary": "Change the class of a connector tool, or turn it off. It applies to the next run.",
         "tags": [
           "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/learning/patches/run": {
+      "post": {
+        "operationId": "run-patch-job",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run-patch-jobResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run the skill patch job now: propose gated patches for skills with 3 or more signals in 14 days",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/learning/router-report": {
+      "get": {
+        "operationId": "router-report",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "description": "0 is the last 7 days.",
+            "explode": false,
+            "in": "query",
+            "name": "weeks_ago",
+            "schema": {
+              "default": 0,
+              "description": "0 is the last 7 days.",
+              "format": "int64",
+              "maximum": 52,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouterReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The weekly router report: per step runs, verifier pass rate, average score, cost and duration, with suggested step settings",
+        "tags": [
+          "learning"
         ]
       }
     },

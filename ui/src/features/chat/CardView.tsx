@@ -5,6 +5,7 @@ import {
   Check,
   CircleHelp,
   Coins,
+  GitCompare,
   Hand,
   KeyRound,
   ListChecks,
@@ -35,6 +36,7 @@ const icons = {
   check: ListChecks,
   proposal: UserPlus,
   connect: Plug,
+  patch: GitCompare,
 } as const;
 
 type Proposed = { name: string; job: string; instructions: string; [k: string]: unknown };
@@ -234,6 +236,25 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
           </dl>
         )}
         {card.hard_ask && <p className="text-xs text-ink-faint">{t("card.approval.hardAsk")}</p>}
+        {card.kind === "patch" && card.data?.diff && (
+          <pre
+            aria-label={t("card.patch.diff")}
+            className="max-h-72 overflow-auto rounded-xs border border-rule bg-surface-sunk p-2 font-mono text-xs leading-relaxed"
+          >
+            {card.data.diff.split("\n").map((line, i) => (
+              <div
+                key={i}
+                className={cn(
+                  line.startsWith("+") && !line.startsWith("+++") && "text-ok",
+                  line.startsWith("-") && !line.startsWith("---") && "text-danger",
+                  (line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++")) && "text-ink-faint",
+                )}
+              >
+                {line || " "}
+              </div>
+            ))}
+          </pre>
+        )}
       </div>
       {editing && card.kind === "approval" && card.preview && (
         <DraftEditor
@@ -368,6 +389,16 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
               {t("card.check.pass")}
             </ActionButton>
             <ActionButton onClick={() => onAnswer({ action: "fail" })}>{t("card.check.fail")}</ActionButton>
+          </>
+        )}
+        {card.kind === "patch" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "apply" })}>
+              {t("card.patch.apply")}
+            </ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "decline" })}>
+              {t("card.patch.decline")}
+            </ActionButton>
           </>
         )}
         {card.kind === "connect" && (

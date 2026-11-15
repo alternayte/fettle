@@ -42,6 +42,8 @@ type Agent struct {
 	Spaces    *spaces.Service
 	// Learning records steering signals and run scores (§14). Nil turns them off.
 	Learning *learning.Service
+	// ApplyPatch makes a new skill version from an applied patch card (§14.3).
+	ApplyPatch func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, card chats.Card) error
 	// bg counts background work that uses the database after a request returns.
 	bg     *sync.WaitGroup
 	Vault  *vault.Vault

@@ -10,6 +10,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { t } from "@/lib/copy";
@@ -20,7 +21,7 @@ import { NewGroup } from "./NewGroup";
 import type { Bot, ChatSummary } from "@/features/chat/types";
 
 export type NavTarget =
-  { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "skills" | "settings" };
+  { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "skills" | "learning" | "settings" };
 
 function Row({
   active,
@@ -184,6 +185,14 @@ export function Sidebar({
               {t("shell.skills")}
             </Row>
           </li>
+          {isOwner && (
+            <li>
+              <Row active={isPage("learning")} onClick={() => onNavigate({ kind: "page", page: "learning" })}>
+                <TrendingUp aria-hidden className="size-4 text-ink-faint" />
+                {t("shell.learning")}
+              </Row>
+            </li>
+          )}
           {isOwner && (
             <li>
               <Row active={isPage("settings")} onClick={() => onNavigate({ kind: "page", page: "settings" })}>

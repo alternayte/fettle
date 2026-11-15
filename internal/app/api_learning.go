@@ -8,6 +8,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+
+	"github.com/alternayte/fettle/internal/learning"
 )
 
 // SignalView is one steering signal.
@@ -136,6 +138,20 @@ func (a *App) registerLearning(api huma.API) {
 			out.Body.Signals = append(out.Body.Signals, v)
 		}
 		return out, nil
+	})
+	huma.Register(api, op("router-report", http.MethodGet, "/spaces/{space}/learning/router-report", "The weekly router report: per step runs, verifier pass rate, average score, cost and duration, with suggested step settings", "learning"), func(ctx context.Context, in *struct {
+		SpacePath
+		WeeksAgo int `query:"weeks_ago" minimum:"0" maximum:"52" default:"0" doc:"0 is the last 7 days."`
+	}) (*struct{ Body learning.RouterReport }, error) {
+		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
+			return nil, err
+		}
+		to := time.Now().AddDate(0, 0, -7*in.WeeksAgo)
+		rep, err := a.Learning.Report(ctx, in.Space, to.AddDate(0, 0, -7), to)
+		if err != nil {
+			return nil, err
+		}
+		return &struct{ Body learning.RouterReport }{Body: rep}, nil
 	})
 	huma.Register(api, op("score-report", http.MethodGet, "/spaces/{space}/learning/scores", "Run scores of a period with averages per bot, skill, step and model", "learning"), func(ctx context.Context, in *struct {
 		SpacePath

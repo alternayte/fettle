@@ -193,6 +193,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"check":        {"pass", "fail"},
 		"proposal":     {"create", "decline"},
 		"connect":      {"done", "skip"},
+		"patch":        {"apply", "decline"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -228,6 +229,14 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		}
 		if card.Kind == "proposal" && action == "create" {
 			if tasks, err = a.applyProposal(ctx, user, spaceID, msg, card, value); err != nil {
+				return err
+			}
+		}
+		if card.Kind == "patch" && action == "apply" {
+			if a.ApplyPatch == nil {
+				return errors.New("this server cannot apply skill patches")
+			}
+			if err := a.ApplyPatch(ctx, user, spaceID, card); err != nil {
 				return err
 			}
 		}
@@ -330,6 +339,8 @@ func cardAnswerText(kind, action, value string) string {
 		return "Created"
 	case action == "decline":
 		return "Declined"
+	case action == "apply":
+		return "Applied"
 	case action == "accept":
 		return "Accepted anyway"
 	case action == "retry":
