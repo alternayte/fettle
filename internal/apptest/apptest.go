@@ -228,7 +228,11 @@ func (e *Env) WaitRun(id string, states ...string) Run {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	e.T.Fatalf("run %s is %q, want one of %v; events %s", id, r.Line.State, states, r.EventTypes())
+	last := ""
+	if n := len(r.Events); n > 0 {
+		last = string(r.Events[n-1].Data)
+	}
+	e.T.Fatalf("run %s is %q, want one of %v; events %s; last event %s", id, r.Line.State, states, r.EventTypes(), last)
 	return r
 }
 
