@@ -30,7 +30,8 @@
       "dark": "Dark"
     },
     "skills": "Skills",
-    "learning": "Learning"
+    "learning": "Learning",
+    "allBots": "Show all bots"
   },
   "palette": {
     "title": "Command menu",
@@ -40,7 +41,8 @@
     "go": "Go to",
     "appearance": "Appearance",
     "light": "Use the light theme",
-    "dark": "Use the dark theme"
+    "dark": "Use the dark theme",
+    "bots": "All bots"
   },
   "bots": {
     "primary": "Primary",
@@ -642,11 +644,14 @@
       "approvals": "Approvals",
       "tokens": "Access tokens",
       "notifications": "Notifications",
-      "connectors": "Connectors"
+      "connectors": "Connectors",
+      "budgets": "Budgets",
+      "members": "Members",
+      "account": "Account"
     },
     "ownerOnly": {
-      "title": "Only the owner can change settings",
-      "body": "Ask the owner of this space for access."
+      "title": "Only an owner of this space can see this.",
+      "body": "Ask an owner of this space for access."
     }
   },
   "space": {
@@ -727,7 +732,83 @@
     "off": "Telemetry is off",
     "saveFailed": "Fettle did not change telemetry",
     "loadFailed": "Fettle cannot load telemetry",
-    "adminOnly": "Only an instance admin can see this page."
+    "adminOnly": "Only an instance admin can see this page.",
+    "instance": {
+      "title": "Instance",
+      "mode": "Mode",
+      "version": "Version",
+      "edition": "Edition",
+      "modes": {
+        "local": "Local",
+        "server": "Server"
+      },
+      "loadFailed": "Fettle cannot load the instance"
+    },
+    "editions": {
+      "community": "Community edition",
+      "enterprise": "Enterprise edition"
+    },
+    "users": {
+      "title": "Users",
+      "loadFailed": "Fettle cannot load the users",
+      "none": "No users yet.",
+      "admin": "Instance admin",
+      "joined": "Joined {when}",
+      "spaces": {
+        "one": "{n} space",
+        "other": "{n} spaces"
+      },
+      "status": {
+        "active": "Active",
+        "disabled": "Disabled"
+      },
+      "list": "Users of this instance"
+    },
+    "licence": {
+      "title": "Licence and Enterprise features",
+      "loadFailed": "Fettle cannot load the edition",
+      "community": "The Enterprise build of Fettle has these features.",
+      "customer": "Customer",
+      "seats": "Seats",
+      "expires": "Ends",
+      "states": {
+        "valid": "The licence is valid.",
+        "grace": "The licence ended. Enterprise features work for {n} more days.",
+        "read_only": "The licence grace period ended. Enterprise features are read-only.",
+        "missing": "There is no licence. Add a licence key to turn on Enterprise features.",
+        "invalid": "The licence is not valid."
+      },
+      "features": {
+        "sso": "Single sign-on (SSO)",
+        "scim": "User provisioning (SCIM)",
+        "audit_export": "Audit log export",
+        "policy_packs": "Policy packs",
+        "org_budgets": "Organization budgets",
+        "admin_console": "Admin console"
+      },
+      "feature": {
+        "available": "Available",
+        "readOnly": "Read-only",
+        "unavailable": "Not available"
+      },
+      "list": "Enterprise features"
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "body": "The checks test this server, its computers, its connectors and its push keys.",
+      "run": "Run checks",
+      "again": "Run checks again",
+      "failed": "Fettle cannot run the checks",
+      "pass": "Pass",
+      "fail": "Fail",
+      "summary": "{pass} of {n} checks pass.",
+      "list": "Check results"
+    },
+    "audit": {
+      "title": "Audit",
+      "body": "The audit log lists each change in this space.",
+      "link": "Open the audit log"
+    }
   },
   "change": {
     "waits": "Waits for you",
@@ -1146,5 +1227,171 @@
       "escalation_accepted_anyway": "Accepted anyway",
       "uncertain_confirmed_wrong": "Uncertain action did not happen"
     }
+  },
+  "botsPage": {
+    "title": "Bots",
+    "new": "New bot",
+    "name": "Name",
+    "job": "Job",
+    "jobHint": "One line about the work of this bot.",
+    "create": "Create bot",
+    "created": "{name} is ready",
+    "failed": "Fettle did not create the bot",
+    "needName": "Give the bot a name.",
+    "loadFailed": "Fettle cannot load the bots",
+    "empty": {
+      "title": "No bots yet",
+      "owner": "Select New bot to make the first bot.",
+      "member": "An owner of this space adds bots."
+    },
+    "noZone": "No zone",
+    "noJob": "No job yet",
+    "list": "Bots of this space",
+    "col": {
+      "name": "Bot",
+      "zone": "Zone",
+      "status": "Status"
+    }
+  },
+  "files": {
+    "title": "Files",
+    "search": "Search files",
+    "placeholder": "File name",
+    "loadFailed": "Fettle cannot load the files",
+    "empty": {
+      "title": "No files yet",
+      "body": "Files that bots send in chats show here."
+    },
+    "noMatch": {
+      "title": "No file name matches \"{q}\"",
+      "body": "Try a shorter or different name."
+    },
+    "more": "Load more",
+    "from": "From {bot}",
+    "openChat": "Open the chat that has {name}",
+    "list": "Files that bots sent"
+  },
+  "budgets": {
+    "title": "Budgets",
+    "intro": "Budgets stop work before it costs too much. A bot stops and asks you when it gets to a limit.",
+    "work": "Each piece of work",
+    "spend": "Spend limits",
+    "default": "Default: {value}",
+    "changed": "Changed by an owner",
+    "saved": "{label} saved",
+    "failed": "Fettle did not save the budget",
+    "loadFailed": "Fettle cannot load the budgets",
+    "needNumber": "Type a number of 0 or more.",
+    "keys": {
+      "envelope_usd": {
+        "label": "Cost of one piece of work",
+        "unit": "USD",
+        "help": "A bot asks you before one piece of work costs more than this."
+      },
+      "envelope_tokens": {
+        "label": "Tokens for one piece of work",
+        "unit": "tokens",
+        "help": "The model tokens that one piece of work can use."
+      },
+      "envelope_wall_ms": {
+        "label": "Time for one piece of work",
+        "unit": "minutes",
+        "help": "The time that one piece of work can run."
+      },
+      "hops": {
+        "label": "Handoffs",
+        "unit": "handoffs",
+        "help": "How many times work can go from one bot to a different bot."
+      },
+      "max_subagents": {
+        "label": "Helpers",
+        "unit": "helpers",
+        "help": "The short-lived helpers that one piece of work can start."
+      },
+      "bot_day_usd": {
+        "label": "Cost per bot per day",
+        "unit": "USD",
+        "help": "Each bot stops for the day at this cost. 0 means no limit."
+      },
+      "space_month_usd": {
+        "label": "Cost of the space per month",
+        "unit": "USD",
+        "help": "All bots in this space stop for the month at this cost. 0 means no limit."
+      }
+    }
+  },
+  "members": {
+    "title": "Members",
+    "loadFailed": "Fettle cannot load the members",
+    "you": "You",
+    "role": "Role of {name}",
+    "roles": {
+      "owner": "Owner",
+      "member": "Member"
+    },
+    "since": "Joined {when}",
+    "remove": "Remove",
+    "removeName": "Remove {name}",
+    "confirm": "Remove {name} from this space?",
+    "roleSaved": "Role saved",
+    "removed": "{name} is not a member now",
+    "failed": "Fettle did not change the member",
+    "list": "Members of this space"
+  },
+  "invites": {
+    "title": "Invite links",
+    "localOnly": "Invite links need server mode. A local Fettle has one owner.",
+    "intro": "An invite link adds one person to this space. Each link works one time.",
+    "role": "Role",
+    "days": "Days the link works",
+    "daysHint": "From 1 to 30 days.",
+    "create": "Make invite link",
+    "fresh": "Copy the link now. Fettle does not show it again.",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Fettle cannot copy the link. Select the link and copy it.",
+    "none": "No open invite links.",
+    "list": "Open invite links",
+    "expires": "Works until {when}",
+    "revoke": "Stop link",
+    "revokeName": "Stop the {role} invite link that works until {when}",
+    "revoked": "The invite link does not work now",
+    "failed": "Fettle did not change the invite links",
+    "loadFailed": "Fettle cannot load the invite links",
+    "needDays": "Type a number from 1 to 30."
+  },
+  "account": {
+    "title": "Account",
+    "name": "Your name",
+    "nameHint": "Bots and other members see this name.",
+    "email": "Email",
+    "emailHint": "You cannot change the email here.",
+    "saved": "Name saved",
+    "failed": "Fettle did not save your name",
+    "needName": "Type your name.",
+    "more": "Access and alerts",
+    "tokensBody": "Tokens let the CLI and scripts use the API as you.",
+    "notifyBody": "Choose the alerts that this device gets.",
+    "role": "Your role in {space}: {role}."
+  },
+  "invite": {
+    "title": "Join {space}",
+    "role": "You join with the {role} role. The link works until {when}.",
+    "name": "Your name",
+    "email": "Email",
+    "password": "Password",
+    "create": "Create account and join",
+    "haveAccount": "Have an account?",
+    "signIn": "Sign in",
+    "signInJoin": "Sign in and join",
+    "newAccount": "Make a new account",
+    "signedIn": "You are signed in as {email}.",
+    "join": "Join {space}",
+    "failed": "Fettle could not add you to the space.",
+    "gone": {
+      "title": "This invite link does not work",
+      "body": "Someone used it or stopped it, or it is too old. Ask an owner for a new link."
+    },
+    "loadFailed": "Fettle cannot load the invite link"
   }
 }

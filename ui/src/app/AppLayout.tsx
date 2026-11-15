@@ -71,29 +71,35 @@ export function AppLayout() {
 
   const active: NavTarget | null = pathname.startsWith("/chat/")
     ? { kind: "chat", chatId: pathname.split("/")[2] ?? "" }
-    : pathname.startsWith("/runs")
-      ? { kind: "page", page: "runs" }
-      : pathname.startsWith("/routines")
-        ? { kind: "page", page: "routines" }
-        : pathname.startsWith("/skills")
-          ? { kind: "page", page: "skills" }
-          : pathname.startsWith("/learning")
-            ? { kind: "page", page: "learning" }
-            : pathname.startsWith("/settings") || pathname.startsWith("/admin")
-              ? { kind: "page", page: "settings" }
-              : null;
+    : pathname === "/bots" || pathname === "/bots/"
+      ? { kind: "page", page: "bots" }
+      : pathname.startsWith("/files")
+        ? { kind: "page", page: "files" }
+        : pathname.startsWith("/runs")
+          ? { kind: "page", page: "runs" }
+          : pathname.startsWith("/routines")
+            ? { kind: "page", page: "routines" }
+            : pathname.startsWith("/skills")
+              ? { kind: "page", page: "skills" }
+              : pathname.startsWith("/learning")
+                ? { kind: "page", page: "learning" }
+                : pathname.startsWith("/settings") || pathname.startsWith("/admin")
+                  ? { kind: "page", page: "settings" }
+                  : null;
 
   const onNavigate = useCallback(
     (to: NavTarget) => {
       setMenu(false);
       if (to.kind === "chat") void navigate({ to: "/chat/$chatId", params: { chatId: to.chatId } });
+      else if (to.page === "bots") void navigate({ to: "/bots" });
+      else if (to.page === "files") void navigate({ to: "/files" });
       else if (to.page === "runs") void navigate({ to: "/runs" });
       else if (to.page === "routines") void navigate({ to: "/routines" });
       else if (to.page === "skills") void navigate({ to: "/skills" });
       else if (to.page === "learning") void navigate({ to: "/learning" });
-      else void navigate({ to: "/settings/models" });
+      else void navigate({ to: isOwner ? "/settings/models" : "/settings/account" });
     },
-    [navigate],
+    [navigate, isOwner],
   );
 
   useHotkey(
@@ -103,7 +109,7 @@ export function AppLayout() {
   useHotkey(
     ",",
     useCallback(() => {
-      if (isOwner) void navigate({ to: "/settings/models" });
+      void navigate({ to: isOwner ? "/settings/models" : "/settings/account" });
     }, [isOwner, navigate]),
   );
 
@@ -138,14 +144,7 @@ export function AppLayout() {
       >
         <Outlet />
       </Shell>
-      <CommandPalette
-        open={palette}
-        onOpenChange={setPalette}
-        bots={uiBots}
-        chats={uiChats}
-        onNavigate={onNavigate}
-        isOwner={isOwner}
-      />
+      <CommandPalette open={palette} onOpenChange={setPalette} bots={uiBots} chats={uiChats} onNavigate={onNavigate} />
     </ShellContext.Provider>
   );
 }

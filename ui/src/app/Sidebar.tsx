@@ -2,6 +2,8 @@ import {
   Activity,
   AlarmClock,
   BookOpen,
+  FileText,
+  List,
   Hourglass,
   Loader,
   Monitor,
@@ -21,7 +23,8 @@ import { NewGroup } from "./NewGroup";
 import type { Bot, ChatSummary } from "@/features/chat/types";
 
 export type NavTarget =
-  { kind: "chat"; chatId: string } | { kind: "page"; page: "runs" | "routines" | "skills" | "learning" | "settings" };
+  | { kind: "chat"; chatId: string }
+  | { kind: "page"; page: "bots" | "files" | "runs" | "routines" | "skills" | "learning" | "settings" };
 
 function Row({
   active,
@@ -121,7 +124,19 @@ export function Sidebar({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        <h2 className="label-caps px-2 pt-4 pb-1">{t("shell.bots")}</h2>
+        <div className="flex items-center justify-between px-2 pt-4 pb-1">
+          <h2 className="label-caps">{t("shell.bots")}</h2>
+          <button
+            type="button"
+            onClick={() => onNavigate({ kind: "page", page: "bots" })}
+            aria-label={t("shell.allBots")}
+            title={t("shell.allBots")}
+            aria-current={isPage("bots") ? "page" : undefined}
+            className="inline-flex size-6 items-center justify-center rounded-xs text-ink-faint hover:bg-surface-sunk hover:text-ink aria-[current=page]:bg-surface-sunk aria-[current=page]:text-ink"
+          >
+            <List aria-hidden className="size-3.5" />
+          </button>
+        </div>
         <ul>
           {direct.map((c) => {
             const bot = botById[c.bot_ids[0]];
@@ -168,6 +183,12 @@ export function Sidebar({
         <h2 className="label-caps px-2 pt-4 pb-1">{t("shell.workspace")}</h2>
         <ul>
           <li>
+            <Row active={isPage("files")} onClick={() => onNavigate({ kind: "page", page: "files" })}>
+              <FileText aria-hidden className="size-4 text-ink-faint" />
+              {t("shell.files")}
+            </Row>
+          </li>
+          <li>
             <Row active={isPage("runs")} onClick={() => onNavigate({ kind: "page", page: "runs" })}>
               <Activity aria-hidden className="size-4 text-ink-faint" />
               {t("shell.runs")}
@@ -193,14 +214,12 @@ export function Sidebar({
               </Row>
             </li>
           )}
-          {isOwner && (
-            <li>
-              <Row active={isPage("settings")} onClick={() => onNavigate({ kind: "page", page: "settings" })}>
-                <Settings aria-hidden className="size-4 text-ink-faint" />
-                {t("shell.settings")}
-              </Row>
-            </li>
-          )}
+          <li>
+            <Row active={isPage("settings")} onClick={() => onNavigate({ kind: "page", page: "settings" })}>
+              <Settings aria-hidden className="size-4 text-ink-faint" />
+              {t("shell.settings")}
+            </Row>
+          </li>
         </ul>
       </div>
       <div className="flex shrink-0 items-center gap-1 border-t border-rule px-2 py-1.5">

@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { t } from "@/lib/copy";
 import { useTheme } from "@/lib/theme";
 
-function FullPage({ children }: { children: React.ReactNode }) {
+export function FullPage({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full items-center justify-center bg-ground px-4 py-12">
       <div className="w-full max-w-md">
@@ -124,6 +124,14 @@ export function Root() {
   }, [me.data]);
 
   if (import.meta.env.DEV && pathname.startsWith("/__preview")) return <Outlet />;
+  // An invite link opens before a sign-in, so it needs no session.
+  if (pathname.startsWith("/invite/"))
+    return (
+      <>
+        <Outlet />
+        <Toaster position="bottom-right" />
+      </>
+    );
 
   let body: React.ReactNode;
   if (me.isPending) body = <div className="h-full bg-ground" aria-busy="true" />;

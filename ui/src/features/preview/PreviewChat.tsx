@@ -117,14 +117,7 @@ export function PreviewChat() {
           panelOpen={!!panelRun}
         />
       </Shell>
-      <CommandPalette
-        open={palette}
-        onOpenChange={setPalette}
-        bots={fx.bots}
-        chats={fx.chats}
-        onNavigate={setActive}
-        isOwner
-      />
+      <CommandPalette open={palette} onOpenChange={setPalette} bots={fx.bots} chats={fx.chats} onNavigate={setActive} />
     </>
   );
 }

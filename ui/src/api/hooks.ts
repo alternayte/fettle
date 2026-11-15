@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, must } from "./client";
 import type {
   SchemaBotBody,
@@ -64,6 +64,12 @@ export const keys = {
   routineRuns: (s: string, r: string) => ["s", s, "routines", r, "runs"] as const,
   skills: (s: string) => ["s", s, "skills"] as const,
   skill: (s: string, k: string) => ["s", s, "skills", k] as const,
+  files: (s: string, q: string) => ["s", s, "files", q] as const,
+  members: (s: string) => ["s", s, "members"] as const,
+  invites: (s: string) => ["s", s, "invites"] as const,
+  instance: ["instance", "view"] as const,
+  adminUsers: ["admin", "users"] as const,
+  edition: ["admin", "edition"] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -192,6 +198,19 @@ export function usePutSharedMemory() {
     mutationFn: (content: string) =>
       must(api.PUT("/api/v1/spaces/{space}/memory", { params: { path: { space } }, body: { content } })),
     onSuccess: (v) => qc.setQueryData(keys.sharedMemory(space), v),
+  });
+}
+
+export function useCreateBot() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: { name: string; job?: string }) =>
+      must(api.POST("/api/v1/spaces/{space}/bots", { params: { path: { space } }, body })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.bots(space), exact: true });
+      void qc.invalidateQueries({ queryKey: keys.chats(space) });
+    },
   });
 }
 
@@ -1011,5 +1030,117 @@ export function useAddComposio() {
     mutationFn: (key: string) =>
       must(api.POST("/api/v1/spaces/{space}/connectors/composio", { params: { path: { space } }, body: { key } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+// ---------------------------------------------------------------- files
+
+const FILES_PAGE = 50;
+
+/** useFiles lists the files that bots sent, newest first, one page at a time. */
+export function useFiles(q: string) {
+  const space = useSpaceId();
+  return useInfiniteQuery({
+    queryKey: keys.files(space, q),
+    initialPageParam: "",
+    queryFn: ({ pageParam }) =>
+      must(
+        api.GET("/api/v1/spaces/{space}/files", {
+          params: {
+            path: { space },
+            query: { limit: FILES_PAGE, ...(q ? { q } : {}), ...(pageParam ? { before: pageParam } : {}) },
+          },
+        }),
+      ),
+    getNextPageParam: (last) => last.next || undefined,
+    placeholderData: keepPreviousData,
+  });
+}
+
+// ---------------------------------------------------------------- members and invites
+
+export function useMembers() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.members(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/members", { params: { path: { space } } }))).members ?? [],
+  });
+}
+
+export function useSetMemberRole() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ user, role }: { user: string; role: "owner" | "member" }) =>
+      must(api.PUT("/api/v1/spaces/{space}/members/{user}", { params: { path: { space, user } }, body: { role } })),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.members(space) });
+      void qc.invalidateQueries({ queryKey: keys.me });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (user: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/members/{user}", { params: { path: { space, user } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.members(space) }),
+  });
+}
+
+export function useInvites(enabled: boolean) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.invites(space),
+    enabled,
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/invites", { params: { path: { space } } }))).invites ?? [],
+  });
+}
+
+export function useCreateInvite() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: { role: "owner" | "member"; days: number }) =>
+      must(api.POST("/api/v1/spaces/{space}/invites", { params: { path: { space } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.invites(space) }),
+  });
+}
+
+export function useRevokeInvite() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (invite: string) =>
+      must(api.DELETE("/api/v1/spaces/{space}/invites/{invite}", { params: { path: { space, invite } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.invites(space) }),
+  });
+}
+
+// ---------------------------------------------------------------- instance and admin
+
+export function useInstance() {
+  return useQuery({ queryKey: keys.instance, queryFn: () => must(api.GET("/api/v1/instance")), staleTime: 60_000 });
+}
+
+export function useAdminUsers(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.adminUsers,
+    enabled,
+    queryFn: async () => (await must(api.GET("/api/v1/admin/users"))).users ?? [],
+  });
+}
+
+export function useEdition(enabled: boolean) {
+  return useQuery({ queryKey: keys.edition, enabled, queryFn: () => must(api.GET("/api/v1/admin/edition")) });
+}
+
+export function useDiagnostics() {
+  return useMutation({
+    mutationFn: async () => (await must(api.GET("/api/v1/admin/diagnostics"))).checks ?? [],
   });
 }
