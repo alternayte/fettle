@@ -26,7 +26,7 @@ import type { SchemaEditionView, SchemaFeatureView, SchemaLicenseView } from "@/
 import { Notice, Page, Section } from "@/app/Page";
 import { Btn } from "@/components/form";
 import { Switch } from "@/components/ui/switch";
-import { SettingsNav } from "@/features/settings/SettingsLayout";
+import { SettingsFrame } from "@/features/settings/SettingsLayout";
 import { has, t, tn } from "@/lib/copy";
 import { formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -335,43 +335,44 @@ export function AdminPage() {
   const { me } = useSession();
   return (
     <Page title={t("shell.settings")} wide>
-      <SettingsNav />
-      <div className="max-w-3xl">
-        {!me.is_admin ? (
-          <Notice icon={Lock} title={t("admin.adminOnly")} />
-        ) : (
-          <>
-            <Section id="instance-section" title={t("admin.instance.title")}>
-              <Instance />
-            </Section>
-            <Section id="users-section" title={t("admin.users.title")}>
-              <Users />
-            </Section>
-            <Section id="licence-section" title={t("admin.licence.title")}>
-              <Licence />
-            </Section>
-            <Section id="telemetry-section" title={t("admin.title")}>
-              <Telemetry />
-            </Section>
-            <Section id="diagnostics-section" title={t("admin.diagnostics.title")}>
-              <Diagnostics />
-            </Section>
-            <Section id="audit-section" title={t("admin.audit.title")}>
-              <Link
-                to="/settings/audit"
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-y border-rule px-1 py-2.5 hover:bg-surface-sunk sm:px-2"
-              >
-                <ScrollText aria-hidden className="size-4 text-ink-faint" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-[var(--weight-medium)] text-ink">{t("admin.audit.link")}</span>
-                  <span className="block text-xs text-ink-faint">{t("admin.audit.body")}</span>
-                </span>
-                <ChevronRight aria-hidden className="size-4 text-ink-faint" />
-              </Link>
-            </Section>
-          </>
-        )}
-      </div>
+      <SettingsFrame>
+        <div className="max-w-3xl">
+          {!me.is_admin ? (
+            <Notice icon={Lock} title={t("admin.adminOnly")} />
+          ) : (
+            <>
+              <Section id="instance-section" title={t("admin.instance.title")}>
+                <Instance />
+              </Section>
+              <Section id="users-section" title={t("admin.users.title")}>
+                <Users />
+              </Section>
+              <Section id="licence-section" title={t("admin.licence.title")}>
+                <Licence />
+              </Section>
+              <Section id="telemetry-section" title={t("admin.title")}>
+                <Telemetry />
+              </Section>
+              <Section id="diagnostics-section" title={t("admin.diagnostics.title")}>
+                <Diagnostics />
+              </Section>
+              <Section id="audit-section" title={t("admin.audit.title")}>
+                <Link
+                  to="/settings/audit"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border-y border-rule px-1 py-2.5 hover:bg-surface-sunk sm:px-2"
+                >
+                  <ScrollText aria-hidden className="size-4 text-ink-faint" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-[var(--weight-medium)] text-ink">{t("admin.audit.link")}</span>
+                    <span className="block text-xs text-ink-faint">{t("admin.audit.body")}</span>
+                  </span>
+                  <ChevronRight aria-hidden className="size-4 text-ink-faint" />
+                </Link>
+              </Section>
+            </>
+          )}
+        </div>
+      </SettingsFrame>
     </Page>
   );
 }

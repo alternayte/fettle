@@ -197,7 +197,7 @@
     "step": {
       "direct": "Reply",
       "single": "Work",
-      "fanout": "Research",
+      "fanout": "Parallel reads",
       "forked": "Parallel edits",
       "handoff": "Handoff",
       "hire": "Hire"
@@ -657,6 +657,11 @@
     "ownerOnly": {
       "title": "Only an owner of this space can see this.",
       "body": "Ask an owner of this space for access."
+    },
+    "groups": {
+      "space": "This space",
+      "you": "You",
+      "server": "This server"
     }
   },
   "space": {

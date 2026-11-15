@@ -47,9 +47,9 @@ export function RunLine({ run, onOpen, active }: { run: RunLineT; onOpen: (runId
       )}
     >
       <Icon aria-hidden className={cn("size-3.5 shrink-0", s.tone, live && "animate-spin [animation-duration:2.4s]")} />
-      <span className="truncate text-sm font-[var(--weight-medium)] text-ink">{run.label}</span>
-      <span className="figures hidden truncate text-ink-faint sm:inline">{parts.join(" · ")}</span>
-      <span className={cn("ml-auto shrink-0 text-xs font-[var(--weight-medium)]", s.tone)}>{s.label}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-[var(--weight-medium)] text-ink">{run.label}</span>
+      <span className="figures hidden shrink-0 whitespace-nowrap text-ink-faint sm:inline">{parts.join(" · ")}</span>
+      <span className={cn("shrink-0 text-xs font-[var(--weight-medium)]", s.tone)}>{s.label}</span>
       <ChevronRight
         aria-hidden
         className="size-3.5 shrink-0 text-ink-faint transition-transform duration-[var(--dur-2)] group-hover:translate-x-0.5"
