@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alternayte/fettle/internal/providers/applecontainer"
+
 	"github.com/alternayte/fettle/internal/desktop"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 )
@@ -384,8 +386,16 @@ func TestSCN_UX_001_DesktopWindowTrayUpdateAndFirstRun(t *testing.T) {
 			Default string `json:"default"`
 		}
 		a.do("GET", "/computer-setup", nil, &setup)
-		if setup.Default != "applecontainer" {
-			t.Fatalf("the default provider on this Mac is %q, want applecontainer", setup.Default)
+		// D-15: applecontainer on macOS 26 on Apple silicon, else docker when it answers, else
+		// none (the wizard explains the options).
+		want := ""
+		if applecontainer.Supported() == nil {
+			want = "applecontainer"
+		} else if exec.Command("docker", "info").Run() == nil {
+			want = "docker"
+		}
+		if setup.Default != want {
+			t.Fatalf("the default provider on this Mac is %q, want %q", setup.Default, want)
 		}
 		var firstReply time.Duration
 		lastJS := time.Time{}
