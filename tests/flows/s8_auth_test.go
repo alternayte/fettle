@@ -32,7 +32,10 @@ func sessionCookie(h http.Header) string {
 }
 
 type meRow struct {
-	Email  string `json:"email"`
+	Email string `json:"email"`
+	Setup struct {
+		NeedsModel bool `json:"needs_model"`
+	} `json:"setup"`
 	Spaces []struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -96,6 +99,10 @@ func TestSCN_AUTH_001_InviteLinkMakesAMemberOfOneSpace(t *testing.T) {
 	m := s.me()
 	if m.Email != "member@acme.test" || len(m.Spaces) != 1 || m.Spaces[0].ID != acme.ID || m.Spaces[0].Role != "member" {
 		t.Fatalf("the member's spaces: %+v", m)
+	}
+	// The owner has set up no model yet; only an owner can, so the member is not sent to setup.
+	if m.Setup.NeedsModel {
+		t.Fatal("a member is sent to the model setup")
 	}
 	// The link works once.
 	if code, _, _ = s.do("GET", "/api/v1/invites/"+token, nil, ""); code != 410 {

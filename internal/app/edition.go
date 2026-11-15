@@ -2,8 +2,9 @@ package app
 
 import (
 	"context"
-	authall "github.com/alternayte/auth-all"
 	"net/http"
+
+	authall "github.com/alternayte/auth-all"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-chi/chi/v5"

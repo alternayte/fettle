@@ -186,7 +186,8 @@ func (a *App) meView(ctx context.Context, userID uuid.UUID) (MeView, error) {
 		v.Spaces = append(v.Spaces, SpaceView{ID: m.Space.ID().String(), Name: m.Space.Name, TimeZone: m.Space.TimeZone, Role: m.Role})
 	}
 	v.Setup.NeedsName = u.Name == ""
-	if len(ms) > 0 {
+	// Only an owner can set up the models; a member of a space without them goes on.
+	if len(ms) > 0 && ms[0].Role == spaces.RoleOwner {
 		ps, err := a.Models.List(ctx, ms[0].Space.ID())
 		if err != nil {
 			return MeView{}, err
