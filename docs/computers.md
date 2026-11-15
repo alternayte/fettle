@@ -23,6 +23,7 @@ Each bot works in one zone. You choose the zone in the **New bot** form. A templ
 To move a bot, open its settings page and use **Computer**. An owner can move a bot when it has no work in progress. The bot uses the new computer from its next run, and its own files go with it.
 
 Settings > Computers lists the zones and the providers.
+The menu at the end of a zone row tests the computer (it starts the computer and runs one command) and puts a running computer to sleep. A sleeping computer keeps its files, and the next work wakes it.
 
 ![The Computers settings page. It lists the zones browsing and personal with running computers, and the computer providers.](images/settings-computers.png)
 

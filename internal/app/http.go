@@ -55,6 +55,8 @@ func (a *App) Handler() http.Handler {
 		}
 		g.Use(a.spaceGuard)
 		g.Get(APIPrefix+"/admin/usage", a.usageExport)
+		g.Post(APIPrefix+"/spaces/{space}/export", a.spaceExport)
+		g.Post(APIPrefix+"/space-import", a.spaceImport)
 		a.registerAPI(humachi.New(g, apiConfig(a.Cfg.Version)))
 	})
 	r.Handle("/*", spa())

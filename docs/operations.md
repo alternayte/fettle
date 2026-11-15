@@ -55,6 +55,16 @@ Copy `fettle.db` and the `objects` folder into the data folder, then start the s
 
 ## Export and import of a space
 
+In the UI:
+
+- An owner exports a space in **Settings**, **Space**, **Export this space**. Type a passphrase to include the vault, then select **Download the archive**.
+- An instance admin imports an archive in **Settings**, **Space**, **Import a space**. The person who imports the space owns it. The upload limit is 2 GiB.
+- The space name at the top of the sidebar switches between your spaces.
+
+The API has the same routes: `POST /api/v1/spaces/{space}/export` (JSON or form with an optional `passphrase`) streams the archive, and `POST /api/v1/space-import` takes a multipart form with `file` and an optional `passphrase`.
+
+With the CLI:
+
 ```sh
 FETTLE_EXPORT_PASSPHRASE='<passphrase>' fettle export --space "My space" --out my-space.fettle.tar.gz
 FETTLE_EXPORT_PASSPHRASE='<passphrase>' fettle import my-space.fettle.tar.gz --owner owner@acme.test

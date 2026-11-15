@@ -21,6 +21,8 @@ export interface Session {
   me: SchemaMeView;
   space: SchemaSpaceView;
   isOwner: boolean;
+  /** chooseSpace switches the UI to another space of the caller. */
+  chooseSpace: (id: string) => void;
 }
 
 export const SessionContext = createContext<Session | null>(null);
@@ -663,6 +665,28 @@ export function useUpdateZone() {
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: SchemaZoneBody }) =>
       must(api.PATCH("/api/v1/spaces/{space}/zones/{zone}", { params: { path: { space, zone: id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useTestZoneComputer starts or wakes a zone's computer and runs one command in it. */
+export function useTestZoneComputer() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (zone: string) =>
+      must(api.POST("/api/v1/spaces/{space}/zones/{zone}/computer/test", { params: { path: { space, zone } } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useSleepZoneComputer puts a zone's computer to sleep; its files stay. */
+export function useSleepZoneComputer() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (zone: string) =>
+      must(api.POST("/api/v1/spaces/{space}/zones/{zone}/computer/stop", { params: { path: { space, zone } } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
   });
 }

@@ -1,7 +1,7 @@
 import { useDesktopLinks } from "@/lib/desktop";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Navigate, Outlet, useRouterState } from "@tanstack/react-router";
+import { Navigate, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Building2, Fingerprint, KeyRound, RotateCw } from "lucide-react";
 import { api, errorText, isUnauthorized } from "@/api/client";
 import { listSSO, passkeySignIn, passkeysSupported, signIn } from "@/api/signin";
@@ -146,18 +146,43 @@ function Failed({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   );
 }
 
+// The chosen space is a convenience of this browser; without storage the first space opens.
+const SPACE_KEY = "fettle.space";
+function readSpace(): string {
+  try {
+    return localStorage.getItem(SPACE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+function writeSpace(id: string) {
+  try {
+    localStorage.setItem(SPACE_KEY, id);
+  } catch {
+    // Storage is off: the choice lasts until the page reloads.
+  }
+}
+
 /** Root loads the caller and provides the session to every route. */
 export function Root() {
   useTheme();
   useDesktopLinks();
   const me = useMe();
+  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [chosen, setChosen] = useState(readSpace);
   const session = useMemo(() => {
     const m = me.data;
-    const space = m?.spaces?.[0];
+    const space = m?.spaces?.find((x) => x.id === chosen) ?? m?.spaces?.[0];
     if (!m || !space) return null;
-    return { me: m, space, isOwner: space.role === "owner" };
-  }, [me.data]);
+    const chooseSpace = (id: string) => {
+      writeSpace(id);
+      setChosen(id);
+      // Pages of the old space, such as a chat, do not exist in the new one.
+      void navigate({ to: "/" });
+    };
+    return { me: m, space, isOwner: space.role === "owner", chooseSpace };
+  }, [me.data, chosen, navigate]);
 
   if (import.meta.env.DEV && pathname.startsWith("/__preview")) return <Outlet />;
   // An invite link opens before a sign-in, so it needs no session.
@@ -195,9 +220,9 @@ export function Root() {
 
 /** Index sends the caller to setup or to the chat of the primary bot. */
 export function Index() {
-  const { me } = useSession();
+  const { me, space } = useSession();
   const bots = useBots();
-  if (me.setup.needs_model || me.setup.needs_name) return <Navigate to="/setup" replace />;
+  if (space.needs_model || me.setup.needs_name) return <Navigate to="/setup" replace />;
   if (bots.isPending) return <div className="h-full bg-ground" aria-busy="true" />;
   const list = bots.data ?? [];
   const primary = list.find((b) => b.is_primary) ?? list[0];

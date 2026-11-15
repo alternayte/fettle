@@ -1,13 +1,29 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Monitor, Plus } from "lucide-react";
+import { FlaskConical, Monitor, Moon, MoreHorizontal, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
-import { useBots, useComputerProviders, useCreateZone, useEnableHost, useUpdateZone, useZones } from "@/api/hooks";
+import {
+  useBots,
+  useComputerProviders,
+  useCreateZone,
+  useEnableHost,
+  useSleepZoneComputer,
+  useTestZoneComputer,
+  useUpdateZone,
+  useZones,
+} from "@/api/hooks";
 import type { SchemaComputerProviderView, SchemaZoneBody, SchemaZoneView } from "@/api/schema";
 import { Notice, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { t } from "@/lib/copy";
+import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PendingChange, type Pending } from "./PendingChange";
 import { NativeSelect } from "./ProviderForm";
@@ -185,10 +201,14 @@ function ZoneForm({
   );
 }
 
+const took = (ms: number) => (ms < 1000 ? t("computers.underSecond") : formatDuration(ms));
+
 function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaComputerProviderView[] }) {
   const [editing, setEditing] = useState(false);
   const update = useUpdateZone();
   const bots = useBots();
+  const test = useTestZoneComputer();
+  const sleep = useSleepZoneComputer();
   // The screen belongs to the zone's computer; it opens through one of the zone's bots.
   const screenBot =
     zone.size === "desktop"
@@ -200,7 +220,7 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
       : t("computers.allowCount", { n: String(zone.allow_hosts?.length ?? 0) });
   return (
     <li className="border-b border-rule py-3">
-      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(8rem,1fr)_8rem_14rem_9.5rem]">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(8rem,1fr)_8rem_14rem_11.5rem]">
         <div className="min-w-0">
           <p className="truncate text-sm font-[var(--weight-medium)] text-ink">{zone.name}</p>
           <p className="truncate text-xs text-ink-faint">
@@ -226,8 +246,50 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
           <Btn kind="quiet" size="sm" aria-expanded={editing} onClick={() => setEditing((e) => !e)}>
             {editing ? t("common.close") : t("common.edit")}
           </Btn>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Btn kind="quiet" size="sm" aria-label={t("computers.more", { zone: zone.name })}>
+                <MoreHorizontal aria-hidden className="size-4" />
+              </Btn>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={test.isPending} onSelect={() => test.mutate(zone.id)}>
+                <FlaskConical aria-hidden className="size-3.5" />
+                {t("computers.test")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={zone.computer_state !== "running" || sleep.isPending}
+                onSelect={() =>
+                  sleep.mutate(zone.id, {
+                    onSuccess: () => toast.success(t("computers.slept", { zone: zone.name })),
+                    onError: (err) => toast.error(t("computers.sleepFailed"), { description: errorText(err) }),
+                  })
+                }
+              >
+                <Moon aria-hidden className="size-3.5" />
+                {t("computers.sleep")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+      {test.isPending && (
+        <p role="status" className="mt-1 text-xs text-ink-faint">
+          {t("computers.testing")}
+        </p>
+      )}
+      {test.data && !test.isPending && (
+        <p role="status" className={cn("mt-1 text-xs", test.data.pass ? "text-ok" : "text-danger")}>
+          {test.data.pass
+            ? t("computers.testPass", {
+                start: took(test.data.start_ms),
+                exec: took(test.data.exec_ms),
+                output: test.data.output,
+              })
+            : t("computers.testFail", { error: test.data.error || test.data.output })}
+        </p>
+      )}
+      {test.isError && <p className="mt-1 text-xs text-danger">{errorText(test.error)}</p>}
       {zone.computer_error && zone.computer_state === "error" && (
         <p className="mt-1 text-xs text-danger">{zone.computer_error}</p>
       )}

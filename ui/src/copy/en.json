@@ -31,7 +31,13 @@
     },
     "skills": "Skills",
     "learning": "Learning",
-    "allBots": "Show all bots"
+    "allBots": "Show all bots",
+    "spaces": "Spaces",
+    "switchSpace": "Switch the space. Now: {space}",
+    "role": {
+      "owner": "Owner",
+      "member": "Member"
+    }
   },
   "palette": {
     "title": "Command menu",
@@ -702,7 +708,27 @@
     "historyTitle": "Change history",
     "historyFailed": "Fettle cannot load the history",
     "noHistory": "No changes yet.",
-    "defaultValue": "default"
+    "defaultValue": "default",
+    "export": {
+      "title": "Export this space",
+      "body": "The archive holds the bots, chats, memory, skills, routines, zones and files of this space. It has no zone grants and no runs.",
+      "passphrase": "Passphrase for the vault",
+      "passphraseHint": "Optional. With a passphrase, the archive also holds the vault, sealed with it. Without one, the vault stays here.",
+      "submit": "Download the archive"
+    },
+    "import": {
+      "title": "Import a space",
+      "body": "Make a new space on this server from an archive of fettle export or of Export this space. You become its owner.",
+      "file": "Archive",
+      "fileHint": "A .fettle.tar.gz file, at most 2 GiB. For a larger archive, use fettle import on the server.",
+      "passphrase": "Passphrase",
+      "passphraseHint": "Only for an archive with a vault.",
+      "submit": "Import",
+      "needFile": "Choose an archive file.",
+      "done": "Fettle imported {name}",
+      "open": "Open it",
+      "failed": "Fettle did not import the archive"
+    }
   },
   "usage": {
     "title": "Cost",
@@ -922,7 +948,16 @@
       "quarantined": "Stopped for safety"
     },
     "screen": "Screen",
-    "openScreen": "Open the screen of the zone {zone}"
+    "openScreen": "Open the screen of the zone {zone}",
+    "more": "More actions for the zone {zone}",
+    "test": "Test the computer",
+    "sleep": "Put to sleep",
+    "slept": "The computer of {zone} sleeps. Its files stay. The next work wakes it.",
+    "sleepFailed": "Fettle did not put the computer to sleep",
+    "testing": "Fettle starts the computer and runs a test command.",
+    "testPass": "The computer works. It was ready in {start} and ran the command in {exec}: {output}",
+    "testFail": "The computer test failed: {error}",
+    "underSecond": "under 1 s"
   },
   "approvals": {
     "mode": "Approval mode",

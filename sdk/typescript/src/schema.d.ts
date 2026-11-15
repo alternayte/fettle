@@ -2761,6 +2761,7 @@ export interface components {
     SpaceView: {
       id: string;
       name: string;
+      needs_model: boolean;
       role: string;
       time_zone: string;
     };

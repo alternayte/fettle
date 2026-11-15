@@ -43,7 +43,7 @@ function RunPanel({ runId, onClose }: { runId: string; onClose: () => void }) {
 
 /** AppLayout is the signed-in frame: sidebar, command menu, main page and the run panel. */
 export function AppLayout() {
-  const { space, isOwner } = useSession();
+  const { me, space, isOwner, chooseSpace } = useSession();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
@@ -127,6 +127,9 @@ export function AppLayout() {
         sidebar={
           <Sidebar
             spaceName={space.name}
+            spaces={me.spaces ?? []}
+            spaceId={space.id}
+            onSpace={chooseSpace}
             bots={uiBots}
             chats={uiChats}
             active={active}

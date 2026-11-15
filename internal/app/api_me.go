@@ -22,6 +22,8 @@ type SpaceView struct {
 	Name     string `json:"name"`
 	TimeZone string `json:"time_zone"`
 	Role     string `json:"role"`
+	// NeedsModel is true for an owner of a space without a working owner model.
+	NeedsModel bool `json:"needs_model"`
 }
 
 // MeView is the caller.
@@ -186,29 +188,43 @@ func (a *App) meView(ctx context.Context, userID uuid.UUID) (MeView, error) {
 	}
 	v := MeView{ID: u.ID().String(), Email: u.Email, Name: u.Name, IsAdmin: u.IsAdmin, Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Spaces: []SpaceView{}}
 	for _, m := range ms {
-		v.Spaces = append(v.Spaces, SpaceView{ID: m.Space.ID().String(), Name: m.Space.Name, TimeZone: m.Space.TimeZone, Role: m.Role})
+		sv := SpaceView{ID: m.Space.ID().String(), Name: m.Space.Name, TimeZone: m.Space.TimeZone, Role: m.Role}
+		// Only an owner can set up the models; a member of a space without them goes on.
+		if m.Role == spaces.RoleOwner {
+			need, err := a.needsModel(ctx, m.Space.ID())
+			if err != nil {
+				return MeView{}, err
+			}
+			sv.NeedsModel = need
+		}
+		v.Spaces = append(v.Spaces, sv)
 	}
 	v.Setup.NeedsName = u.Name == ""
-	// Only an owner can set up the models; a member of a space without them goes on.
-	if len(ms) > 0 && ms[0].Role == spaces.RoleOwner {
-		ps, err := a.Models.List(ctx, ms[0].Space.ID())
-		if err != nil {
-			return MeView{}, err
-		}
-		ready := false
-		for _, pr := range ps {
-			if pr.Smoke.Tools {
-				ready = true
-			}
-		}
-		roles, _ := a.Models.Roles(ctx, ms[0].Space.ID(), nil)
-		hasOwner := false
-		for _, r := range roles {
-			if r.Role == "owner" && len(r.Targets) > 0 {
-				hasOwner = true
-			}
-		}
-		v.Setup.NeedsModel = !ready || !hasOwner
+	if len(v.Spaces) > 0 {
+		v.Setup.NeedsModel = v.Spaces[0].NeedsModel
 	}
 	return v, nil
+}
+
+// needsModel reports whether a space lacks a provider that passed the tool check or an
+// owner model.
+func (a *App) needsModel(ctx context.Context, spaceID uuid.UUID) (bool, error) {
+	ps, err := a.Models.List(ctx, spaceID)
+	if err != nil {
+		return false, err
+	}
+	ready := false
+	for _, pr := range ps {
+		if pr.Smoke.Tools {
+			ready = true
+		}
+	}
+	roles, _ := a.Models.Roles(ctx, spaceID, nil)
+	hasOwner := false
+	for _, r := range roles {
+		if r.Role == "owner" && len(r.Targets) > 0 {
+			hasOwner = true
+		}
+	}
+	return !ready || !hasOwner, nil
 }

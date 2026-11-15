@@ -3713,6 +3713,9 @@
           "name": {
             "type": "string"
           },
+          "needs_model": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string"
           },
@@ -3724,7 +3727,8 @@
           "id",
           "name",
           "time_zone",
-          "role"
+          "role",
+          "needs_model"
         ],
         "type": "object"
       },

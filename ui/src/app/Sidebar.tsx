@@ -1,5 +1,7 @@
 import {
   Activity,
+  Check,
+  ChevronsUpDown,
   AlarmClock,
   BookOpen,
   FileText,
@@ -15,6 +17,13 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { t } from "@/lib/copy";
 import { useTheme, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -76,8 +85,13 @@ function BotState({ bot }: { bot: Bot }) {
 const themeOrder: ThemePref[] = ["system", "light", "dark"];
 const themeIcon = { system: Monitor, light: Sun, dark: Moon } as const;
 
+export type SpaceChoice = { id: string; name: string; role: string };
+
 export function Sidebar({
   spaceName,
+  spaces,
+  spaceId,
+  onSpace,
   bots,
   chats,
   active,
@@ -86,6 +100,10 @@ export function Sidebar({
   isOwner,
 }: {
   spaceName: string;
+  /** The spaces of the caller; with more than one, the header switches between them. */
+  spaces?: SpaceChoice[];
+  spaceId?: string;
+  onSpace?: (id: string) => void;
   bots: Bot[];
   chats: ChatSummary[];
   active: NavTarget | null;
@@ -110,7 +128,29 @@ export function Sidebar({
         >
           F
         </span>
-        <span className="truncate text-sm font-[var(--weight-strong)] text-ink">{spaceName}</span>
+        {spaces && spaces.length > 1 && onSpace ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t("shell.switchSpace", { space: spaceName })}
+              className="-mx-1 flex min-w-0 flex-1 items-center gap-1 rounded-sm px-1 py-1 text-left hover:bg-surface-sunk"
+            >
+              <span className="truncate text-sm font-[var(--weight-strong)] text-ink">{spaceName}</span>
+              <ChevronsUpDown aria-hidden className="ml-auto size-3.5 shrink-0 text-ink-faint" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>{t("shell.spaces")}</DropdownMenuLabel>
+              {spaces.map((sp) => (
+                <DropdownMenuItem key={sp.id} onSelect={() => sp.id !== spaceId && onSpace(sp.id)}>
+                  <Check aria-hidden className={cn("size-3.5", sp.id === spaceId ? "opacity-100" : "opacity-0")} />
+                  <span className="min-w-0 flex-1 truncate">{sp.name}</span>
+                  <span className="text-xs text-ink-faint">{t(`shell.role.${sp.role}`)}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="truncate text-sm font-[var(--weight-strong)] text-ink">{spaceName}</span>
+        )}
       </div>
       <div className="px-2 pt-2">
         <button

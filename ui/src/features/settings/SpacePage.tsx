@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { CircleAlert, History } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CircleAlert, Download, History, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
+  keys,
   usePutSharedMemory,
   useSession,
   useSetSetting,
@@ -221,7 +223,107 @@ function SettingsList() {
   );
 }
 
+function ExportSpace() {
+  const { space } = useSession();
+  return (
+    // A native form, so the browser downloads the archive as it streams.
+    <form method="post" action={`/api/v1/spaces/${space.id}/export`} className="space-y-4">
+      <p className="text-sm text-ink-soft">{t("space.export.body")}</p>
+      <Field
+        id="export-passphrase"
+        label={t("space.export.passphrase")}
+        hint={t("space.export.passphraseHint")}
+        className="max-w-sm"
+      >
+        <input
+          id="export-passphrase"
+          name="passphrase"
+          type="password"
+          autoComplete="new-password"
+          aria-describedby="export-passphrase-hint"
+          className={inputCls}
+        />
+      </Field>
+      <Btn type="submit">
+        <Download aria-hidden className="size-3.5" />
+        {t("space.export.submit")}
+      </Btn>
+    </form>
+  );
+}
+
+function ImportSpace() {
+  const qc = useQueryClient();
+  const { chooseSpace } = useSession();
+  const [file, setFile] = useState<File | null>(null);
+  const [pass, setPass] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!file) return setError(t("space.import.needFile"));
+        setBusy(true);
+        const body = new FormData();
+        if (pass) body.append("passphrase", pass);
+        body.append("file", file);
+        try {
+          const r = await fetch("/api/v1/space-import", { method: "POST", credentials: "same-origin", body });
+          const data = (await r.json().catch(() => ({}))) as { space_id?: string; detail?: string };
+          if (!r.ok || !data.space_id) throw new Error(data.detail ?? String(r.status));
+          await qc.invalidateQueries({ queryKey: keys.me });
+          const id = data.space_id;
+          toast.success(t("space.import.done", { name: file.name }), {
+            action: { label: t("space.import.open"), onClick: () => chooseSpace(id) },
+          });
+          setFile(null);
+          setPass("");
+        } catch (err) {
+          toast.error(t("space.import.failed"), { description: errorText(err) });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="text-sm text-ink-soft">{t("space.import.body")}</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="import-file" label={t("space.import.file")} hint={t("space.import.fileHint")} error={error}>
+          <input
+            id="import-file"
+            type="file"
+            accept=".gz,.tgz,application/gzip"
+            aria-describedby="import-file-hint"
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              setError(null);
+            }}
+            className={cn(inputCls, "py-1.5")}
+          />
+        </Field>
+        <Field id="import-passphrase" label={t("space.import.passphrase")} hint={t("space.import.passphraseHint")}>
+          <input
+            id="import-passphrase"
+            type="password"
+            autoComplete="off"
+            value={pass}
+            aria-describedby="import-passphrase-hint"
+            onChange={(e) => setPass(e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+      </div>
+      <Btn type="submit" busy={busy}>
+        <Upload aria-hidden className="size-3.5" />
+        {t("space.import.submit")}
+      </Btn>
+    </form>
+  );
+}
+
 export function SpacePage() {
+  const { me } = useSession();
   const memory = useSharedMemory();
   const put = usePutSharedMemory();
   return (
@@ -242,6 +344,14 @@ export function SpacePage() {
       <Section id="settings" title={t("space.settings")}>
         <SettingsList />
       </Section>
+      <Section id="export" title={t("space.export.title")}>
+        <ExportSpace />
+      </Section>
+      {me.is_admin && (
+        <Section id="import" title={t("space.import.title")}>
+          <ImportSpace />
+        </Section>
+      )}
     </div>
   );
 }
