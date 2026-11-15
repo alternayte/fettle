@@ -175,3 +175,60 @@ func TestSCN_TEAM_009_ProposalsCreateOnlyOnCreate(t *testing.T) {
 		t.Fatalf("Writer's proposal: %s", res)
 	}
 }
+
+func TestAppendixETeamTools(t *testing.T) {
+	e := apptest.Start(t, "sqlite")
+	e.SetupModel("openai-chat", "", 128000)
+	chief := scripted(e,
+		fakemodel.Step{ToolCalls: calls("list_bots", map[string]any{})},
+		fakemodel.Step{ToolCalls: calls("reply", map[string]any{"text": "Working on it."})},
+		fakemodel.Step{ToolCalls: calls("ask_user", map[string]any{"question": "Which desk?", "options": []string{"Alpha", "Beta"}})},
+		fakemodel.Step{ToolCalls: calls("create_routine", map[string]any{"name": "Desk check", "cron": "0 9 * * 1", "prompt": "Check the desks."})},
+		fakemodel.Step{Text: "Done."})
+	run, _ := e.Post(chief.ChatID, "Plan the desk work.")
+	r := e.WaitRun(run, "waiting")
+	var question map[string]any
+	for _, m := range e.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "question" {
+			question = c
+		}
+		if m["body"] == "Working on it." && m["author_kind"] != "bot" {
+			t.Fatal("reply came from the wrong author")
+		}
+	}
+	if question == nil || question["title"] != "Which desk?" {
+		t.Fatalf("no question card: %s", r.EventTypes())
+	}
+	e.MustDo("POST", e.SP("/cards/%s/answer", question["id"]), map[string]any{"action": "answer", "value": "Beta"}, nil)
+	r = e.WaitRun(run, "waiting", "done")
+	var approval map[string]any
+	for _, m := range e.Messages(chief.ChatID) {
+		if c, ok := m["card"].(map[string]any); ok && c["kind"] == "approval" && c["status"] == "pending" {
+			approval = c
+		}
+	}
+	if approval == nil || approval["tool"] != "create_routine" {
+		t.Fatalf("create_routine did not ask: %s", r.EventTypes())
+	}
+	e.MustDo("POST", e.SP("/cards/%s/answer", approval["id"]), map[string]any{"action": "allow"}, nil)
+	r = e.WaitRun(run, "done", "failed", "escalated")
+	var results []string
+	for _, ev := range r.Events {
+		if ev.Type == "tool_call" || ev.Type == "tool_result" {
+			results = append(results, string(ev.Data))
+		}
+	}
+	all := strings.Join(results, "\n")
+	for _, want := range []string{"Chief (primary) (you)", "Sent.", "The user answered: Beta", "Made the routine Desk check"} {
+		if !strings.Contains(all, want) {
+			t.Fatalf("missing %q in\n%s", want, all)
+		}
+	}
+	sent := false
+	for _, m := range e.Messages(chief.ChatID) {
+		sent = sent || (m["body"] == "Working on it." && m["author_kind"] == "bot")
+	}
+	if !sent {
+		t.Fatal("reply did not reach the chat")
+	}
+}

@@ -107,3 +107,45 @@ func (a *Agent) WakeScreenWaiters(ctx context.Context, botID uuid.UUID) error {
 	}
 	return nil
 }
+
+func (a *Agent) registerAskUser() {
+	a.Tools.Add(Tool{
+		Name:        "ask_user",
+		Description: "Ask the user one question with a card and wait for the answer. Give options when the answer is one of a few choices.",
+		Class:       envelopes.ClassRead,
+		NoSubagent:  true,
+		Schema:      schema(`{"type":"object","properties":{"question":{"type":"string"},"options":{"type":"array","items":{"type":"string"},"maxItems":6}},"required":["question"],"additionalProperties":false}`),
+		// The run loop handles ask_user, because it parks the run.
+		Run: func(context.Context, *ToolEnv, json.RawMessage) (ToolOutput, error) {
+			return ToolOutput{}, errors.New("ask_user runs in the loop")
+		},
+	})
+}
+
+// askUser posts a question card and parks the run until the user answers it.
+func (x *exec) askUser(ctx context.Context, st *state, call models.ToolCall) error {
+	if cardID, ok := st.takeoverCard[call.ID]; ok {
+		ans := st.takeoverDone[cardID]
+		if ans == nil {
+			return x.wait(ctx, "card")
+		}
+		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: envelopes.ClassRead, Args: call.Args, Result: "The user answered: " + ans.Value, Origin: OriginUser}})
+		return err
+	}
+	var in struct {
+		Question string   `json:"question"`
+		Options  []string `json:"options"`
+	}
+	_ = json.Unmarshal(call.Args, &in)
+	if strings.TrimSpace(in.Question) == "" {
+		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Error: "Give the question."}})
+		return err
+	}
+	var opts []string
+	for _, o := range in.Options {
+		if o = strings.TrimSpace(o); o != "" {
+			opts = append(opts, truncate(o, 80))
+		}
+	}
+	return x.postCard(ctx, chats.Card{Kind: "question", Title: truncate(strings.TrimSpace(in.Question), 300), Options: opts, Data: map[string]string{"call_id": call.ID}}, runs.StatusWaiting)
+}

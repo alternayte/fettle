@@ -159,6 +159,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupConnectors()
 	a.setupSkills()
 	a.setupScreens()
+	a.registerSelfTools()
 	a.registerChanges()
 	a.registerPrimaryChange()
 	workers := river.NewWorkers()

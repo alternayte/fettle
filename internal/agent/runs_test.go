@@ -109,8 +109,9 @@ func TestSCN_RUN_001_ResumeAfterStepTwentyFromJournal(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(evs) != 42 {
-			t.Fatalf("journal has %d steps, want 42: %s", len(evs), r.EventTypes())
+		// 42 steps of work, then verify_started and verify_result (§9.5).
+		if len(evs) != 44 {
+			t.Fatalf("journal has %d steps, want 44: %s", len(evs), r.EventTypes())
 		}
 		var s21 struct {
 			Tool string `json:"tool"`

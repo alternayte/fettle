@@ -654,10 +654,13 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "report_result" && x.run.Kind == "subagent" {
 		return x.reportResult(ctx, st, call)
 	}
+	if call.Name == "ask_user" {
+		return x.askUser(ctx, st, call)
+	}
 	if call.Name == "request_takeover" {
 		return x.requestTakeover(ctx, st, call)
 	}
-	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}, Subagent: x.run.Kind == "subagent", Fork: x.forkRun()}
+	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, EnvelopeID: x.env.ID(), Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}, Subagent: x.run.Kind == "subagent", Fork: x.forkRun()}
 	// The computer comes first: a full host makes the run wait before any card, and
 	// ClassOf may need the computer to see what the call touches.
 	if tool.NeedsComputer && a.Computer != nil && !x.forkRun() {

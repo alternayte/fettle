@@ -60,6 +60,10 @@ func (c *Computer) lease(ctx context.Context, env *agent.ToolEnv) (*computers.Le
 
 // resolve maps a path from the model to a path under home. Paths may be relative to the
 // bot home, or start with shared/ for the zone's shared folder. Other homes are refused (SI-04).
+// Resolve maps a path from the model to a path in the computer: relative to the bot home,
+// or under shared/. Other homes are refused (SI-04).
+func Resolve(home, p string) (string, error) { return resolve(home, p) }
+
 func resolve(home, p string) (string, error) {
 	p = strings.TrimSpace(p)
 	p = strings.TrimPrefix(p, "/home/fettle/")

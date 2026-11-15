@@ -165,6 +165,10 @@
       "name": "Name",
       "job": "Job",
       "instructions": "Instructions"
+    },
+    "question": {
+      "answer": "Your answer",
+      "send": "Answer"
     }
   },
   "run": {

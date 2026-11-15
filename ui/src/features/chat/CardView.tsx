@@ -152,6 +152,7 @@ function Resolved({ card }: { card: Card }) {
 export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAnswer) => void }) {
   const reduce = useReducedMotion();
   const [editing, setEditing] = useState(false);
+  const [answer, setAnswer] = useState("");
   if (card.status !== "pending") return <Resolved card={card} />;
   const Icon = icons[card.kind];
   return (
@@ -222,6 +223,26 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         )}
         {card.kind === "warning" && (
           <ActionButton onClick={() => onAnswer({ action: "dismiss" })}>{t("card.warning.dismiss")}</ActionButton>
+        )}
+        {card.kind === "question" && (card.options ?? []).length === 0 && (
+          <form
+            className="flex w-full min-w-0 flex-1 gap-1.5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (answer.trim()) onAnswer({ action: "answer", value: answer.trim() });
+            }}
+          >
+            <input
+              aria-label={t("card.question.answer")}
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              maxLength={2000}
+              className="h-7 min-w-0 flex-1 rounded-sm border border-rule-strong bg-surface-raised px-2 text-sm text-ink"
+            />
+            <ActionButton kind="act" type="submit" disabled={!answer.trim()}>
+              {t("card.question.send")}
+            </ActionButton>
+          </form>
         )}
         {card.kind === "question" &&
           (card.options ?? []).map((o, i) => (

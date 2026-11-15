@@ -200,7 +200,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evCard
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.openCard = &d
-			if d.Kind == "takeover" && d.CallID != "" {
+			if (d.Kind == "takeover" || d.Kind == "question") && d.CallID != "" {
 				st.takeoverCard[d.CallID] = d.CardID
 			}
 		case runs.EvCardAnswered:
@@ -210,7 +210,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 				st.openCard = nil
 			}
 			st.answers = append(st.answers, d)
-			if d.Kind == "takeover" {
+			if d.Kind == "takeover" || d.Kind == "question" {
 				st.takeoverDone[d.CardID] = &d
 			}
 			switch {

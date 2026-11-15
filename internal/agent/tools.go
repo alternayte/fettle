@@ -63,14 +63,16 @@ type ToolOutput struct {
 
 // ToolEnv is the context of one tool call.
 type ToolEnv struct {
-	SpaceID  uuid.UUID
-	BotID    uuid.UUID
-	RunID    uuid.UUID
-	ChatID   *uuid.UUID
-	Actor    audit.Actor
-	Origin   string // origin of the run's envelope
-	ReadData bool   // the run already read web, email or connector content
-	Seq      int64  // the journal sequence of this call, for output file names
+	SpaceID uuid.UUID
+	BotID   uuid.UUID
+	RunID   uuid.UUID
+	ChatID  *uuid.UUID
+	// EnvelopeID is the work of the run; messages that a tool posts belong to it.
+	EnvelopeID uuid.UUID
+	Actor      audit.Actor
+	Origin     string // origin of the run's envelope
+	ReadData   bool   // the run already read web, email or connector content
+	Seq        int64  // the journal sequence of this call, for output file names
 	// Checked holds what ClassOf saw (for example the element of a browser action), so that
 	// Run acts only on the same thing and the card shows it.
 	Checked map[string]string

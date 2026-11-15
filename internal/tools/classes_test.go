@@ -23,6 +23,8 @@ var appendixE = map[string]string{
 	"attach_file": envelopes.ClassRead, "reply": envelopes.ClassRead, "handoff": envelopes.ClassWriteLocal,
 	"propose_bot": envelopes.ClassAdmin, "propose_team": envelopes.ClassAdmin, "create_routine": envelopes.ClassAdmin, "update_routine": envelopes.ClassAdmin, "update_self": envelopes.ClassAdmin,
 	"sleep_until": envelopes.ClassWriteLocal, "add_open_work": envelopes.ClassWriteLocal, "complete_open_work": envelopes.ClassWriteLocal,
+	// report_result is the structured end of a helper run (§9.4, D-151); only helpers get it.
+	"report_result": envelopes.ClassRead,
 }
 
 // registry holds every built-in tool that this build has.
