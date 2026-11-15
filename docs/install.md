@@ -13,7 +13,7 @@ Each release at <https://github.com/alternayte/fettle/releases/latest> holds the
 
 | File | Use |
 | --- | --- |
-| `Fettle-<version>-macos-universal.dmg` | The desktop app for macOS 13 or later. |
+| `Fettle-<version>-macos-universal.dmg` | The desktop app for macOS 14 or later. |
 | `Fettle-<version>-windows-amd64.msi` | The desktop app installer for Windows on x64. |
 | `Fettle-<version>-windows-amd64.exe` | The desktop app for Windows, without an installer. |
 | `Fettle-<version>-linux-x86_64.AppImage`, `Fettle-<version>-linux-aarch64.AppImage` | The desktop app for Linux. |

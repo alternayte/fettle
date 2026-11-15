@@ -29,7 +29,7 @@ Get the installers from the [latest release](https://github.com/alternayte/fettl
 
 | System | File |
 | --- | --- |
-| macOS 13 or later, Apple silicon and Intel | `Fettle-<version>-macos-universal.dmg` |
+| macOS 14 or later, Apple silicon and Intel | `Fettle-<version>-macos-universal.dmg` |
 | Windows, x64 | `Fettle-<version>-windows-amd64.msi` |
 | Linux, x86_64 and aarch64 | `Fettle-<version>-linux-<arch>.AppImage` |
 | Debian and Ubuntu, amd64 and arm64 | `fettle-desktop_<version>_<arch>.deb` |

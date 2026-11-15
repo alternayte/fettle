@@ -8,7 +8,7 @@ The app can also open a Fettle server that you or your team runs.
 
 Download the file for your system from <https://github.com/alternayte/fettle/releases/latest>.
 
-- macOS 13 or later: open `Fettle-<version>-macos-universal.dmg` and move Fettle to Applications.
+- macOS 14 or later: open `Fettle-<version>-macos-universal.dmg` and move Fettle to Applications.
 - Windows on x64: run `Fettle-<version>-windows-amd64.msi`.
 - Linux: make `Fettle-<version>-linux-<arch>.AppImage` executable and run it.
 - Debian and Ubuntu: install `fettle-desktop_<version>_<arch>.deb` with `sudo apt install ./fettle-desktop_<version>_<arch>.deb`.
