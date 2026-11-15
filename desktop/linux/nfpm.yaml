@@ -7,8 +7,8 @@ description: Fettle desktop app. Your AI team, on your computer or a server.
 license: AGPL-3.0-only
 homepage: https://github.com/alternayte/fettle
 depends:
-  - libgtk-3-0
-  - libwebkit2gtk-4.1-0
+  - libgtk-4-1
+  - libwebkitgtk-6.0-4
 contents:
   - src: ${BIN}
     dst: /usr/bin/fettle-desktop

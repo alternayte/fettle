@@ -99,7 +99,7 @@ fmt-check:
 
 # recipe: lint
 # Linters, type check, copy lint, forbidden words, licences and repository checks.
-lint:
+lint: build
     golangci-lint run ./...
     golangci-lint run --build-tags ee ./ee/... ./cmd/fettle/
     cd ui && bunx eslint . && bunx tsc -b --noEmit && bun scripts/copylint.ts
