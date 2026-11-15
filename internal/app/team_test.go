@@ -11,16 +11,6 @@ import (
 	"github.com/alternayte/fettle/internal/apptest"
 )
 
-func pendingCard(e *apptest.Env, chatID, kind string) map[string]any {
-	e.T.Helper()
-	for _, m := range e.Messages(chatID) {
-		if c, ok := m["card"].(map[string]any); ok && c["kind"] == kind && c["status"] == "pending" {
-			return c
-		}
-	}
-	return nil
-}
-
 func primaries(e *apptest.Env) []string {
 	e.T.Helper()
 	var bs struct{ Bots []apptest.Bot }
