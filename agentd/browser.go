@@ -137,6 +137,10 @@ func (s *Server) openBrowser(req client.BrowserContextRequest) (*browserCtx, err
 	// user. The computer is the sandbox; the image sets this variable.
 	if os.Getenv("FETTLE_BROWSER_NO_SANDBOX") == "1" {
 		opts = append(opts, chromedp.NoSandbox)
+		if req.Screen != "" {
+			// Without it, Chromium shows a warning bar about --no-sandbox to the person.
+			opts = append(opts, chromedp.Flag("test-type", true))
+		}
 	}
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), opts...)
 	tab, cancelTab := chromedp.NewContext(allocCtx)
