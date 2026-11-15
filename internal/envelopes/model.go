@@ -71,24 +71,24 @@ type Decision struct {
 // Envelope is one unit of work (Appendix C).
 type Envelope struct {
 	drel.Model[uuid.UUID] `db:"unique_index=uq_envelopes_idem[space_id,idempotency_key]"`
-	ParentID              *uuid.UUID     `db:"parent_id"`
-	RootID                uuid.UUID      `db:"root_id,index"`
-	SpaceID               uuid.UUID      `db:"space_id,references=spaces,on_delete=cascade"`
-	Kind                  string         `db:"kind,check=kind IN ('message','routine','webhook','handoff','part','verify')"`
-	Origin                string         `db:"origin,check=origin IN ('user','routine','webhook','bot')"`
-	Requester             Requester      `db:"requester"`
-	OwnerBotID            *uuid.UUID     `db:"owner_bot_id"`
-	ChatID                *uuid.UUID     `db:"chat_id"`
-	MessageID             *uuid.UUID     `db:"message_id"`
-	Goal                  string         `db:"goal"`
-	Acceptance            []Check        `db:"acceptance"`
-	ContextRefs           []ContextRef   `db:"context_refs"`
-	Capabilities          []string       `db:"capabilities"`
-	Budget                Budget         `db:"budget"`
-	Step                  *string        `db:"step"`
-	IdempotencyKey        string         `db:"idempotency_key"`
-	Deadline              *time.Time     `db:"deadline"`
-	Status                string         `db:"status,check=status IN ('created','routed','running','verifying','done','failed','escalated','cancelled')"`
-	Decision              Decision       `db:"decision"`
-	Result                *Result        `db:"result"`
+	ParentID              *uuid.UUID   `db:"parent_id"`
+	RootID                uuid.UUID    `db:"root_id,index"`
+	SpaceID               uuid.UUID    `db:"space_id,references=spaces,on_delete=cascade"`
+	Kind                  string       `db:"kind,check=kind IN ('message','routine','webhook','handoff','part','verify')"`
+	Origin                string       `db:"origin,check=origin IN ('user','routine','webhook','bot')"`
+	Requester             Requester    `db:"requester"`
+	OwnerBotID            *uuid.UUID   `db:"owner_bot_id"`
+	ChatID                *uuid.UUID   `db:"chat_id"`
+	MessageID             *uuid.UUID   `db:"message_id"`
+	Goal                  string       `db:"goal"`
+	Acceptance            []Check      `db:"acceptance"`
+	ContextRefs           []ContextRef `db:"context_refs"`
+	Capabilities          []string     `db:"capabilities"`
+	Budget                Budget       `db:"budget"`
+	Step                  *string      `db:"step"`
+	IdempotencyKey        string       `db:"idempotency_key"`
+	Deadline              *time.Time   `db:"deadline"`
+	Status                string       `db:"status,check=status IN ('created','routed','running','verifying','done','failed','escalated','cancelled')"`
+	Decision              Decision     `db:"decision"`
+	Result                *Result      `db:"result"`
 }
