@@ -77,8 +77,18 @@ function reducer(s: State, a: Action): State {
       return { ...s, loadingOlder: false };
     case "error":
       return { ...s, error: a.error, loaded: true };
-    case "upsert":
-      return { ...s, list: upsertAll(s.list, [a.m]) };
+    case "upsert": {
+      // The stream can bring the server's copy of a sent message before the post answers;
+      // then it replaces the local copy at once.
+      let list = s.list;
+      if (a.m.author_kind === "user" && !a.m.id.startsWith("local")) {
+        const i = list.findIndex(
+          (m) => m.id.startsWith("local") && m.author_id === a.m.author_id && m.body === a.m.body,
+        );
+        if (i >= 0) list = [...list.slice(0, i), ...list.slice(i + 1)];
+      }
+      return { ...s, list: upsertAll(list, [a.m]) };
+    }
     case "deltas": {
       let hit = false;
       const list = s.list.map((m) => {
