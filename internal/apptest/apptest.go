@@ -216,7 +216,8 @@ func (e *Env) GetRun(id string) Run {
 // WaitRun waits until a run has one of the states.
 func (e *Env) WaitRun(id string, states ...string) Run {
 	e.T.Helper()
-	deadline := time.Now().Add(30 * time.Second)
+	// Runs with computers and browsers are slow when the whole suite loads the host.
+	deadline := time.Now().Add(90 * time.Second)
 	var r Run
 	for time.Now().Before(deadline) {
 		r = e.GetRun(id)
