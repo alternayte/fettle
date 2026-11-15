@@ -339,6 +339,10 @@
           },
           "zone_name": {
             "type": "string"
+          },
+          "zone_size": {
+            "description": "small, browser or desktop. Only a desktop zone has a screen.",
+            "type": "string"
           }
         },
         "required": [
@@ -353,6 +357,7 @@
           "status",
           "zone_id",
           "zone_name",
+          "zone_size",
           "chat_id",
           "activity"
         ],
@@ -855,6 +860,16 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "Create-from-templateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "zone_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Create-groupRequest": {
@@ -2159,6 +2174,19 @@
         },
         "required": [
           "id"
+        ],
+        "type": "object"
+      },
+      "Move-bot-zoneRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "zone_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone_id"
         ],
         "type": "object"
       },
@@ -6247,6 +6275,67 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/bots/{bot}/zone": {
+      "put": {
+        "operationId": "move-bot-zone",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Move-bot-zoneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Move a bot to another zone (owners). It works there from its next run.",
+        "tags": [
+          "bots"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/cards/{card}/answer": {
       "post": {
         "operationId": "answer-card",
@@ -10157,6 +10246,15 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-from-templateRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

@@ -25,6 +25,7 @@ type BotView struct {
 	Status          string  `json:"status"`
 	ZoneID          *string `json:"zone_id"`
 	ZoneName        string  `json:"zone_name"`
+	ZoneSize        string  `json:"zone_size" doc:"small, browser or desktop. Only a desktop zone has a screen."`
 	ChatID          string  `json:"chat_id"`
 	Activity        string  `json:"activity" enum:"idle,working,waiting" doc:"What the bot does now."`
 }
@@ -35,7 +36,7 @@ func (a *App) botView(ctx context.Context, b *bots.Bot) BotView {
 		s := b.ZoneID.String()
 		v.ZoneID = &s
 		if z, err := a.Zones.Get(ctx, b.SpaceID, *b.ZoneID); err == nil {
-			v.ZoneName = z.Name
+			v.ZoneName, v.ZoneSize = z.Name, z.Size
 		}
 	}
 	if c, err := a.Chats.DirectFor(ctx, b.SpaceID, b.ID()); err == nil {
@@ -183,6 +184,37 @@ func (a *App) registerBots(api huma.API) {
 			return nil, err
 		}
 		b, err := a.Bots.Update(ctx, actorOf(p), in.Space, in.Bot, bots.Input{Name: in.Body.Name, Job: in.Body.Job, PublicDesc: in.Body.PublicDesc, Instructions: in.Body.Instructions, Avatar: in.Body.Avatar})
+		if err != nil {
+			return nil, apiError(err)
+		}
+		return &botOut{Body: a.botView(ctx, b)}, nil
+	})
+
+	huma.Register(api, op("move-bot-zone", http.MethodPut, "/spaces/{space}/bots/{bot}/zone", "Move a bot to another zone (owners). It works there from its next run.", "bots"), func(ctx context.Context, in *struct {
+		BotPath
+		Body struct {
+			ZoneID string `json:"zone_id" format:"uuid"`
+		}
+	}) (*botOut, error) {
+		p, _, err := a.ctxSpace(ctx, in.Space, true)
+		if err != nil {
+			return nil, err
+		}
+		zid, err := uuid.Parse(in.Body.ZoneID)
+		if err != nil {
+			return nil, huma.Error422UnprocessableEntity("zone_id is not valid")
+		}
+		if _, err := a.Zones.Get(ctx, in.Space, zid); err != nil {
+			return nil, huma.Error422UnprocessableEntity("The zone is not in this space.")
+		}
+		var open int
+		if err := a.DB.Engine.QueryRow(ctx, "SELECT COUNT(*) FROM runs WHERE bot_id = $1 AND status IN ('queued','running','waiting','verifying')", in.Bot).Scan(&open); err != nil {
+			return nil, err
+		}
+		if open > 0 {
+			return nil, huma.Error409Conflict("This bot has work in progress. Move it when the work ends.")
+		}
+		b, err := a.Bots.SetZone(ctx, actorOf(p), in.Space, in.Bot, zid)
 		if err != nil {
 			return nil, apiError(err)
 		}

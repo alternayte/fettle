@@ -205,11 +205,60 @@ export function useCreateBot() {
   const qc = useQueryClient();
   const space = useSpaceId();
   return useMutation({
-    mutationFn: (body: { name: string; job?: string }) =>
+    mutationFn: (body: { name: string; job?: string; zone_id?: string }) =>
       must(api.POST("/api/v1/spaces/{space}/bots", { params: { path: { space } }, body })),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.bots(space), exact: true });
       void qc.invalidateQueries({ queryKey: keys.chats(space) });
+    },
+  });
+}
+
+/** useTemplates lists the bot templates that ship with Fettle. */
+export function useTemplates() {
+  return useQuery({
+    queryKey: ["templates"],
+    queryFn: async () => (await must(api.GET("/api/v1/templates"))).templates ?? [],
+    staleTime: Infinity,
+  });
+}
+
+/** useCreateFromTemplate makes a bot from a template, with its skill and its paused routine. */
+export function useCreateFromTemplate() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ slug, zone_id }: { slug: string; zone_id?: string }) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/templates/{template}", {
+          params: { path: { space, template: slug } },
+          body: zone_id ? { zone_id } : {},
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.bots(space), exact: true });
+      void qc.invalidateQueries({ queryKey: keys.chats(space) });
+      void qc.invalidateQueries({ queryKey: ["s", space, "skills"] });
+      void qc.invalidateQueries({ queryKey: ["s", space, "routines"] });
+    },
+  });
+}
+
+/** useMoveBotZone moves a bot to another zone (owners). */
+export function useMoveBotZone(botId: string) {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (zone_id: string) =>
+      must(
+        api.PUT("/api/v1/spaces/{space}/bots/{bot}/zone", {
+          params: { path: { space, bot: botId } },
+          body: { zone_id },
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.bots(space) });
+      void qc.invalidateQueries({ queryKey: keys.zones(space) });
     },
   });
 }

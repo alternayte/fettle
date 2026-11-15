@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Monitor, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
-import { useComputerProviders, useCreateZone, useEnableHost, useUpdateZone, useZones } from "@/api/hooks";
+import { useBots, useComputerProviders, useCreateZone, useEnableHost, useUpdateZone, useZones } from "@/api/hooks";
 import type { SchemaComputerProviderView, SchemaZoneBody, SchemaZoneView } from "@/api/schema";
 import { Notice, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
@@ -187,13 +188,19 @@ function ZoneForm({
 function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaComputerProviderView[] }) {
   const [editing, setEditing] = useState(false);
   const update = useUpdateZone();
+  const bots = useBots();
+  // The screen belongs to the zone's computer; it opens through one of the zone's bots.
+  const screenBot =
+    zone.size === "desktop"
+      ? (bots.data ?? []).find((b) => b.zone_id === zone.id && b.status !== "archived")
+      : undefined;
   const network =
     zone.network === "open"
       ? t("computers.networks.open")
       : t("computers.allowCount", { n: String(zone.allow_hosts?.length ?? 0) });
   return (
     <li className="border-b border-rule py-3">
-      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(8rem,1fr)_8rem_14rem_auto]">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(8rem,1fr)_8rem_14rem_9.5rem]">
         <div className="min-w-0">
           <p className="truncate text-sm font-[var(--weight-medium)] text-ink">{zone.name}</p>
           <p className="truncate text-xs text-ink-faint">
@@ -204,15 +211,22 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
         <p className="figures order-3 col-span-2 text-ink-soft sm:order-none sm:col-span-1">
           {[t(`computers.kind.${zone.provider_kind}`), t(`computers.sizes.${zone.size}`), network].join(" · ")}
         </p>
-        <Btn
-          kind="quiet"
-          size="sm"
-          aria-expanded={editing}
-          className="justify-self-end"
-          onClick={() => setEditing((e) => !e)}
-        >
-          {editing ? t("common.close") : t("common.edit")}
-        </Btn>
+        <div className="flex items-center gap-1 justify-self-end">
+          {screenBot && (
+            <Link
+              to="/screen/$botId"
+              params={{ botId: screenBot.id }}
+              aria-label={t("computers.openScreen", { zone: zone.name })}
+              className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2.5 text-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
+            >
+              <Monitor aria-hidden className="size-3.5" />
+              {t("computers.screen")}
+            </Link>
+          )}
+          <Btn kind="quiet" size="sm" aria-expanded={editing} onClick={() => setEditing((e) => !e)}>
+            {editing ? t("common.close") : t("common.edit")}
+          </Btn>
+        </div>
       </div>
       {zone.computer_error && zone.computer_state === "error" && (
         <p className="mt-1 text-xs text-danger">{zone.computer_error}</p>

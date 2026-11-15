@@ -135,28 +135,28 @@ Payments and purchases are blocked. Read [security.md](security.md#approvals).
 
 Fettle has five bot templates. Each template has a skill and a paused routine.
 
-1. Add three bots from templates with the CLI:
+1. Select **Bots** in the sidebar, then select **New bot**.
+2. Under **Start from**, select **Research**. The form shows the skill and the routine that come with it.
+3. In **Zone**, keep `browsing`. The template suggests this zone. A zone is the computer that the bot works on.
+4. Select **Create Research**. The settings page of the bot opens.
+5. Do steps 1 to 4 again for **Reporter** and **Inbox**. The screenshots also show Reviewer, from the template **Reviewer**. This tutorial does not use it.
 
-   ```sh
-   fettle bot create --template research
-   fettle bot create --template weekly-report
-   fettle bot create --template inbox
-   ```
+![The New bot form. Inbox is selected under Start from. The form says which skill and routine come with Inbox, and the Zone field shows the zone of the template.](images/new-bot.png)
 
-   The commands add Research, Reporter and Inbox. The screenshots also show Reviewer, from the template `pr-reviewer`. This tutorial does not use it.
+You can also add bots from the CLI with `fettle bot create --template research`.
 
-2. Add a bot without a template in the UI. Select **Bots** in the sidebar, then select **New bot**.
-3. Type the name `Ledger` and the job `Checks supplier invoices and tracks the budgets`.
-4. Select **Create bot**. The settings page of the bot opens.
-5. In **Public description**, type what other bots must know about Ledger. Select **Save**.
-6. In **Instructions**, type the rules of the bot. Select **Save as new version**.
+6. Add a bot without a template. Select **New bot**, then select **Your own bot**.
+7. Type the name `Ledger` and the job `Checks supplier invoices and tracks the budgets`. Keep the zone `personal`.
+8. Select **Create bot**. The settings page of the bot opens.
+9. In **Public description**, type what other bots must know about Ledger. Select **Save**.
+10. In **Instructions**, type the rules of the bot. Select **Save as new version**.
 
-![The settings page of Ledger. It shows the profile with the name, the job and the public description, the instructions, and the version history.](images/bot-settings.png)
+![The settings page of Ledger. It shows the profile, the computer of the bot with its zone, the instructions and the version history.](images/bot-settings.png)
 
 Each save of the instructions makes a new version. **Version history** shows the versions and restores an earlier one.
 
 A bot uses the models of the space. To give one bot other models, open its settings page and go to **Models**. Pick a model for a role, then select **Use for this bot**. Select **Use the space models** to remove the change.
-A bot that you make in the UI works in the zone `personal`. To use another zone, give `--zone` to `fettle bot create`.
+To move a bot to another zone, open its settings page. In **Computer**, choose the zone and select **Move**. The bot uses the new computer from its next run. Fettle does not move a bot while it has work in progress.
 
 The **Bots** page lists the bots with their zones and their status.
 
@@ -208,6 +208,12 @@ This needs a zone of the `desktop` size. Read [computers.md](computers.md#sizes)
 ![The screen of Research under your control. The browser shows the sign-in page of the shop. The header has the note "I signed in with the Acme account" and the Done button.](images/screen-control.png)
 
 The bot waits while you control the screen. Control lasts 15 minutes at a time.
+
+You can also open a screen without a card, to watch a bot work:
+
+- In the chat of the bot, select the screen button in the header.
+- On the settings page of the bot, select **Open the screen** under **Computer**.
+- In **Settings**, **Computers**, select **Screen** on the row of a desktop zone.
 
 ## 12. Save a run as a skill
 

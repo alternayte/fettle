@@ -28,14 +28,20 @@ type TemplateView struct {
 }
 
 // fromTemplate creates a bot from a template in the transaction in ctx: the bot with its
-// instructions in the template's zone, its direct chat, its skill in the library, and its
-// routine paused. primary marks the space's first bot.
-func (a *App) fromTemplate(ctx context.Context, actor audit.Actor, spaceID uuid.UUID, tz string, t templates.Template, primary bool) (*bots.Bot, error) {
-	z, err := a.Zones.ByName(ctx, spaceID, t.Zone)
-	if err != nil {
-		return nil, fmt.Errorf("the template needs the zone %s: %w", t.Zone, err)
+// instructions in the template's zone, or in zone when it is set, its direct chat, its skill
+// in the library, and its routine paused. primary marks the space's first bot.
+func (a *App) fromTemplate(ctx context.Context, actor audit.Actor, spaceID uuid.UUID, tz string, t templates.Template, primary bool, zone *uuid.UUID) (*bots.Bot, error) {
+	var zid uuid.UUID
+	if zone != nil {
+		zid = *zone
+	} else {
+		z, err := a.Zones.ByName(ctx, spaceID, t.Zone)
+		if err != nil {
+			return nil, fmt.Errorf("the template needs the zone %s: %w", t.Zone, err)
+		}
+		zid = z.ID()
 	}
-	zid := z.ID()
+	var err error
 	name := t.Name
 	var b *bots.Bot
 	for n := 1; n < 100; n++ {
@@ -97,6 +103,10 @@ func (a *App) registerTemplates(api huma.API) {
 	huma.Register(api, op("create-from-template", http.MethodPost, "/spaces/{space}/templates/{template}", "Create a bot from a template, with its skill and its routine paused", "bots"), func(ctx context.Context, in *struct {
 		SpacePath
 		Template string `path:"template"`
+		Body     *struct {
+			// ZoneID puts the bot in this zone instead of the template's zone.
+			ZoneID string `json:"zone_id,omitempty" format:"uuid"`
+		} `required:"false"`
 	}) (*botOut, error) {
 		p, _, err := a.ctxSpace(ctx, in.Space, true)
 		if err != nil {
@@ -110,10 +120,21 @@ func (a *App) registerTemplates(api huma.API) {
 		if err != nil {
 			return nil, apiError(err)
 		}
+		var zone *uuid.UUID
+		if in.Body != nil && in.Body.ZoneID != "" {
+			id, err := uuid.Parse(in.Body.ZoneID)
+			if err != nil {
+				return nil, huma.Error422UnprocessableEntity("zone_id is not valid")
+			}
+			if _, err := a.Zones.Get(ctx, in.Space, id); err != nil {
+				return nil, huma.Error422UnprocessableEntity("The zone is not in this space.")
+			}
+			zone = &id
+		}
 		var b *bots.Bot
 		err = a.DB.Engine.WithTx(ctx, func(ctx context.Context) error {
 			var err error
-			b, err = a.fromTemplate(ctx, actorOf(p), in.Space, sp.TimeZone, t, false)
+			b, err = a.fromTemplate(ctx, actorOf(p), in.Space, sp.TimeZone, t, false, zone)
 			return err
 		})
 		if err != nil {

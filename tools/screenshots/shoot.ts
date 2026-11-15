@@ -425,6 +425,16 @@ function shots(s: Seed): Shot[] {
         await p.locator("#diagnostics-section").evaluate((e) => e.scrollIntoView());
       },
     },
+    {
+      name: "new-bot",
+      path: "/bots",
+      ready: text("Waiting for you"),
+      act: async (p) => {
+        await p.getByRole("button", { name: "New bot" }).click();
+        await p.getByRole("radio", { name: /^Inbox/ }).check();
+        await p.getByText("Comes with the skill").waitFor();
+      },
+    },
     { name: "bot-settings", path: `/bots/${s.bots.Ledger.id}`, ready: text("Version history") },
     {
       name: "group-new",
@@ -478,7 +488,7 @@ function shots(s: Seed): Shot[] {
     {
       name: "chat-takeover",
       path: async () => `/chat/${(await takeover(s)).chat}`,
-      ready: (p) => p.getByRole("link", { name: "Open the screen" }).waitFor({ timeout: 60_000 }),
+      ready: (p) => p.getByRole("link", { name: "Open the screen", exact: true }).waitFor({ timeout: 60_000 }),
     },
     {
       name: "screen-control",

@@ -7,6 +7,8 @@ export interface Bot {
   is_primary: boolean;
   status: BotStatus;
   zone: string;
+  /** The zone of the bot has a screen to watch and take over. */
+  screen?: boolean;
 }
 
 export interface ChatSummary {

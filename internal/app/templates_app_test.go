@@ -1,12 +1,19 @@
 package app_test
 
 import (
+	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/alternayte/drel"
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/apptest"
+	"github.com/alternayte/fettle/internal/envelopes"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
+	"github.com/alternayte/fettle/internal/runs"
 	"github.com/alternayte/fettle/internal/skills"
 	"github.com/alternayte/fettle/templates"
 )
@@ -110,5 +117,72 @@ func TestSCN_UX_005_TemplatesCreateBotsWhoseEvalsPass(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBotZoneOnCreateFromTemplateAndMove(t *testing.T) {
+	e := apptest.Start(t, "sqlite")
+	var zs struct {
+		Zones []struct{ ID, Name string } `json:"zones"`
+	}
+	e.MustDo("GET", e.SP("/zones"), nil, &zs)
+	zone := map[string]string{}
+	for _, z := range zs.Zones {
+		zone[z.Name] = z.ID
+	}
+	type view struct {
+		ID       string `json:"id"`
+		ZoneName string `json:"zone_name"`
+		ZoneSize string `json:"zone_size"`
+	}
+	// The template's own zone is browsing; the request puts the bot in personal.
+	var research view
+	e.MustDo("POST", e.SP("/templates/research"), map[string]string{"zone_id": zone["personal"]}, &research)
+	if research.ZoneName != "personal" || research.ZoneSize == "" {
+		t.Fatalf("a template bot with a zone: %+v", research)
+	}
+	// Without a body, the template's zone applies, as for the CLI.
+	var again view
+	e.MustDo("POST", e.SP("/templates/research"), nil, &again)
+	if again.ZoneName != "browsing" {
+		t.Fatalf("a template bot without a zone: %+v", again)
+	}
+	var ledger view
+	e.MustDo("POST", e.SP("/bots"), map[string]string{"name": "Ledger", "job": "Checks invoices", "zone_id": zone["browsing"]}, &ledger)
+	if ledger.ZoneName != "browsing" {
+		t.Fatalf("a new bot with a zone: %+v", ledger)
+	}
+
+	var moved view
+	e.MustDo("PUT", e.SP("/bots/%s/zone", research.ID), map[string]string{"zone_id": zone["browsing"]}, &moved)
+	if moved.ZoneName != "browsing" {
+		t.Fatalf("after the move: %+v", moved)
+	}
+	var log struct {
+		Rows []struct {
+			Action string `json:"action"`
+		} `json:"rows"`
+	}
+	if code, body := e.Do("GET", e.SP("/audit?action=bot.zone"), nil, &log); code != 200 || !strings.Contains(body, `"bot.zone"`) {
+		t.Fatalf("no audit row for the move: %d %s", code, body)
+	}
+
+	// A bot with open work stays where it is.
+	ctx := context.Background()
+	space, _ := uuid.Parse(e.Space)
+	botID, _ := uuid.Parse(research.ID)
+	env := &envelopes.Envelope{SpaceID: space, Kind: "message", Origin: "user", Requester: envelopes.Requester{Type: "user", ID: e.Owner}, OwnerBotID: &botID, Goal: "Compare desks"}
+	if err := e.App.Envs.Create(ctx, env, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.App.DB.Engine.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		drel.Repo(tx, runs.RunMeta).Add(&runs.Run{SpaceID: space, EnvelopeID: env.ID(), BotID: botID, Kind: "owner", Status: runs.StatusWaiting})
+		return tx.SaveChanges(ctx)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if code, body := e.Do("PUT", e.SP("/bots/%s/zone", research.ID), map[string]string{"zone_id": zone["personal"]}, nil); code != 409 {
+		t.Fatalf("a bot with open work moved: %d %s", code, body)
 	}
 }

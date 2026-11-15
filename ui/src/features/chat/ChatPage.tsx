@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
-import { CircleAlert, Settings2 } from "lucide-react";
+import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { CircleAlert, Monitor, Settings2 } from "lucide-react";
 import { uploadAttachment, useBots, useChats, useSession, useStopRun } from "@/api/hooks";
 import { errorText } from "@/api/client";
 import { Notice, Page } from "@/app/Page";
@@ -128,14 +128,27 @@ function ChatScreen({ chatId }: { chatId: string }) {
       empty={empty}
       headerActions={
         bot ? (
-          <button
-            type="button"
-            onClick={() => void navigate({ to: "/bots/$botId", params: { botId: bot.id } })}
-            aria-label={t("chat.botSettings", { name: bot.name })}
-            className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
-          >
-            <Settings2 className="size-4" aria-hidden />
-          </button>
+          <>
+            {bot.screen && (
+              <Link
+                to="/screen/$botId"
+                params={{ botId: bot.id }}
+                aria-label={t("chat.openScreen", { name: bot.name })}
+                title={t("chat.openScreen", { name: bot.name })}
+                className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
+              >
+                <Monitor className="size-4" aria-hidden />
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => void navigate({ to: "/bots/$botId", params: { botId: bot.id } })}
+              aria-label={t("chat.botSettings", { name: bot.name })}
+              className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
+            >
+              <Settings2 className="size-4" aria-hidden />
+            </button>
+          </>
         ) : undefined
       }
     />

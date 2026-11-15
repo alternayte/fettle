@@ -640,6 +640,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/bots/{bot}/zone": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Move a bot to another zone (owners). It works there from its next run. */
+    put: operations["move-bot-zone"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/cards/{card}/answer": {
     parameters: {
       query?: never;
@@ -1871,6 +1888,8 @@ export interface components {
       status: string;
       zone_id: string | null;
       zone_name: string;
+      /** @description small, browser or desktop. Only a desktop zone has a screen. */
+      zone_size: string;
     };
     BotsOutBody: {
       bots: components["schemas"]["BotView"][] | null;
@@ -2000,6 +2019,10 @@ export interface components {
       kind?: "mcp_remote" | "mcp_stdio";
       name: string;
       url?: string;
+    };
+    "Create-from-templateRequest": {
+      /** Format: uuid */
+      zone_id?: string;
     };
     "Create-groupRequest": {
       bot_ids: string[] | null;
@@ -2336,6 +2359,10 @@ export interface components {
       price_in?: number;
       /** Format: double */
       price_out?: number;
+    };
+    "Move-bot-zoneRequest": {
+      /** Format: uuid */
+      zone_id: string;
     };
     OnboardingView: {
       chat_id?: string;
@@ -2941,6 +2968,7 @@ export type SchemaComputerTest = components["schemas"]["ComputerTest"];
 export type SchemaConnectorCatalogResponse = components["schemas"]["Connector-catalogResponse"];
 export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
+export type SchemaCreateFromTemplateRequest = components["schemas"]["Create-from-templateRequest"];
 export type SchemaCreateGroupRequest = components["schemas"]["Create-groupRequest"];
 export type SchemaCreateInviteRequest = components["schemas"]["Create-inviteRequest"];
 export type SchemaCreateSpaceRequest = components["schemas"]["Create-spaceRequest"];
@@ -2994,6 +3022,7 @@ export type SchemaMemoryView = components["schemas"]["MemoryView"];
 export type SchemaMessagePage = components["schemas"]["MessagePage"];
 export type SchemaMessageView = components["schemas"]["MessageView"];
 export type SchemaModelInfo = components["schemas"]["ModelInfo"];
+export type SchemaMoveBotZoneRequest = components["schemas"]["Move-bot-zoneRequest"];
 export type SchemaOnboardingView = components["schemas"]["OnboardingView"];
 export type SchemaPatchOutcome = components["schemas"]["PatchOutcome"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
@@ -4478,6 +4507,43 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "move-bot-zone": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Move-bot-zoneRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BotView"];
+        };
       };
       /** @description Error */
       default: {
@@ -6920,7 +6986,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Create-from-templateRequest"];
+      };
+    };
     responses: {
       /** @description OK */
       200: {

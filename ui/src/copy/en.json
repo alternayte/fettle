@@ -98,7 +98,8 @@
     "removeFile": "Remove {name}",
     "download": "Download {name}",
     "mentions": "Bots of this group",
-    "quoted": "Reply to {name}"
+    "quoted": "Reply to {name}",
+    "openScreen": "Open the screen of {name}"
   },
   "card": {
     "waits": "This card waits for you",
@@ -641,7 +642,17 @@
     "isPrimary": "This is the primary bot. Make another bot primary before you archive or delete it.",
     "isArchived": "This bot is archived.",
     "models": "Models",
-    "modelsBody": "Each role of this bot uses the models of the space. Choose other models for a role to use them only for this bot."
+    "modelsBody": "Each role of this bot uses the models of the space. Choose other models for a role to use them only for this bot.",
+    "computer": "Computer",
+    "worksIn": "{bot} works on the computer of the zone {zone}, size {size}.",
+    "noZone": "This bot has no zone. Choose one to give it a computer.",
+    "moveTo": "Zone",
+    "move": "Move",
+    "moved": "{bot} now works in {zone}",
+    "moveFailed": "Fettle did not move the bot",
+    "moveHint": "The bot uses the new computer from its next run. Its own files move with it.",
+    "openScreen": "Open the screen",
+    "noScreen": "Only a desktop zone has a screen you can watch and take over."
   },
   "settings": {
     "nav": "Settings pages",
@@ -909,7 +920,9 @@
       "stopping": "Stopping",
       "error": "Error",
       "quarantined": "Stopped for safety"
-    }
+    },
+    "screen": "Screen",
+    "openScreen": "Open the screen of the zone {zone}"
   },
   "approvals": {
     "mode": "Approval mode",
@@ -1278,7 +1291,15 @@
       "name": "Bot",
       "zone": "Zone",
       "status": "Status"
-    }
+    },
+    "startFrom": "Start from",
+    "own": "Your own bot",
+    "ownBody": "You write the name, the job and the instructions.",
+    "includes": "Comes with the skill {skill} and the routine {routine}. The routine is off until you turn it on.",
+    "zone": "Zone",
+    "zoneHint": "The computer that the bot works on. Bots in one zone share its computer and its logins.",
+    "zoneOption": "{name} ({size})",
+    "createFrom": "Create {name}"
   },
   "files": {
     "title": "Files",

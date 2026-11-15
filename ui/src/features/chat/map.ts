@@ -8,8 +8,8 @@ export function toBot(b: SchemaBotView): Bot {
     job: b.job,
     is_primary: b.is_primary,
     status: b.status === "archived" ? "archived" : b.activity,
-    // The API gives only the zone ID; the header shows the zone name when the API gives one.
-    zone: "",
+    zone: b.zone_name,
+    screen: b.zone_size === "desktop",
   };
 }
 

@@ -19,6 +19,9 @@ A zone has these settings:
 A bot asks for a new zone with a card. The zone exists after a person allows the card.
 A change of the provider or the network replaces the computer of the zone.
 
+Each bot works in one zone. You choose the zone in the **New bot** form. A template suggests its own zone.
+To move a bot, open its settings page and use **Computer**. An owner can move a bot when it has no work in progress. The bot uses the new computer from its next run, and its own files go with it.
+
 Settings > Computers lists the zones and the providers.
 
 ![The Computers settings page. It lists the zones browsing and personal with running computers, and the computer providers.](images/settings-computers.png)
@@ -138,7 +141,7 @@ The space setting `workspaces.home_limit_gib` limits the size of one bot home. T
 ## Screens
 
 A computer of the `desktop` size has a screen.
-You can open the screen of a bot read-only.
+You can open the screen of a bot read-only from the chat header of the bot, from the **Computer** section of its settings page, or from the zone row in Settings > Computers.
 You can take control of the screen for 15 minutes at a time. The bot waits while you control it.
 
 ![The screen of the bot Research, read-only. The browser of its computer shows the Beta Desk page of the catalogue.](images/computer-screen.png)

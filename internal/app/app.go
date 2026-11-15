@@ -285,7 +285,7 @@ func (a *App) CreateSpace(ctx context.Context, actor audit.Actor, name, tz strin
 		if err != nil {
 			return err
 		}
-		_, err = a.fromTemplate(ctx, actor, sp.ID(), tz, t, true)
+		_, err = a.fromTemplate(ctx, actor, sp.ID(), tz, t, true, nil)
 		return err
 	})
 	return sp, err

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { CircleAlert, History, MessageSquare } from "lucide-react";
+import { CircleAlert, History, MessageSquare, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
@@ -11,6 +11,8 @@ import {
   useMakePrimary,
   useRestoreBot,
   useBot,
+  useMoveBotZone,
+  useZones,
   useBotMemory,
   useInstructionVersions,
   usePutBotMemory,
@@ -25,6 +27,7 @@ import { Notice, Page, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import { BotMark } from "@/features/chat/BotMark";
 import { ModelRoles } from "@/features/settings/ModelsPage";
+import { NativeSelect } from "@/features/settings/ProviderForm";
 import { t } from "@/lib/copy";
 import { formatClock, formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -250,6 +253,64 @@ function BotSkills({ botId }: { botId: string }) {
 }
 
 /** Manage holds duplicate, archive, primary and delete (§6.1, §9.8). */
+function Computer({ bot }: { bot: SchemaBotView }) {
+  const { isOwner } = useSession();
+  const zones = useZones();
+  const move = useMoveBotZone(bot.id);
+  const [zoneId, setZoneId] = useState(bot.zone_id ?? "");
+  const size = bot.zone_size ? t(`computers.sizes.${bot.zone_size}`).toLowerCase() : "";
+  const target = (zones.data ?? []).find((z) => z.id === zoneId);
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-soft">
+        {bot.zone_id ? t("botPage.worksIn", { bot: bot.name, zone: bot.zone_name, size }) : t("botPage.noZone")}
+      </p>
+      {isOwner && (zones.data ?? []).length > 0 && (
+        <div>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field id="bot-zone" label={t("botPage.moveTo")} className="w-64">
+              <NativeSelect id="bot-zone" value={zoneId} onChange={setZoneId} describedBy="bot-zone-hint">
+                {(zones.data ?? []).map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {t("botsPage.zoneOption", { name: z.name, size: t(`computers.sizes.${z.size}`).toLowerCase() })}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Btn
+              disabled={!zoneId || zoneId === bot.zone_id}
+              busy={move.isPending}
+              onClick={() =>
+                move.mutate(zoneId, {
+                  onSuccess: () => toast.success(t("botPage.moved", { bot: bot.name, zone: target?.name ?? "" })),
+                  onError: (err) => toast.error(t("botPage.moveFailed"), { description: errorText(err) }),
+                })
+              }
+            >
+              {t("botPage.move")}
+            </Btn>
+          </div>
+          <p id="bot-zone-hint" className="mt-1.5 text-xs text-ink-faint">
+            {t("botPage.moveHint")}
+          </p>
+        </div>
+      )}
+      {bot.zone_size === "desktop" ? (
+        <Link
+          to="/screen/$botId"
+          params={{ botId: bot.id }}
+          className="inline-flex items-center gap-1.5 text-sm text-ink underline underline-offset-2"
+        >
+          <Monitor aria-hidden className="size-4" />
+          {t("botPage.openScreen")}
+        </Link>
+      ) : (
+        <p className="text-xs text-ink-faint">{t("botPage.noScreen")}</p>
+      )}
+    </div>
+  );
+}
+
 function Manage({ bot }: { bot: SchemaBotView }) {
   const navigate = useNavigate();
   const dup = useDuplicateBot();
@@ -427,6 +488,9 @@ export function BotPage() {
       </div>
       <Section id="profile" title={t("botPage.profile")}>
         <Profile key={`${b.name}|${b.job}|${b.public_desc}`} bot={b} />
+      </Section>
+      <Section id="computer" title={t("botPage.computer")}>
+        <Computer key={b.zone_id ?? ""} bot={b} />
       </Section>
       <Section id="instructions" title={t("botPage.instructions")}>
         <Instructions key={b.instructions_rev} bot={b} />

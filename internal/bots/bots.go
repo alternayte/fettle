@@ -261,6 +261,33 @@ func (s *Service) SetPrimary(ctx context.Context, actor audit.Actor, spaceID, id
 	})
 }
 
+// SetZone moves a bot to another zone of its space. The bot's home moves with it at its
+// next run; the caller checks that no run of the bot is open.
+func (s *Service) SetZone(ctx context.Context, actor audit.Actor, spaceID, id, zoneID uuid.UUID) (*Bot, error) {
+	var out *Bot
+	err := s.e.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		b, err := drel.Repo(tx, BotMeta).Where(Bots.ID.Eq(id)).Where(Bots.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if b == nil {
+			return ErrNotFound
+		}
+		from := ""
+		if b.ZoneID != nil {
+			from = b.ZoneID.String()
+		}
+		if _, err := tx.Exec(ctx, "UPDATE bots SET zone_id = $1 WHERE id = $2", zoneID, id); err != nil {
+			return err
+		}
+		b.ZoneID = &zoneID
+		out = b
+		return s.audit.Record(ctx, actor, &spaceID, "bot.zone", "bot:"+id.String(), map[string]string{"name": b.Name, "from": from, "to": zoneID.String()})
+	})
+	return out, err
+}
+
 // SetArchived archives or restores a bot. The primary bot cannot be archived.
 func (s *Service) SetArchived(ctx context.Context, actor audit.Actor, spaceID, id uuid.UUID, archived bool) (*Bot, error) {
 	var out *Bot
