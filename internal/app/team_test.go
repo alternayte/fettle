@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -55,8 +56,21 @@ func TestSCN_TEAM_010_PrimaryRoleAndDigest(t *testing.T) {
 
 	// The daily digest lists finished work, waiting cards and failures.
 	e.MustDo("PUT", e.SP("/settings/digest.enabled"), map[string]any{"value": true}, nil)
-	e.MustDo("PUT", e.SP("/settings/digest.time"), map[string]any{"value": "08:00"}, nil)
-	e.MustDo("PATCH", e.SP(""), map[string]any{"time_zone": "UTC"}, nil)
+	// The maintenance tick also sends digests with the real clock. A zone where the real time
+	// is about noon keeps it before the 23:00 digest, so only this test's calls send it.
+	off := 12 - time.Now().UTC().Hour()
+	zone := "Etc/GMT"
+	if off > 0 {
+		zone = fmt.Sprintf("Etc/GMT-%d", off)
+	} else if off < 0 {
+		zone = fmt.Sprintf("Etc/GMT+%d", -off)
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.MustDo("PUT", e.SP("/settings/digest.time"), map[string]any{"value": "23:00"}, nil)
+	e.MustDo("PATCH", e.SP(""), map[string]any{"time_zone": zone}, nil)
 	done, _ := e.Post(chief.ChatID, "Summarize the Q3 notes.")
 	e.WaitRun(done, "done")
 	failed, _ := e.Post(chief.ChatID, "Book the Acme meeting room.")
@@ -66,8 +80,8 @@ func TestSCN_TEAM_010_PrimaryRoleAndDigest(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.MustDo("POST", e.SP("/bots/%s/primary", chief.ID), nil, &reply) // a card that waits
-	now := time.Now().UTC()
-	before := time.Date(now.Year(), now.Month(), now.Day(), 7, 59, 0, 0, time.UTC)
+	now := time.Now().In(loc)
+	before := time.Date(now.Year(), now.Month(), now.Day(), 22, 59, 0, 0, loc)
 	e.App.SendDigests(ctx, before)
 	var inboxBot apptest.Bot
 	e.MustDo("GET", e.SP("/bots/%s", inbox.ID), nil, &inboxBot)
@@ -76,7 +90,7 @@ func TestSCN_TEAM_010_PrimaryRoleAndDigest(t *testing.T) {
 			t.Fatal("the digest went out before its time")
 		}
 	}
-	at := time.Date(now.Year(), now.Month(), now.Day(), 8, 1, 0, 0, time.UTC)
+	at := time.Date(now.Year(), now.Month(), now.Day(), 23, 1, 0, 0, loc)
 	e.App.SendDigests(ctx, at)
 	e.App.SendDigests(ctx, at.Add(time.Minute))
 	var digests []string
