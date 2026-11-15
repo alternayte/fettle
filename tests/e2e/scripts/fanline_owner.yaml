@@ -1,0 +1,9 @@
+name: fanline-owner
+match:
+  user: "Result from one of your helpers"
+steps:
+  - text: |
+      | Desk | Price |
+      |---|---|
+      | Alpha Desk | $420 [alpha](http://docs.test/alpha) |
+      | Beta Desk | $610 [beta](http://docs.test/beta) |

@@ -1,0 +1,10 @@
+# SCN-UX-011: a run that keeps reading until the turn limit, for a long timeline.
+name: many
+match:
+  user: "[[many]]"
+steps:
+  - tool_calls:
+      - name: search_history
+        args:
+          query: desks
+    repeat: true

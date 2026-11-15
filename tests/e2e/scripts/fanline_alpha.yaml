@@ -1,0 +1,12 @@
+name: fanline-alpha
+match:
+  system: "You are a helper"
+  user: "[[fl-alpha]]"
+steps:
+  - tool_calls:
+      - name: report_result
+        args:
+          summary: "Alpha Desk: $420."
+          findings:
+            - claim: "The Alpha Desk costs $420."
+              sources: ["http://docs.test/alpha"]

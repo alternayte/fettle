@@ -1,0 +1,12 @@
+name: fanline-beta
+match:
+  system: "You are a helper"
+  user: "[[fl-beta]]"
+steps:
+  - tool_calls:
+      - name: report_result
+        args:
+          summary: "Beta Desk: $610."
+          findings:
+            - claim: "The Beta Desk costs $610."
+              sources: ["http://docs.test/beta"]

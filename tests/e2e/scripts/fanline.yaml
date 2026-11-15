@@ -1,0 +1,18 @@
+# SCN-BOT-005: a fanout with two helpers that read docs.test, and a cited synthesis.
+name: fanline-route
+match:
+  system: "You route one piece of work"
+  user: "[[fanline]]"
+steps:
+  - json:
+      step: fanout
+      owner_bot_id: ""
+      rationale: two independent pages
+      confidence: 0.9
+      parts:
+        - goal: "[[fl-alpha]] Read http://docs.test/alpha."
+          acceptance: The price has a source.
+          needs: read
+        - goal: "[[fl-beta]] Read http://docs.test/beta."
+          acceptance: The price has a source.
+          needs: read
