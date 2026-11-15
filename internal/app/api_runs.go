@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -37,6 +38,8 @@ type RunView struct {
 	FinishedAt  *time.Time    `json:"finished_at"`
 	Children    []string      `json:"children"`
 	Events      []EventView   `json:"events"`
+	// Score is the run score of §14.2 for an ended owner run, else null.
+	Score *int `json:"score"`
 }
 
 type RunPath struct {
@@ -49,6 +52,10 @@ func (a *App) runView(ctx context.Context, r *runs.Run) RunView {
 	v := RunView{Line: line, Kind: r.Kind, TokensIn: r.TokensIn, TokensOut: r.TokensOut, StartedAt: r.StartedAt, FinishedAt: r.FinishedAt, Children: []string{}, Events: []EventView{}}
 	if r.ParentRunID != nil {
 		v.ParentRunID = r.ParentRunID.String()
+	}
+	if sc, err := a.Learning.ScoreOf(ctx, r.ID()); err == nil && sc != nil {
+		val := sc.Value
+		v.Score = &val
 	}
 	if b, err := a.Bots.Get(ctx, r.SpaceID, r.BotID); err == nil {
 		v.BotName = b.Name
@@ -134,5 +141,29 @@ func (a *App) registerRuns(api huma.API) {
 			return nil, err
 		}
 		return nil, apiError(a.Agent.Stop(ctx, actorOf(p), in.Space, in.Run))
+	})
+	huma.Register(api, op("rerun-run", http.MethodPost, "/spaces/{space}/runs/{run}/rerun", "Run the work of an ended run again as new work in the same chat. It counts as a steering signal on the old run.", "runs"), func(ctx context.Context, in *RunPath) (*struct {
+		Body struct {
+			RunID string `json:"run_id"`
+		}
+	}, error) {
+		p, _, err := a.ctxSpace(ctx, in.Space, false)
+		if err != nil {
+			return nil, err
+		}
+		r, err := a.Agent.Rerun(ctx, actorOf(p), in.Space, in.Run)
+		if errors.Is(err, agent.ErrNotFinished) {
+			return nil, huma.Error409Conflict(err.Error())
+		}
+		if err != nil {
+			return nil, apiError(err)
+		}
+		out := &struct {
+			Body struct {
+				RunID string `json:"run_id"`
+			}
+		}{}
+		out.Body.RunID = r.ID().String()
+		return out, nil
 	})
 }

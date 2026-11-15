@@ -14,6 +14,7 @@ import (
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/computers"
+	"github.com/alternayte/fettle/internal/learning"
 	"github.com/alternayte/fettle/internal/screens"
 	"github.com/alternayte/fettle/internal/tools"
 )
@@ -139,6 +140,9 @@ func (a *App) registerScreens(api huma.API) {
 			if err := a.Audit.Record(ctx, actorOf(p), &in.Space, "screen.control", "bot:"+in.Bot.String(), nil); err != nil {
 				return nil, err
 			}
+			if !a.takeoverAsked(ctx, in.Space, in.Bot) {
+				a.signalTakeover(ctx, in.Space, in.Bot, p.UserID.String())
+			}
 		}
 		return &struct{ Body ScreenControl }{Body: ScreenControl{Token: tok, ExpiresAt: exp}}, nil
 	})
@@ -244,4 +248,28 @@ func (a *App) screenStream(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+// takeoverAsked reports whether the bot asked for a takeover with a card that waits.
+func (a *App) takeoverAsked(ctx context.Context, spaceID, botID uuid.UUID) bool {
+	cards, err := a.Chats.PendingCards(ctx, spaceID)
+	if err != nil {
+		return true // without the answer, record no signal
+	}
+	for _, m := range cards {
+		if m.Card != nil && m.Card.Kind == "takeover" && m.Card.Data["bot_id"] == botID.String() {
+			return true
+		}
+	}
+	return false
+}
+
+// signalTakeover records an unrequested takeover on the bot's newest owner run (§14.1).
+func (a *App) signalTakeover(ctx context.Context, spaceID, botID uuid.UUID, userID string) {
+	in := learning.Input{SpaceID: spaceID, BotID: &botID, Type: learning.UnrequestedTakeover, Ref: "takeover:" + uuid.NewString(), UserID: userID, Detail: "A person took control of the screen without a request."}
+	var runID uuid.UUID
+	if err := a.DB.Engine.QueryRow(ctx, "SELECT id FROM runs WHERE bot_id = $1 AND space_id = $2 AND kind = 'owner' ORDER BY created_at DESC LIMIT 1", botID, spaceID).Scan(&runID); err == nil {
+		in.RunID = &runID
+	}
+	a.Agent.Signal(ctx, in)
 }

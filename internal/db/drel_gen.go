@@ -13,6 +13,7 @@ import (
 	computers "github.com/alternayte/fettle/internal/computers"
 	connectors "github.com/alternayte/fettle/internal/connectors"
 	envelopes "github.com/alternayte/fettle/internal/envelopes"
+	learning "github.com/alternayte/fettle/internal/learning"
 	models "github.com/alternayte/fettle/internal/models"
 	policy "github.com/alternayte/fettle/internal/policy"
 	push "github.com/alternayte/fettle/internal/push"
@@ -45,6 +46,8 @@ type DB struct {
 	ConnectorAccounts   *connectors.ConnectorAccountRepository
 	OAuthStates         *connectors.OAuthStateRepository
 	Envelopes           *envelopes.EnvelopeRepository
+	Scores              *learning.ScoreRepository
+	Signals             *learning.SignalRepository
 	ModelProviders      *models.ModelProviderRepository
 	ModelRoles          *models.ModelRoleRepository
 	Approvals           *policy.ApprovalRepository
@@ -94,6 +97,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		ConnectorAccounts:   &connectors.ConnectorAccountRepository{Repository: drel.NewRepository(engine, connectors.ConnectorAccountMeta)},
 		OAuthStates:         &connectors.OAuthStateRepository{Repository: drel.NewRepository(engine, connectors.OAuthStateMeta)},
 		Envelopes:           &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
+		Scores:              &learning.ScoreRepository{Repository: drel.NewRepository(engine, learning.ScoreMeta)},
+		Signals:             &learning.SignalRepository{Repository: drel.NewRepository(engine, learning.SignalMeta)},
 		ModelProviders:      &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
 		ModelRoles:          &models.ModelRoleRepository{Repository: drel.NewRepository(engine, models.ModelRoleMeta)},
 		Approvals:           &policy.ApprovalRepository{Repository: drel.NewRepository(engine, policy.ApprovalMeta)},
@@ -147,6 +152,10 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 			},
 			Envelopes: EnvelopesRepos{
 				Envelopes: &envelopes.EnvelopeRepository{Repository: drel.NewRepository(engine, envelopes.EnvelopeMeta)},
+			},
+			Learning: LearningRepos{
+				Scores:  &learning.ScoreRepository{Repository: drel.NewRepository(engine, learning.ScoreMeta)},
+				Signals: &learning.SignalRepository{Repository: drel.NewRepository(engine, learning.SignalMeta)},
 			},
 			Models: ModelsRepos{
 				ModelProviders: &models.ModelProviderRepository{Repository: drel.NewRepository(engine, models.ModelProviderMeta)},
@@ -218,6 +227,8 @@ type TxRepos struct {
 	ConnectorAccounts   *connectors.TxConnectorAccountRepository
 	OAuthStates         *connectors.TxOAuthStateRepository
 	Envelopes           *envelopes.TxEnvelopeRepository
+	Scores              *learning.TxScoreRepository
+	Signals             *learning.TxSignalRepository
 	ModelProviders      *models.TxModelProviderRepository
 	ModelRoles          *models.TxModelRoleRepository
 	Approvals           *policy.TxApprovalRepository
@@ -265,6 +276,8 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		ConnectorAccounts:   &connectors.TxConnectorAccountRepository{TxRepository: drel.NewTxRepository(tx, connectors.ConnectorAccountMeta)},
 		OAuthStates:         &connectors.TxOAuthStateRepository{TxRepository: drel.NewTxRepository(tx, connectors.OAuthStateMeta)},
 		Envelopes:           &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
+		Scores:              &learning.TxScoreRepository{TxRepository: drel.NewTxRepository(tx, learning.ScoreMeta)},
+		Signals:             &learning.TxSignalRepository{TxRepository: drel.NewTxRepository(tx, learning.SignalMeta)},
 		ModelProviders:      &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
 		ModelRoles:          &models.TxModelRoleRepository{TxRepository: drel.NewTxRepository(tx, models.ModelRoleMeta)},
 		Approvals:           &policy.TxApprovalRepository{TxRepository: drel.NewTxRepository(tx, policy.ApprovalMeta)},
@@ -318,6 +331,10 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 			},
 			Envelopes: EnvelopesTxRepos{
 				Envelopes: &envelopes.TxEnvelopeRepository{TxRepository: drel.NewTxRepository(tx, envelopes.EnvelopeMeta)},
+			},
+			Learning: LearningTxRepos{
+				Scores:  &learning.TxScoreRepository{TxRepository: drel.NewTxRepository(tx, learning.ScoreMeta)},
+				Signals: &learning.TxSignalRepository{TxRepository: drel.NewTxRepository(tx, learning.SignalMeta)},
 			},
 			Models: ModelsTxRepos{
 				ModelProviders: &models.TxModelProviderRepository{TxRepository: drel.NewTxRepository(tx, models.ModelProviderMeta)},
@@ -456,6 +473,18 @@ type EnvelopesRepos struct {
 // EnvelopesTxRepos holds the tracked repositories of the "envelopes" module.
 type EnvelopesTxRepos struct {
 	Envelopes *envelopes.TxEnvelopeRepository
+}
+
+// LearningRepos holds the untracked repositories of the "learning" module.
+type LearningRepos struct {
+	Scores  *learning.ScoreRepository
+	Signals *learning.SignalRepository
+}
+
+// LearningTxRepos holds the tracked repositories of the "learning" module.
+type LearningTxRepos struct {
+	Scores  *learning.TxScoreRepository
+	Signals *learning.TxSignalRepository
 }
 
 // ModelsRepos holds the untracked repositories of the "models" module.
@@ -610,6 +639,7 @@ type Modules struct {
 	Computers  ComputersRepos
 	Connectors ConnectorsRepos
 	Envelopes  EnvelopesRepos
+	Learning   LearningRepos
 	Models     ModelsRepos
 	Policy     PolicyRepos
 	Push       PushRepos
@@ -634,6 +664,7 @@ type TxModules struct {
 	Computers  ComputersTxRepos
 	Connectors ConnectorsTxRepos
 	Envelopes  EnvelopesTxRepos
+	Learning   LearningTxRepos
 	Models     ModelsTxRepos
 	Policy     PolicyTxRepos
 	Push       PushTxRepos

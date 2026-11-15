@@ -50,6 +50,9 @@ modules:
   - name: push
     packages: [./internal/push]
     migrations: ./internal/push/migrations/sqlite
+  - name: learning
+    packages: [./internal/learning]
+    migrations: ./internal/learning/migrations/sqlite
   - name: screens
     packages: [./internal/screens]
     migrations: ./internal/screens/migrations/sqlite

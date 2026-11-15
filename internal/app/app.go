@@ -29,6 +29,7 @@ import (
 	"github.com/alternayte/fettle/internal/connectors"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/jobs"
+	"github.com/alternayte/fettle/internal/learning"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/objects"
 	"github.com/alternayte/fettle/internal/policy"
@@ -60,6 +61,7 @@ type App struct {
 	Routines *routines.Service
 	Push     *push.Service
 	Skills   *skills.Service
+	Learning *learning.Service
 	Skael    *skills.Skael
 	Screens  *screens.Service
 	// Desktop is set when the desktop app runs this server in process (§15.1).
@@ -154,7 +156,8 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Usage = usage.New(e)
 	a.Policy = policy.New(e, a.Audit)
 	a.Zones = zones.New(e, a.Audit)
-	a.Agent = agent.New(agent.Agent{E: e, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
+	a.Learning = learning.New(e, a.Runs, a.Journal, a.Envs)
+	a.Agent = agent.New(agent.Agent{E: e, Learning: a.Learning, Audit: a.Audit, Bots: a.Bots, Chats: a.Chats, Envelopes: a.Envs, Runs: a.Runs, Journal: a.Journal, Models: a.Models, Usage: a.Usage, Policy: a.Policy, Settings: a.Settings, Spaces: a.Spaces, Vault: a.Vault, HTTP: a.HTTP, Log: a.Log, Metrics: a.Metrics})
 	a.Telemetry = NewTelemetry(a)
 
 	a.setupComputers(ctx)
@@ -357,6 +360,9 @@ func (a *App) Shutdown(ctx context.Context) error {
 			}
 			hcancel()
 		}
+	}
+	if a.Agent != nil {
+		a.Agent.Wait()
 	}
 	if a.Computers != nil {
 		if err := a.Computers.CheckpointAll(ctx); err != nil {

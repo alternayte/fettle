@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 
 	"errors"
 	"fmt"
@@ -154,6 +155,14 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 	for _, id := range started {
 		a.publishRun(ctx, id)
 	}
+	if !res.Steered && res.EnvelopeID != nil && a.Learning != nil {
+		envID := *res.EnvelopeID
+		a.bg.Add(1)
+		go func() {
+			defer a.bg.Done()
+			a.checkCorrection(context.WithoutCancel(ctx), spaceID, msg, envID)
+		}()
+	}
 	return res, nil
 }
 
@@ -246,7 +255,21 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 			if action == "deny" {
 				decision = "denied"
 			}
-			evs = append(evs, runs.New{Type: runs.EvApprovalDecided, Data: evApproval{CallID: card.Data["call_id"], CardID: cardID, Tool: card.Tool, Decision: decision, Class: card.Data["class"]}})
+			ev := evApproval{CallID: card.Data["call_id"], CardID: cardID, Tool: card.Tool, Decision: decision, Class: card.Data["class"]}
+			if decision == "allowed" && value != "" {
+				// The person changed the draft before Allow (§14.1, draft_edited).
+				var ed map[string]string
+				if json.Unmarshal([]byte(value), &ed) != nil {
+					return fmt.Errorf("%w: the edited draft is not a map of text fields", ErrBadAction)
+				}
+				ev.Edited = map[string]string{}
+				for k, v := range ed {
+					if old, ok := card.Preview[k]; ok && old != v {
+						ev.Edited[k] = v
+					}
+				}
+			}
+			evs = append(evs, runs.New{Type: runs.EvApprovalDecided, Data: ev})
 			tx := drel.MustFromContext(ctx)
 			if _, err := tx.Exec(ctx, "UPDATE approvals SET status = $1, decided_by = $2 WHERE card_id = $3", decision, user.ID, cardID); err != nil {
 				return err
@@ -287,6 +310,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		return nil, err
 	}
 	a.Chats.Publish(out.ChatID, "message", a.MessageView(ctx, out))
+	a.cardSignal(ctx, user, spaceID, msg, card, action, value)
 	if tasks != nil {
 		a.Chats.Publish(tasks.ChatID, "message", a.MessageView(ctx, tasks))
 	}

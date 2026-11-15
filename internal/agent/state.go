@@ -87,6 +87,8 @@ type (
 		Reason   string `json:"reason,omitempty"`
 		Auto     bool   `json:"auto,omitempty"` // decided by the verifier in Auto mode
 		Class    string `json:"class,omitempty"`
+		// Edited holds the text fields that the person changed before Allow (a draft).
+		Edited map[string]string `json:"edited,omitempty"`
 	}
 )
 
@@ -112,10 +114,11 @@ type state struct {
 	finalText      string
 	lastMsgID      string
 	budgetHalts    int
-	approvals      map[string]string // call ID -> requested, allowed, denied
-	approvedAs     map[string]string // call ID -> the class that the decision saw
-	intent         []string          // user items of this run: the goal and steer texts
-	sleepUntil     *time.Time        // the last sleep_until time
+	approvals      map[string]string            // call ID -> requested, allowed, denied
+	approvedAs     map[string]string            // call ID -> the class that the decision saw
+	edited         map[string]map[string]string // call ID -> fields the person changed
+	intent         []string                     // user items of this run: the goal and steer texts
+	sleepUntil     *time.Time                   // the last sleep_until time
 	verifyStarted  int
 	verifyResults  []evVerifyResult
 	verifyAccepted bool
@@ -138,7 +141,7 @@ type state struct {
 }
 
 func rebuild(evs []*runs.RunEvent) *state {
-	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}, subResults: map[string]evSubResult{}, handoffs: map[string]evHandoffSent{}, handoffResults: map[string]evHandoffResult{}}
+	st := &state{events: evs, approvals: map[string]string{}, approvedAs: map[string]string{}, edited: map[string]map[string]string{}, takeoverCard: map[string]string{}, takeoverDone: map[string]*evCard{}, subResults: map[string]evSubResult{}, handoffs: map[string]evHandoffSent{}, handoffResults: map[string]evHandoffResult{}}
 	done := map[string]bool{}
 	intents := map[string]evTool{}
 	var summary *evSummary
@@ -238,6 +241,9 @@ func rebuild(evs []*runs.RunEvent) *state {
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.approvals[d.CallID] = d.Decision
 			st.approvedAs[d.CallID] = d.Class
+			if len(d.Edited) > 0 {
+				st.edited[d.CallID] = d.Edited
+			}
 		case runs.EvSleepUntil:
 			var d evSleep
 			_ = json.Unmarshal([]byte(ev.Data), &d)

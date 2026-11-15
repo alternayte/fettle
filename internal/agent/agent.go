@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/chats"
 	"github.com/alternayte/fettle/internal/envelopes"
+	"github.com/alternayte/fettle/internal/learning"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/policy"
 	"github.com/alternayte/fettle/internal/runs"
@@ -38,9 +40,13 @@ type Agent struct {
 	Usage     *usage.Service
 	Settings  *settings.Store
 	Spaces    *spaces.Service
-	Vault     *vault.Vault
-	Tools     *Registry
-	Policy    *policy.Service
+	// Learning records steering signals and run scores (§14). Nil turns them off.
+	Learning *learning.Service
+	// bg counts background work that uses the database after a request returns.
+	bg     *sync.WaitGroup
+	Vault  *vault.Vault
+	Tools  *Registry
+	Policy *policy.Service
 	// Checker opens the zone computer of a bot for file, command and citations checks.
 	Checker func(ctx context.Context, spaceID, botID uuid.UUID) (Checker, error)
 	// Hire creates the bots of an allowed proposal card: bots, paused routines, skills and
@@ -99,6 +105,7 @@ type Metrics interface {
 // New returns an agent with the built-in tools registered.
 func New(a Agent) *Agent {
 	ag := &a
+	ag.bg = &sync.WaitGroup{}
 	if ag.Tools == nil {
 		ag.Tools = NewRegistry()
 	}
@@ -131,3 +138,6 @@ func (a *Agent) Now() time.Time { return a.now() }
 
 // ErrNoComputer is returned by Agent.Computer when no computer is free; the run waits.
 var ErrNoComputer = errors.New("waiting for a free computer")
+
+// Wait waits for the background work of requests, such as the correction check.
+func (a *Agent) Wait() { a.bg.Wait() }

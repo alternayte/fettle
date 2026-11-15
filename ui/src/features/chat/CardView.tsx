@@ -100,6 +100,49 @@ function ProposalEditor({
   );
 }
 
+/** DraftEditor changes the text fields of an action before Allow (§14.1, draft_edited). */
+function DraftEditor({
+  preview,
+  onAllow,
+  onCancel,
+}: {
+  preview: Record<string, string>;
+  onAllow: (v: string) => void;
+  onCancel: () => void;
+}) {
+  const [fields, setFields] = useState<Record<string, string>>(() => ({ ...preview }));
+  const field = "mt-0.5 w-full rounded-xs border border-rule-strong bg-surface px-2 py-1 text-sm text-ink";
+  return (
+    <form
+      className="space-y-2 px-3 py-2.5 pl-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onAllow(JSON.stringify(fields));
+      }}
+    >
+      {Object.entries(fields).map(([k, v]) => (
+        <label key={k} className="block text-xs text-ink-soft">
+          {k}
+          <textarea
+            rows={Math.min(8, Math.max(1, Math.ceil(v.length / 70)))}
+            value={v}
+            onChange={(e) => setFields((f) => ({ ...f, [k]: e.target.value }))}
+            className={field}
+          />
+        </label>
+      ))}
+      <div className="flex gap-1.5">
+        <ActionButton kind="act" type="submit">
+          {t("card.approval.allowEdited")}
+        </ActionButton>
+        <ActionButton kind="quiet" onClick={onCancel}>
+          {t("common.cancel")}
+        </ActionButton>
+      </div>
+    </form>
+  );
+}
+
 function ActionButton({
   children,
   kind = "plain",
@@ -192,6 +235,13 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         )}
         {card.hard_ask && <p className="text-xs text-ink-faint">{t("card.approval.hardAsk")}</p>}
       </div>
+      {editing && card.kind === "approval" && card.preview && (
+        <DraftEditor
+          preview={card.preview}
+          onCancel={() => setEditing(false)}
+          onAllow={(v) => onAnswer({ action: "allow", value: v })}
+        />
+      )}
       {editing && card.kind === "proposal" && (
         <ProposalEditor
           raw={card.data?.proposal ?? "[]"}
@@ -200,11 +250,14 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         />
       )}
       <footer className="flex flex-wrap items-center gap-1.5 border-t border-rule bg-surface px-3 py-2 pl-4">
-        {card.kind === "approval" && (
+        {card.kind === "approval" && !editing && (
           <>
             <ActionButton kind="act" onClick={() => onAnswer({ action: "allow" })}>
               {t("card.approval.allowOnce")}
             </ActionButton>
+            {card.preview && Object.keys(card.preview).length > 0 && (
+              <ActionButton onClick={() => setEditing(true)}>{t("card.approval.edit")}</ActionButton>
+            )}
             {!card.hard_ask && (
               <ActionButton onClick={() => onAnswer({ action: "always" })}>{t("card.approval.always")}</ActionButton>
             )}

@@ -1,0 +1,212 @@
+{
+  "tables": [
+    {
+      "name": "run_scores",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "run_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "step",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "skills",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "model_name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "verifier_pass",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "signals",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "within_budget",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "escalated",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "value",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "cost_usd",
+          "type": "REAL",
+          "notNull": true
+        },
+        {
+          "name": "duration_ms",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "finished_at",
+          "type": "DATETIME",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_run_scores_space_time",
+          "columns": [
+            "space_id",
+            "finished_at"
+          ]
+        },
+        {
+          "name": "uq_run_scores_run",
+          "columns": [
+            "run_id"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "steering_signals",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "run_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "step",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "skills",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "type",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "type IN ('correction','draft_edited','approval_denied','rerun','unrequested_takeover','thumbs_down','card_declined','escalation_accepted_anyway','uncertain_confirmed_wrong')"
+        },
+        {
+          "name": "detail",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "ref",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "user_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_signals_run",
+          "columns": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "idx_signals_space_time",
+          "columns": [
+            "space_id",
+            "created_at"
+          ]
+        },
+        {
+          "name": "uq_signals_ref",
+          "columns": [
+            "space_id",
+            "type",
+            "ref"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

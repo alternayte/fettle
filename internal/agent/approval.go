@@ -190,3 +190,25 @@ func (x *exec) intentMatches(ctx context.Context, st *state, call models.ToolCal
 	}
 	return out.Matches, out.Reason
 }
+
+// applyEdits puts the fields that a person changed on an approval card into the call's
+// arguments. Only text fields that the card showed in full change; a field that held a
+// vault value keeps it, because the card showed it redacted.
+func (x *exec) applyEdits(ctx context.Context, args json.RawMessage, edited map[string]string) json.RawMessage {
+	var m map[string]any
+	if json.Unmarshal(args, &m) != nil {
+		return args
+	}
+	for k, v := range edited {
+		old, ok := m[k].(string)
+		if !ok || x.a.Vault.Redactor.String(ctx, x.run.SpaceID, old) != old || len([]rune(old)) > 300 {
+			continue
+		}
+		m[k] = v
+	}
+	out, err := json.Marshal(m)
+	if err != nil {
+		return args
+	}
+	return out
+}

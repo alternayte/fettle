@@ -15,7 +15,7 @@ function formatSize(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-const QUICK = ["👍", "✅", "❤️", "👀"];
+const QUICK = ["👍", "👎", "✅", "❤️", "👀"];
 
 /** Reactions shows each emoji with its count; the viewer's own reaction is marked. */
 function Reactions({

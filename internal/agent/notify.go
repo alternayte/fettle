@@ -32,6 +32,11 @@ func (x *exec) notifyCard(ctx context.Context, card chats.Card, msg *chats.Messa
 // (§13.2).
 func (x *exec) notifyFinished(ctx context.Context, status, summary string) {
 	a := x.a
+	if a.Learning != nil && x.run.Kind == "owner" && status != runs.StatusEscalated {
+		if _, err := a.Learning.ScoreRun(context.WithoutCancel(ctx), x.run.ID()); err != nil {
+			a.Log.Warn("score the run", "run", x.run.ID(), "error", err)
+		}
+	}
 	if a.Notify == nil || x.run.Kind != "owner" || (status != runs.StatusDone && status != runs.StatusFailed) {
 		return
 	}

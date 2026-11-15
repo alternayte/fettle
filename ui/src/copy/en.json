@@ -123,7 +123,9 @@
       "allowOnce": "Allow once",
       "always": "Always allow",
       "deny": "Deny",
-      "hardAsk": "This action always needs your approval."
+      "hardAsk": "This action always needs your approval.",
+      "edit": "Edit",
+      "allowEdited": "Allow with my changes"
     },
     "budget": {
       "add": "Add {usd} and continue",

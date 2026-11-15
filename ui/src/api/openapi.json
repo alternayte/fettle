@@ -1446,6 +1446,24 @@
         ],
         "type": "object"
       },
+      "List-signalsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "signals"
+        ],
+        "type": "object"
+      },
       "List-templatesResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2185,6 +2203,18 @@
         ],
         "type": "object"
       },
+      "Rerun-runResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      },
       "RoleView": {
         "additionalProperties": false,
         "properties": {
@@ -2600,6 +2630,13 @@
           "parent_run_id": {
             "type": "string"
           },
+          "score": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "started_at": {
             "format": "date-time",
             "type": [
@@ -2626,7 +2663,8 @@
           "started_at",
           "finished_at",
           "children",
-          "events"
+          "events",
+          "score"
         ],
         "type": "object"
       },
@@ -2659,6 +2697,91 @@
         },
         "required": [
           "skill_md"
+        ],
+        "type": "object"
+      },
+      "ScoreAverage": {
+        "additionalProperties": false,
+        "properties": {
+          "avg_score": {
+            "format": "double",
+            "type": "number"
+          },
+          "key": {
+            "type": "string"
+          },
+          "runs": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "runs",
+          "avg_score"
+        ],
+        "type": "object"
+      },
+      "ScoreReport": {
+        "additionalProperties": false,
+        "properties": {
+          "average": {
+            "format": "double",
+            "type": "number"
+          },
+          "by_bot": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreAverage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "by_model": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreAverage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "by_skill": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreAverage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "by_step": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreAverage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "days": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "runs": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "runs",
+          "average",
+          "by_bot",
+          "by_skill",
+          "by_step",
+          "by_model"
         ],
         "type": "object"
       },
@@ -2867,6 +2990,54 @@
         "required": [
           "needs_model",
           "needs_name"
+        ],
+        "type": "object"
+      },
+      "SignalView": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "bot_id": {
+            "type": "string"
+          },
+          "bot_name": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "step": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "step",
+          "skills",
+          "detail",
+          "at"
         ],
         "type": "object"
       },
@@ -6506,6 +6677,116 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/learning/scores": {
+      "get": {
+        "operationId": "score-report",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 30,
+              "format": "int64",
+              "maximum": 365,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run scores of a period with averages per bot, skill, step and model",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/learning/signals": {
+      "get": {
+        "operationId": "list-signals",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 14,
+              "format": "int64",
+              "maximum": 365,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-signalsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Steering signals of a space, newest first",
+        "tags": [
+          "learning"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/memory": {
       "get": {
         "operationId": "get-shared-memory",
@@ -7633,6 +7914,57 @@
         "summary": "Draft a SKILL.md from a finished run (Save as skill)",
         "tags": [
           "skills"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/runs/{run}/rerun": {
+      "post": {
+        "operationId": "rerun-run",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rerun-runResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run the work of an ended run again as new work in the same chat. It counts as a steering signal on the old run.",
+        "tags": [
+          "runs"
         ]
       }
     },

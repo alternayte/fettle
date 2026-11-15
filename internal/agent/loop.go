@@ -694,6 +694,9 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		}
 		defer release()
 	}
+	if ed := st.edited[call.ID]; len(ed) > 0 {
+		call.Args = x.applyEdits(ctx, call.Args, ed)
+	}
 	class := tool.classOf(ctx, env, call.Args)
 	if !x.allowed(class) {
 		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Args: call.Args, Error: "This action is of class " + class + ", which this work may not use."}})

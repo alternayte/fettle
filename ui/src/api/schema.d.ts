@@ -813,6 +813,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/learning/scores": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Run scores of a period with averages per bot, skill, step and model */
+    get: operations["score-report"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/learning/signals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Steering signals of a space, newest first */
+    get: operations["list-signals"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/memory": {
     parameters: {
       query?: never;
@@ -1101,6 +1135,23 @@ export interface paths {
     put?: never;
     /** Draft a SKILL.md from a finished run (Save as skill) */
     post: operations["draft-skill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/runs/{run}/rerun": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run the work of an ended run again as new work in the same chat. It counts as a steering signal on the old run. */
+    post: operations["rerun-run"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1883,6 +1934,9 @@ export interface components {
     "List-settingsResponse": {
       settings: components["schemas"]["SettingView"][] | null;
     };
+    "List-signalsResponse": {
+      signals: components["schemas"]["SignalView"][] | null;
+    };
     "List-templatesResponse": {
       templates: components["schemas"]["TemplateView"][] | null;
     };
@@ -2064,6 +2118,9 @@ export interface components {
     ReactRequest: {
       emoji: string;
     };
+    "Rerun-runResponse": {
+      run_id: string;
+    };
     RoleView: {
       bot_id?: string;
       role: string;
@@ -2183,6 +2240,8 @@ export interface components {
       kind: string;
       line: components["schemas"]["RunLine"];
       parent_run_id?: string;
+      /** Format: int64 */
+      score: number | null;
       /** Format: date-time */
       started_at: string | null;
       /** Format: int64 */
@@ -2195,6 +2254,25 @@ export interface components {
     };
     "Save-skill-mdRequest": {
       skill_md: string;
+    };
+    ScoreAverage: {
+      /** Format: double */
+      avg_score: number;
+      key: string;
+      /** Format: int64 */
+      runs: number;
+    };
+    ScoreReport: {
+      /** Format: double */
+      average: number;
+      by_bot: components["schemas"]["ScoreAverage"][] | null;
+      by_model: components["schemas"]["ScoreAverage"][] | null;
+      by_skill: components["schemas"]["ScoreAverage"][] | null;
+      by_step: components["schemas"]["ScoreAverage"][] | null;
+      /** Format: int64 */
+      days: number;
+      /** Format: int64 */
+      runs: number;
     };
     "Screen-doneRequest": {
       card_id?: string;
@@ -2252,6 +2330,18 @@ export interface components {
     SetupState: {
       needs_model: boolean;
       needs_name: boolean;
+    };
+    SignalView: {
+      /** Format: date-time */
+      at: string;
+      bot_id?: string;
+      bot_name?: string;
+      detail: string;
+      id: string;
+      run_id?: string;
+      skills: string[] | null;
+      step: string;
+      type: string;
     };
     SkillVersionView: {
       /** Format: date-time */
@@ -2492,6 +2582,7 @@ export type SchemaListModelProvidersResponse = components["schemas"]["List-model
 export type SchemaListModelRolesResponse = components["schemas"]["List-model-rolesResponse"];
 export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
+export type SchemaListSignalsResponse = components["schemas"]["List-signalsResponse"];
 export type SchemaListTemplatesResponse = components["schemas"]["List-templatesResponse"];
 export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-itemsResponse"];
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
@@ -2521,6 +2612,7 @@ export type SchemaPushSubBodyKeysStruct = components["schemas"]["PushSubBodyKeys
 export type SchemaPutBotMemoryRequest = components["schemas"]["Put-bot-memoryRequest"];
 export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-memoryRequest"];
 export type SchemaReactRequest = components["schemas"]["ReactRequest"];
+export type SchemaRerunRunResponse = components["schemas"]["Rerun-runResponse"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
 export type SchemaRoutineBody = components["schemas"]["RoutineBody"];
 export type SchemaRoutineRunView = components["schemas"]["RoutineRunView"];
@@ -2534,6 +2626,8 @@ export type SchemaRunLine = components["schemas"]["RunLine"];
 export type SchemaRunView = components["schemas"]["RunView"];
 export type SchemaRunsOutBody = components["schemas"]["RunsOutBody"];
 export type SchemaSaveSkillMdRequest = components["schemas"]["Save-skill-mdRequest"];
+export type SchemaScoreAverage = components["schemas"]["ScoreAverage"];
+export type SchemaScoreReport = components["schemas"]["ScoreReport"];
 export type SchemaScreenDoneRequest = components["schemas"]["Screen-doneRequest"];
 export type SchemaScreenControl = components["schemas"]["ScreenControl"];
 export type SchemaScreenView = components["schemas"]["ScreenView"];
@@ -2545,6 +2639,7 @@ export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequ
 export type SchemaSettingHistoryResponse = components["schemas"]["Setting-historyResponse"];
 export type SchemaSettingView = components["schemas"]["SettingView"];
 export type SchemaSetupState = components["schemas"]["SetupState"];
+export type SchemaSignalView = components["schemas"]["SignalView"];
 export type SchemaSkillVersionView = components["schemas"]["SkillVersionView"];
 export type SchemaSkillView = components["schemas"]["SkillView"];
 export type SchemaSmoke = components["schemas"]["Smoke"];
@@ -4537,6 +4632,74 @@ export interface operations {
       };
     };
   };
+  "score-report": {
+    parameters: {
+      query?: {
+        days?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScoreReport"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-signals": {
+    parameters: {
+      query?: {
+        days?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-signalsResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "get-shared-memory": {
     parameters: {
       query?: never;
@@ -5273,6 +5436,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Draft-skillResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "rerun-run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        run: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Rerun-runResponse"];
         };
       };
       /** @description Error */

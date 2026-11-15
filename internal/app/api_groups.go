@@ -16,6 +16,7 @@ import (
 
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/chats"
+	"github.com/alternayte/fettle/internal/learning"
 )
 
 // attachmentKey is where an attachment of a chat lives in the object store. The chat is in
@@ -192,6 +193,29 @@ func (a *App) registerGroups(api huma.API) {
 		}
 		v := a.Agent.MessageView(ctx, m)
 		a.Chats.Publish(in.Chat, "message", v)
+		// A thumbs down on a bot's reply is a steering signal on the run that wrote it (§14.1).
+		if isThumbsDown(in.Body.Emoji) && m.AuthorKind == "bot" {
+			sig := learning.Input{SpaceID: in.Space, Type: learning.ThumbsDown, Ref: "message:" + m.ID().String() + ":" + p.UserID.String(), UserID: p.UserID.String(), Detail: truncateText(m.Body, 300)}
+			if m.EnvelopeID != nil {
+				sig.RunID = a.Agent.OwnerRunOf(ctx, *m.EnvelopeID)
+			}
+			if bot, err := uuid.Parse(m.AuthorID); err == nil {
+				sig.BotID = &bot
+			}
+			a.Agent.Signal(ctx, sig)
+		}
 		return &struct{ Body agent.MessageView }{Body: v}, nil
 	})
+}
+
+// isThumbsDown reports whether a reaction is a thumbs down, with any skin tone.
+func isThumbsDown(emoji string) bool {
+	return strings.HasPrefix(strings.TrimSpace(emoji), "👎")
+}
+
+func truncateText(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
 }
