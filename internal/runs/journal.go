@@ -55,6 +55,9 @@ const (
 	EvRunFinished       = "run_finished"
 )
 
+// EventTypes are all run event types (Appendix D), in order.
+var EventTypes = []string{EvRunStarted, EvRouteDecision, EvContextBuilt, EvModelTurn, EvModelSwitch, EvToolCall, EvToolIntent, EvToolResult, EvToolUncertain, EvApprovalRequested, EvApprovalDecided, EvCardPosted, EvCardAnswered, EvSteer, EvSubagentsStarted, EvSubagentResult, EvMergeResult, EvHandoffSent, EvHandoffResult, EvVerifyStarted, EvVerifyResult, EvComputerWait, EvComputerAcquired, EvComputerReleased, EvTakeoverRequested, EvTakeoverDone, EvMemoryWrite, EvSummary, EvBudgetReached, EvSleepUntil, EvCancel, EvRunFinished}
+
 // PayloadLimit is the event size above which the data goes to the object store (§7.1).
 const PayloadLimit = 8 * 1024
 

@@ -1,0 +1,76 @@
+{
+  "type": "object",
+  "properties": {
+    "seq": {
+      "type": "integer",
+      "description": "position in the journal, from 1, without gaps"
+    },
+    "at": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "run_started",
+        "route_decision",
+        "context_built",
+        "model_turn",
+        "model_switch",
+        "tool_call",
+        "tool_intent",
+        "tool_result",
+        "tool_uncertain",
+        "approval_requested",
+        "approval_decided",
+        "card_posted",
+        "card_answered",
+        "steer",
+        "subagents_started",
+        "subagent_result",
+        "merge_result",
+        "handoff_sent",
+        "handoff_result",
+        "verify_started",
+        "verify_result",
+        "computer_wait",
+        "computer_acquired",
+        "computer_released",
+        "takeover_requested",
+        "takeover_done",
+        "memory_write",
+        "summary",
+        "budget_reached",
+        "sleep_until",
+        "cancel",
+        "run_finished"
+      ]
+    },
+    "data": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "description": "the data of the event type"
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "true when data is a preview of a payload in the object store"
+    }
+  },
+  "$id": "https://github.com/alternayte/fettle/sdk/schemas/run-event.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fettle run event",
+  "required": [
+    "seq",
+    "at",
+    "type",
+    "data",
+    "truncated"
+  ],
+  "additionalProperties": false
+}

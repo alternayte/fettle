@@ -17,6 +17,7 @@ setup:
     go install golang.org/x/tools/cmd/goimports@v0.38.0
     go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
     cd ui && bun install --frozen-lockfile
+    cd sdk/typescript && bun install --frozen-lockfile
     cd tests/e2e && bun install --frozen-lockfile && bunx playwright install chromium
 
 # recipe: ui
@@ -70,12 +71,16 @@ gen:
     scripts/gen-migrations.sh
     go run ./cmd/fettle openapi > ui/src/api/openapi.json
     cd ui && bunx openapi-typescript src/api/openapi.json -o src/api/schema.d.ts --root-types >/dev/null && bunx prettier --write src/api/schema.d.ts >/dev/null
+    # The SDK (Apache-2.0): the same document, the TypeScript types and the JSON Schemas.
+    cp ui/src/api/openapi.json sdk/openapi.json
+    cd ui && bunx openapi-typescript src/api/openapi.json -o ../sdk/typescript/src/schema.d.ts >/dev/null && bunx prettier --write ../sdk/typescript/src/schema.d.ts >/dev/null
+    go run ./tools/schemas sdk/schemas
 
 # recipe: gen-check
 # Run gen and fail on any difference; verify migrations against fresh databases.
 gen-check: gen
     git diff --exit-code -- . ':(exclude)ui/dist'
-    test -z "$(git status --porcelain --untracked-files=all -- internal ui/src/api)"
+    test -z "$(git status --porcelain --untracked-files=all -- internal ui/src/api sdk)"
     go test -count=1 -run 'TestMigrationsVerify' ./internal/app/
 
 # recipe: fmt
@@ -98,8 +103,10 @@ lint:
     golangci-lint run ./...
     golangci-lint run --build-tags ee ./ee/... ./cmd/fettle/
     cd ui && bunx eslint . && bunx tsc -b --noEmit && bun scripts/copylint.ts
+    cd sdk/typescript && bunx tsc -p . --noEmit
     scripts/forbid.sh
     go run ./tools/licensecheck ui
+    go run ./tools/licensecheck sdk/typescript
     for c in checks/*.sh; do bash "$c" || exit 1; done
 
 # recipe: test

@@ -1,0 +1,313 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "UUID"
+    },
+    "parent_id": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "description": "UUID of the parent envelope, or null for a root"
+    },
+    "root_id": {
+      "type": "string",
+      "description": "UUID of the first envelope of the tree; equals id for a root"
+    },
+    "space_id": {
+      "type": "string",
+      "description": "UUID; the same as the parent's"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "message",
+        "routine",
+        "webhook",
+        "handoff",
+        "part",
+        "verify"
+      ]
+    },
+    "origin": {
+      "type": "string",
+      "description": "sets the intent (provenance)",
+      "enum": [
+        "user",
+        "routine",
+        "webhook",
+        "bot"
+      ]
+    },
+    "requester": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "bot",
+            "routine"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "owner_bot_id": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "description": "UUID; set by the inbox or the router"
+    },
+    "chat_id": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "description": "UUID of the chat where the result goes"
+    },
+    "message_id": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "description": "UUID of the message that started the work"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "acceptance": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "file",
+              "command",
+              "citations",
+              "human"
+            ]
+          },
+          "spec": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "spec"
+        ],
+        "additionalProperties": false
+      },
+      "description": "at least one check",
+      "minItems": 1
+    },
+    "context_refs": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "message",
+              "file",
+              "artifact",
+              "run"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "description": "files only from shared/"
+          }
+        },
+        "required": [
+          "type",
+          "ref"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "capabilities": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": "string",
+        "enum": [
+          "read",
+          "write_local",
+          "write_external",
+          "send",
+          "spend",
+          "admin"
+        ]
+      },
+      "description": "capability classes; a child has a subset of its parent's"
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "usd": {
+          "type": "number"
+        },
+        "tokens": {
+          "type": "integer"
+        },
+        "wall_ms": {
+          "type": "integer"
+        },
+        "hops_remaining": {
+          "type": "integer"
+        },
+        "max_subagents": {
+          "type": "integer"
+        }
+      },
+      "description": "a child's budget is at most the parent's remainder",
+      "required": [
+        "usd",
+        "tokens",
+        "wall_ms",
+        "hops_remaining",
+        "max_subagents"
+      ],
+      "additionalProperties": false
+    },
+    "step": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "description": "ladder step; fixed for part and verify",
+      "enum": [
+        "direct",
+        "single",
+        "fanout",
+        "forked",
+        "handoff",
+        "hire",
+        null
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "unique per space"
+    },
+    "deadline": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "created",
+        "routed",
+        "running",
+        "verifying",
+        "done",
+        "failed",
+        "escalated",
+        "cancelled"
+      ]
+    },
+    "result": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "artifacts": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_items": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_owner": {
+          "type": "string"
+        }
+      },
+      "description": "set at done",
+      "required": [
+        "summary",
+        "artifacts",
+        "evidence",
+        "open_items"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$id": "https://github.com/alternayte/fettle/sdk/schemas/envelope.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fettle envelope",
+  "required": [
+    "id",
+    "parent_id",
+    "root_id",
+    "space_id",
+    "kind",
+    "origin",
+    "requester",
+    "owner_bot_id",
+    "chat_id",
+    "message_id",
+    "goal",
+    "acceptance",
+    "context_refs",
+    "capabilities",
+    "budget",
+    "step",
+    "idempotency_key",
+    "deadline",
+    "status",
+    "result"
+  ],
+  "additionalProperties": false
+}
