@@ -247,7 +247,21 @@ func TestSCN_CORE_010_AuditRowsAndNoAuditWrites(t *testing.T) {
 		}
 	}
 	s.MustDo("POST", s.SP("/cards/%s/answer", card), map[string]any{"action": "stop"}, nil)
-	want := []string{"settings.change", "vault.create", "model_provider.create", "model_provider.test", "model_role.set", "bot.create", "card.decide"}
+	// Member changes need server mode; TestSCN_AUTH_001 checks their audit rows.
+	// Zone, grant and provider changes are hard asks: they apply when the card is allowed.
+	allow := func(path string, body any) {
+		var r cardReply
+		s.MustDo("POST", s.SP("%s", path), body, &r)
+		s.MustDo("POST", s.SP("/cards/%s/answer", r.CardID), map[string]any{"action": "allow"}, nil)
+	}
+	allow("/zones", map[string]any{"name": "audit-zone", "size": "small", "network": "open"})
+	allow("/zones/"+s.zoneIDOf("personal")+"/grants", map[string]any{"kind": "vault_item", "target_id": it.ID})
+	allow("/computer-providers/host/enable", nil)
+	s.MustDo("POST", s.SP("/connectors"), map[string]any{"name": "fakemail", "url": "http://127.0.0.1:9/mcp", "auth": "header", "header_name": "X-Api-Key"}, nil)
+	s.MustDo("POST", s.SP("/routines"), map[string]any{"bot_id": b.ID, "name": "Daily", "prompt": "Check the news.", "trigger": "cron", "cron": "0 9 * * *", "tz": "UTC", "enabled": false}, nil)
+	s.MustDo("POST", s.SP("/policy/rules"), map[string]any{"tool": "exec", "effect": "ask"}, nil)
+	want := []string{"settings.change", "vault.create", "model_provider.create", "model_provider.test", "model_role.set", "bot.create", "card.decide",
+		"zone.create", "grant.add", "provider.enable", "connector.create", "routine.create", "policy.rule_add"}
 	for _, a := range want {
 		var out struct {
 			Entries []struct{ Action string } `json:"entries"`

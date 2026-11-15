@@ -139,6 +139,13 @@ func TestSCN_AUTH_001_InviteLinkMakesAMemberOfOneSpace(t *testing.T) {
 	if code, _, body = s.do("DELETE", "/api/v1/spaces/"+acme.ID+"/members/"+memberID, nil, s.baseURL); code != 204 {
 		t.Fatalf("remove member: %d %s", code, body)
 	}
+	// Member changes have audit rows (REQ-CORE-010).
+	for _, action := range []string{"invite.create", "invite.accept", "member.remove"} {
+		code, _, body := s.do("GET", "/api/v1/spaces/"+acme.ID+"/audit?action="+action, nil, "")
+		if code != 200 || !strings.Contains(body, `"action":"`+action+`"`) {
+			t.Fatalf("no audit row for %s: %d %s", action, code, body)
+		}
+	}
 	s.signInAs("member@acme.test", "acme-member-pass-5521")
 	if m = s.me(); len(m.Spaces) != 0 {
 		t.Fatalf("a removed member still has spaces: %+v", m)
