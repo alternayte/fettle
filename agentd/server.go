@@ -312,6 +312,13 @@ func Run(ctx context.Context, cfg Config, logger *slog.Logger) error {
 	} else {
 		logger.Warn("serving plain HTTP because FETTLE_AGENTD_INSECURE_LISTEN is 1")
 	}
+	if cfg.WSAddr != "" {
+		_, port, _ := net.SplitHostPort(ln.Addr().String())
+		if err := serveBridge(ctx, cfg.WSAddr, net.JoinHostPort("127.0.0.1", port), logger); err != nil {
+			_ = ln.Close()
+			return fmt.Errorf("bridge listen: %w", err)
+		}
+	}
 	logger.Info("agentd started", "addr", ln.Addr().String(), "version", cfg.Version,
 		"uid", os.Getuid(), "network_mode", network.Mode, "network_applied", network.Applied)
 	errc := make(chan error, 1)

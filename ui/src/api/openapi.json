@@ -553,6 +553,40 @@
         ],
         "type": "object"
       },
+      "Check-e2bRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "Check-e2bResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "configured": {
+            "description": "This server already uses E2B (FETTLE_E2B_API_KEY).",
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pass",
+          "configured"
+        ],
+        "type": "object"
+      },
       "Check-kilnRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4605,6 +4639,47 @@
           }
         },
         "summary": "The default computer provider, what works on this server, and the preparation progress",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/computer-setup/e2b-check": {
+      "post": {
+        "operationId": "check-e2b",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Check-e2bRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Check-e2bResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Test an E2B API key (instance admins)",
         "tags": [
           "computers"
         ]

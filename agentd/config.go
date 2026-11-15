@@ -27,10 +27,13 @@ type Config struct {
 	TLSKey   []byte
 	Insecure bool
 	Addr     string
-	Home     string
-	User     string
-	Network  NetworkPolicy
-	Version  string
+	// WSAddr is the plain listener of the WebSocket bridge (BridgeHandler); empty turns
+	// the bridge off.
+	WSAddr  string
+	Home    string
+	User    string
+	Network NetworkPolicy
+	Version string
 }
 
 // SecretEnv lists the environment variables that hold secrets. The command
@@ -45,6 +48,7 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		TLSKey:   []byte(getenv("FETTLE_AGENTD_TLS_KEY")),
 		Insecure: getenv("FETTLE_AGENTD_INSECURE_LISTEN") == "1",
 		Addr:     getenv("FETTLE_AGENTD_ADDR"),
+		WSAddr:   getenv("FETTLE_AGENTD_WS_ADDR"),
 		Home:     getenv("FETTLE_AGENTD_HOME"),
 		User:     getenv("FETTLE_AGENTD_USER"),
 	}

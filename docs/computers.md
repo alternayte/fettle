@@ -43,7 +43,7 @@ The menu at the end of a zone row tests the computer (it starts the computer and
 | `docker` | Docker Desktop, Docker Engine or Podman | yes | yes |
 | `host` | any system | no | no |
 | `kiln` (remote) | a Kiln host, with its URL and token | yes | yes |
-| `e2b` | E2B | | |
+| `e2b` (remote) | E2B, with an API key | yes | yes |
 
 ### applecontainer
 
@@ -93,9 +93,34 @@ This version runs Kiln only as a remote host. A local Kiln on the same computer 
 
 ### e2b
 
-The provider list knows the name `e2b`.
-This version of Fettle does not include the provider.
-`fettle computer add e2b` reports this.
+The provider runs each computer as an E2B sandbox in your E2B account.
+On first use, Fettle builds one E2B template for each size from the computer image of the release.
+A template name holds the Fettle version, so a new release builds new templates.
+The template has no start command. After Fettle creates a sandbox, it starts `fettle-agentd` as root through envd, with the token and the key pair of that computer.
+
+A computer sleeps with an E2B pause, which keeps its memory, its processes and its disk. The next work resumes it.
+A fork is a native E2B fork of the running computer.
+E2B pauses a sandbox when its time to live of one hour ends. An open connection from Fettle extends the time to live.
+
+E2B reaches a sandbox port only through its HTTPS proxy, and the proxy ends TLS.
+So `fettle-agentd` also listens on port 7422 for a WebSocket that it pipes, byte for byte, to its own TLS port.
+Fettle runs its own TLS inside the WebSocket and checks the pinned certificate of the computer. E2B sees only the encrypted stream.
+The port URLs need the traffic access token of the sandbox.
+
+To use E2B:
+
+1. Test the API key: `fettle computer add e2b --key <key>`.
+2. Set `FETTLE_E2B_API_KEY` for the server, and restart it.
+3. Build the computer templates: `fettle computer add e2b`.
+4. Select `e2b` as the provider of a zone.
+
+E2B builds the templates from a registry image. A release uses `ghcr.io/alternayte/fettle-computer:<version>`.
+A development build uses `fettle-computer:dev`, which E2B cannot pull. Set `FETTLE_E2B_IMAGE` to a registry image for a development build.
+`FETTLE_E2B_API_URL` names another E2B API. The default is `https://api.e2b.app`.
+
+A zone with an allowlist gets the same hosts as the E2B egress allowlist, and E2B refuses all other addresses. `fettle-agentd` applies the same rules in the computer.
+An open zone has no egress limit at E2B.
+`e2b` is never the default provider, except when `FETTLE_DEFAULT_PROVIDER` names it.
 The release holds `e2b.Dockerfile`, the E2B template definition of the computer image.
 
 ### Default provider
@@ -128,7 +153,7 @@ fettle computer stop personal
 ```
 
 - `computer list` shows the zones with their provider, state, size, network and bots. Then it shows the providers.
-- `computer add <docker|applecontainer|host>` turns on a provider and prepares it. For `host`, a card in the chat of the primary bot asks you to allow it.
+- `computer add <docker|applecontainer|host|kiln|e2b>` turns on a provider and prepares it. For `host`, a card in the chat of the primary bot asks you to allow it. For `kiln` and `e2b`, the server needs their variables first.
 - `computer test [zone]` starts the computer of a zone and runs one command in it. The default zone is `personal`.
 - `computer stop <zone>` puts the computer of a zone to sleep. Its workspace stays.
 

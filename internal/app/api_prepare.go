@@ -108,6 +108,37 @@ func (a *App) registerPrepare(api huma.API) {
 		}
 		return out, nil
 	})
+	huma.Register(api, op("check-e2b", http.MethodPost, "/computer-setup/e2b-check", "Test an E2B API key (instance admins)", "computers"), func(ctx context.Context, in *struct {
+		Body struct {
+			Key string `json:"key" minLength:"1" maxLength:"4096"`
+		}
+	}) (*struct {
+		Body struct {
+			Pass       bool   `json:"pass"`
+			Error      string `json:"error,omitempty"`
+			Configured bool   `json:"configured" doc:"This server already uses E2B (FETTLE_E2B_API_KEY)."`
+		}
+	}, error) {
+		if p := auth.From(ctx); p == nil || !p.IsAdmin {
+			return nil, huma.Error403Forbidden("only an instance admin adds computer providers")
+		}
+		out := &struct {
+			Body struct {
+				Pass       bool   `json:"pass"`
+				Error      string `json:"error,omitempty"`
+				Configured bool   `json:"configured" doc:"This server already uses E2B (FETTLE_E2B_API_KEY)."`
+			}
+		}{}
+		_, out.Body.Configured = a.Computers.Providers["e2b"]
+		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		if err := a.newE2B(in.Body.Key).Ping(cctx); err != nil {
+			out.Body.Error = strings.ReplaceAll(err.Error(), in.Body.Key, "[secret:E2B API key]")
+		} else {
+			out.Body.Pass = true
+		}
+		return out, nil
+	})
 	huma.Register(api, op("get-computer-setup", http.MethodGet, "/computer-setup", "The default computer provider, what works on this server, and the preparation progress", "computers"), func(ctx context.Context, _ *struct{}) (*struct{ Body ComputerSetup }, error) {
 		return &struct{ Body ComputerSetup }{Body: a.computerSetup(ctx)}, nil
 	})

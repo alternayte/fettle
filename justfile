@@ -124,8 +124,8 @@ test:
     cd ui && bun test scripts
 
 # recipe: contract
-# Contract tests against the fakes (layer C).
-contract:
+# Contract tests against the fakes (layer C). The fake E2B runs the computer image.
+contract: image
     #!/usr/bin/env bash
     set -euo pipefail
     files=$(grep -rl --include='*_test.go' '^//go:build contract' internal tests cmd agentd 2>/dev/null || true)

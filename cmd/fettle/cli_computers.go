@@ -121,12 +121,13 @@ func runComputerAdd(ctx context.Context, args []string) error {
 	o := clientFlags(fs)
 	kilnURL := fs.String("url", "", "kiln: the URL of the Kiln host")
 	kilnToken := fs.String("token", "", "kiln: the API token of the Kiln host (default: FETTLE_KILN_TOKEN)")
+	e2bKey := fs.String("key", "", "e2b: an E2B API key to test before the server uses it")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host|kiln> [--url URL --token TOKEN]")
+		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host|kiln|e2b> [--url URL --token TOKEN] [--key KEY]")
 		return errUsage
 	}
 	kind := strings.ToLower(pos[0])
@@ -145,8 +146,25 @@ func runComputerAdd(ctx context.Context, args []string) error {
 		fmt.Println("A card in the primary bot's chat asks you to allow it. It is on after you press Allow.")
 		return nil
 	}
-	if kind == "e2b" {
-		return fmt.Errorf("the %s provider is not in this version of Fettle", kind)
+	if kind == "e2b" && *e2bKey != "" {
+		key := *e2bKey
+		var res struct {
+			Pass       bool   `json:"pass"`
+			Error      string `json:"error"`
+			Configured bool   `json:"configured"`
+		}
+		if err := c.do(ctx, http.MethodPost, "/computer-setup/e2b-check", map[string]string{"key": key}, &res); err != nil {
+			return err
+		}
+		if !res.Pass {
+			return fmt.Errorf("the E2B API refuses the key: %s", res.Error)
+		}
+		fmt.Println("The E2B API answers, and the key works.")
+		if !res.Configured {
+			fmt.Println("Set FETTLE_E2B_API_KEY for the server, then restart it.")
+			fmt.Println("Then run fettle computer add e2b to build the computer templates.")
+			return nil
+		}
 	}
 	if kind == "kiln" && *kilnURL != "" {
 		tok := *kilnToken

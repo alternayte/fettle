@@ -20,6 +20,7 @@ import (
 	"github.com/alternayte/fettle/internal/jobs"
 	"github.com/alternayte/fettle/internal/providers/applecontainer"
 	"github.com/alternayte/fettle/internal/providers/docker"
+	"github.com/alternayte/fettle/internal/providers/e2b"
 	"github.com/alternayte/fettle/internal/providers/host"
 	"github.com/alternayte/fettle/internal/providers/kiln"
 	"github.com/alternayte/fettle/internal/settings"
@@ -114,6 +115,11 @@ func (a *App) setupComputers(ctx context.Context) {
 		k.HTTP = a.HTTP
 		provs["kiln"] = k
 		a.Vault.Redactor.RegisterGlobal("Kiln token", tok)
+	}
+	// E2B (D-15: remote, never a default unless FETTLE_DEFAULT_PROVIDER names it).
+	if key := os.Getenv("FETTLE_E2B_API_KEY"); key != "" {
+		provs["e2b"] = a.newE2B(key)
+		a.Vault.Redactor.RegisterGlobal("E2B API key", key)
 	}
 	a.Computers = computers.NewManager(&computers.Manager{
 		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log, Audit: a.Audit,
@@ -221,6 +227,21 @@ func (a *App) setupComputers(ctx context.Context) {
 	br := &tools.Browser{Computer: c, Agent: a.Agent, Models: a.Models}
 	br.RegisterBrowser(a.Agent.Tools)
 	(&tools.Broker{Browser: br, Vault: a.Vault, Zones: a.Zones, Now: a.Agent.Now}).RegisterBroker(a.Agent.Tools)
+}
+
+// newE2B returns the e2b provider for an API key. FETTLE_E2B_API_URL names another E2B API,
+// and FETTLE_E2B_IMAGE the registry image that the templates build from.
+func (a *App) newE2B(key string) *e2b.Provider {
+	image := os.Getenv("FETTLE_E2B_IMAGE")
+	if image == "" {
+		image = ComputerImage(a.Cfg.Version)
+	}
+	p := e2b.New(key, image, a.Cfg.Version)
+	if u := os.Getenv("FETTLE_E2B_API_URL"); u != "" {
+		p.API = u
+	}
+	p.HTTP = a.HTTP
+	return p
 }
 
 // wakeComputerWaiters wakes the oldest run that waits for a computer.

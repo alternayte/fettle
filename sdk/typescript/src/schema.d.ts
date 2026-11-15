@@ -107,6 +107,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/computer-setup/e2b-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Test an E2B API key (instance admins) */
+    post: operations["check-e2b"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/computer-setup/kiln-check": {
     parameters: {
       query?: never;
@@ -1940,6 +1957,15 @@ export interface components {
       pass: boolean;
       reason: string;
     };
+    "Check-e2bRequest": {
+      key: string;
+    };
+    "Check-e2bResponse": {
+      /** @description This server already uses E2B (FETTLE_E2B_API_KEY). */
+      configured: boolean;
+      error?: string;
+      pass: boolean;
+    };
     "Check-kilnRequest": {
       token: string;
       url: string;
@@ -3142,6 +3168,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ComputerSetup"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "check-e2b": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Check-e2bRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Check-e2bResponse"];
         };
       };
       /** @description Error */

@@ -153,6 +153,9 @@ The server reads these variables. A flag overrides its variable.
 | `FETTLE_S3_ENDPOINT` | | The endpoint of the S3-compatible store. | none |
 | `FETTLE_KILN_URL` | | The URL of a remote Kiln host for the `kiln` provider. | none |
 | `FETTLE_KILN_TOKEN` | | The API token of that Kiln host. | none |
+| `FETTLE_E2B_API_KEY` | | The E2B API key. It turns on the `e2b` provider. | none |
+| `FETTLE_E2B_API_URL` | | The E2B API. | `https://api.e2b.app` |
+| `FETTLE_E2B_IMAGE` | | The registry image that the E2B templates build from. | the computer image |
 | `FETTLE_S3_REGION` | | The region. | none |
 | `FETTLE_S3_BUCKET` | | The bucket. Fettle creates it. | none |
 | `FETTLE_S3_ACCESS_KEY` | | The access key. | none |
