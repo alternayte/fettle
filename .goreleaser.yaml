@@ -50,6 +50,9 @@ checksum:
     - glob: image/e2b/e2b.Dockerfile
 
 release:
+  # The owner checks a release and publishes the draft; a tag with -rc is a pre-release.
+  draft: true
+  prerelease: auto
   extra_files:
     - glob: install.sh
     - glob: deploy/fettle.service
