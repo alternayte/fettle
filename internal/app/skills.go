@@ -75,13 +75,21 @@ func (a *App) loadSkill(ctx context.Context, env *agent.ToolEnv, name string) (s
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "Skill %s, version %d:\n%s", l.Skill.Name, l.Version.Version, l.Files["SKILL.md"])
-	if len(l.Files) > 1 {
+	// evals.json is for the eval runner, not the bot. Without other files the skill needs
+	// no computer, so a bot can follow it while its computer still prepares (§15.3).
+	files := skills.Files{}
+	for n, v := range l.Files {
+		if n != "evals.json" {
+			files[n] = v
+		}
+	}
+	if len(files) > 1 {
 		dir := ".skills/" + l.Skill.Name
-		if err := a.copySkill(ctx, env, dir, l.Files); err != nil {
+		if err := a.copySkill(ctx, env, dir, files); err != nil {
 			fmt.Fprintf(&b, "\n\nThe skill's files could not be copied to your home: %v", err)
 		} else {
-			names := make([]string, 0, len(l.Files))
-			for n := range l.Files {
+			names := make([]string, 0, len(files))
+			for n := range files {
 				names = append(names, dir+"/"+n)
 			}
 			sort.Strings(names)

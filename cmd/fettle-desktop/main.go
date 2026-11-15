@@ -383,6 +383,12 @@ func (s *shell) install(file string) {
 	if err := cmd.Start(); err != nil {
 		slog.Error("restart after the update", "error", err)
 	}
+	// AppKit does not terminate while a sheet is open. The server is stopped and the new
+	// version runs, so this process may end without the AppKit shutdown.
+	go func() {
+		time.Sleep(10 * time.Second)
+		os.Exit(0)
+	}()
 	s.wails.Quit()
 }
 

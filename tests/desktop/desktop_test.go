@@ -357,6 +357,11 @@ func TestSCN_UX_001_DesktopWindowTrayUpdateAndFirstRun(t *testing.T) {
 		if t.Failed() {
 			b, _ := os.ReadFile(filepath.Join(work, "app.log"))
 			t.Logf("app log:\n%s", b)
+			logs, _ := filepath.Glob(filepath.Join(data, "logs", "*"))
+			for _, f := range logs {
+				b, _ := os.ReadFile(f)
+				t.Logf("%s:\n%s", filepath.Base(f), b)
+			}
 		}
 	})
 	sm := &smoke{t: t, sock: filepath.Join(data, "smoke.sock")}
@@ -504,16 +509,24 @@ func TestSCN_UX_001_DesktopWindowTrayUpdateAndFirstRun(t *testing.T) {
 			t.Fatal("the master key is in a file, not only in the keychain")
 		}
 	}
-	// The app checks the feed at start, so the question may wait already.
+	// The app checks the feed at start, so the question may wait already. With the window
+	// closed to the tray the question waits for the window, so the window opens again.
 	if !sm.must("state", "").Asked {
 		sm.must("check-update", "")
+		sm.must("show", "")
 	}
 	sm.waitFor("the update asks first", 60*time.Second, func(s state) bool { return s.Asked })
 	if v := sm.must("state", "").Version; v != v1 {
 		t.Fatalf("the update installed before the confirmation: version %s", v)
 	}
 	sm.must("install-update", "")
-	_, _ = cmd.Process.Wait()
+	exited := make(chan struct{})
+	go func() { _, _ = cmd.Process.Wait(); close(exited) }()
+	select {
+	case <-exited:
+	case <-time.After(60 * time.Second):
+		t.Fatal("the old version did not exit after the update")
+	}
 	a.base = sm.waitFor("the new version runs", 90*time.Second, func(s state) bool { return s.Version == v2 }).Base
 	if b, _ := os.ReadFile(filepath.Join(app1, "Contents", "Info.plist")); !strings.Contains(string(b), v2) {
 		t.Fatal("the installed bundle is not the new version")
