@@ -91,7 +91,9 @@
       "takeover": "Takeover",
       "turn_limit": "Turn limit",
       "change": "Change",
-      "warning": "Warning"
+      "warning": "Warning",
+      "verification": "Failed checks",
+      "check": "Your check"
     },
     "approval": {
       "tool": "Tool",
@@ -129,6 +131,15 @@
     },
     "warning": {
       "dismiss": "Dismiss"
+    },
+    "verification": {
+      "accept": "Accept anyway",
+      "retry": "Retry",
+      "stop": "Stop"
+    },
+    "check": {
+      "pass": "It passes",
+      "fail": "It fails"
     }
   },
   "run": {

@@ -18,7 +18,16 @@ export interface ChatSummary {
 }
 
 export type CardKind =
-  "approval" | "question" | "budget" | "uncertain" | "takeover" | "turn_limit" | "change" | "warning";
+  | "approval"
+  | "question"
+  | "budget"
+  | "uncertain"
+  | "takeover"
+  | "turn_limit"
+  | "change"
+  | "warning"
+  | "verification"
+  | "check";
 export type CardStatus = "pending" | "allowed" | "denied" | "answered" | "expired";
 
 export interface Card {

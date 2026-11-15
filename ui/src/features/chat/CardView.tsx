@@ -1,6 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, CircleHelp, Coins, Hand, KeyRound, Monitor, ShieldQuestion, TriangleAlert, X } from "lucide-react";
+import {
+  Check,
+  CircleHelp,
+  Coins,
+  Hand,
+  KeyRound,
+  ListChecks,
+  ListX,
+  Monitor,
+  ShieldQuestion,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { Card } from "./types";
@@ -16,6 +28,8 @@ const icons = {
   turn_limit: TriangleAlert,
   change: KeyRound,
   warning: TriangleAlert,
+  verification: ListX,
+  check: ListChecks,
 } as const;
 
 function ActionButton({
@@ -88,7 +102,7 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         <span className="label-caps ml-auto">{t(`card.kind.${card.kind}`)}</span>
       </header>
       <div className="space-y-2 px-3 py-2.5 pl-4">
-        {card.detail && <p className="text-sm text-ink-soft">{card.detail}</p>}
+        {card.detail && <p className="text-sm whitespace-pre-line text-ink-soft">{card.detail}</p>}
         {card.tool && (
           <p className="text-sm text-ink-soft">
             {t("card.approval.tool")} <code className="font-mono text-xs text-ink">{card.tool}</code>
@@ -172,6 +186,25 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
             <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
               {t("card.turnLimit.stop")}
             </ActionButton>
+          </>
+        )}
+        {card.kind === "verification" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "retry" })}>
+              {t("card.verification.retry")}
+            </ActionButton>
+            <ActionButton onClick={() => onAnswer({ action: "accept" })}>{t("card.verification.accept")}</ActionButton>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "stop" })}>
+              {t("card.verification.stop")}
+            </ActionButton>
+          </>
+        )}
+        {card.kind === "check" && (
+          <>
+            <ActionButton kind="act" onClick={() => onAnswer({ action: "pass" })}>
+              {t("card.check.pass")}
+            </ActionButton>
+            <ActionButton onClick={() => onAnswer({ action: "fail" })}>{t("card.check.fail")}</ActionButton>
           </>
         )}
         {card.kind === "takeover" && card.data?.bot_id && (
