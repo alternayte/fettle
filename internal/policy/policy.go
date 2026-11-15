@@ -61,7 +61,7 @@ type Decision struct {
 var ErrSpend = errors.New("payments and purchases are blocked in this version")
 
 func ruleMatches(r *Rule, req Request) bool {
-	if r.Tool != "" && r.Tool != "*" && r.Tool != req.Tool {
+	if r.Tool != "" && r.Tool != "*" && r.Tool != req.Tool && !bareToolMatch(r.Tool, req.Tool) {
 		return false
 	}
 	if r.Connector != "" && r.Connector != req.Connector {
@@ -74,6 +74,16 @@ func ruleMatches(r *Rule, req Request) bool {
 		return false
 	}
 	return true
+}
+
+// bareToolMatch reports whether a rule tool without a connector prefix names the tool of a
+// connector call: send_email matches fakemail__send_email.
+func bareToolMatch(rule, tool string) bool {
+	if strings.Contains(rule, "__") {
+		return false
+	}
+	_, name, ok := strings.Cut(tool, "__")
+	return ok && name == rule
 }
 
 func hostOf(site string) string {
@@ -163,6 +173,9 @@ func Decide(mode string, rules []*Rule, req Request) Decision {
 type Service struct {
 	e     *drel.Engine
 	audit *audit.Log
+	// InstanceRules are rules for every space (an Enterprise policy pack). A block rule of
+	// a pack wins over every rule of a space. Nil adds none.
+	InstanceRules func(ctx context.Context) []*Rule
 }
 
 // New returns the policy service.

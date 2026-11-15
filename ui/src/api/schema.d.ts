@@ -21,6 +21,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/edition": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The edition of this build, its licence and the Enterprise features (instance admins) */
+    get: operations["get-edition"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/telemetry": {
     parameters: {
       query?: never;
@@ -306,6 +323,23 @@ export interface paths {
     put?: never;
     /** Remove a push subscription of the caller */
     post: operations["push-unsubscribe"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Make a new space with its primary bot; the caller becomes its owner (instance admins) */
+    post: operations["create-space"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1922,6 +1956,10 @@ export interface components {
        */
       role: "owner" | "member";
     };
+    "Create-spaceRequest": {
+      name: string;
+      time_zone?: string;
+    };
     CreateOutBody: {
       routine: components["schemas"]["RoutineView"];
       secret?: string;
@@ -1945,6 +1983,12 @@ export interface components {
     };
     "Draft-skillResponse": {
       skill_md: string;
+    };
+    EditionView: {
+      features: components["schemas"]["FeatureView"][] | null;
+      license?: components["schemas"]["LicenseView"];
+      /** @enum {string} */
+      name: "community" | "enterprise";
     };
     Entry: {
       /** @enum {string} */
@@ -2035,6 +2079,13 @@ export interface components {
       reason: string;
       text: string;
     };
+    FeatureView: {
+      /** @description The feature works: the build has it and the licence names it. */
+      available: boolean;
+      key: string;
+      /** @description The feature can change data; false after the licence grace ends. */
+      writable: boolean;
+    };
     "Get-skillResponse": {
       skill: components["schemas"]["SkillView"];
       versions: components["schemas"]["SkillVersionView"][] | null;
@@ -2057,6 +2108,7 @@ export interface components {
       /** @description The server runs inside the desktop app. */
       desktop: boolean;
       desktop_first_run: boolean;
+      edition: components["schemas"]["EditionView"];
       /** @enum {string} */
       mode: "local" | "server";
       version: string;
@@ -2076,6 +2128,17 @@ export interface components {
       /** @enum {string} */
       role: "owner" | "member";
       url?: string;
+    };
+    LicenseView: {
+      customer?: string;
+      /** Format: int64 */
+      days_left: number;
+      expires?: string;
+      reason?: string;
+      /** Format: int64 */
+      seats?: number;
+      /** @enum {string} */
+      state: "missing" | "invalid" | "valid" | "grace" | "read_only";
     };
     "List-auditResponse": {
       entries: components["schemas"]["AuditView"][] | null;
@@ -2784,6 +2847,7 @@ export type SchemaConnectorView = components["schemas"]["ConnectorView"];
 export type SchemaCreateConnectorRequest = components["schemas"]["Create-connectorRequest"];
 export type SchemaCreateGroupRequest = components["schemas"]["Create-groupRequest"];
 export type SchemaCreateInviteRequest = components["schemas"]["Create-inviteRequest"];
+export type SchemaCreateSpaceRequest = components["schemas"]["Create-spaceRequest"];
 export type SchemaCreateOutBody = components["schemas"]["CreateOutBody"];
 export type SchemaDesktopConnectRequest = components["schemas"]["Desktop-connectRequest"];
 export type SchemaDesktopConnectResponse = components["schemas"]["Desktop-connectResponse"];
@@ -2791,6 +2855,7 @@ export type SchemaDesktopOpenRequest = components["schemas"]["Desktop-openReques
 export type SchemaDesktopWindowRequest = components["schemas"]["Desktop-windowRequest"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaDraftSkillResponse = components["schemas"]["Draft-skillResponse"];
+export type SchemaEditionView = components["schemas"]["EditionView"];
 export type SchemaEntry = components["schemas"]["Entry"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
 export type SchemaErrorModel = components["schemas"]["ErrorModel"];
@@ -2798,12 +2863,14 @@ export type SchemaEvalReport = components["schemas"]["EvalReport"];
 export type SchemaEvalResult = components["schemas"]["EvalResult"];
 export type SchemaEventView = components["schemas"]["EventView"];
 export type SchemaExpectation = components["schemas"]["Expectation"];
+export type SchemaFeatureView = components["schemas"]["FeatureView"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
 export type SchemaInviteView = components["schemas"]["InviteView"];
+export type SchemaLicenseView = components["schemas"]["LicenseView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
 export type SchemaListInstructionVersionsResponse = components["schemas"]["List-instruction-versionsResponse"];
@@ -2920,6 +2987,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DiagnosticsResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-edition": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EditionView"];
         };
       };
       /** @description Error */
@@ -3504,6 +3600,39 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-space": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Create-spaceRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SpaceView"];
+        };
       };
       /** @description Error */
       default: {

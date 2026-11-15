@@ -32,6 +32,9 @@ type Service struct {
 	vault *vault.Vault
 	audit *audit.Log
 	HTTP  *http.Client
+	// AllowModel is an instance-wide model allowlist (an Enterprise policy pack). It
+	// returns an error for a model that the pack does not allow. Nil allows every model.
+	AllowModel func(ctx context.Context, model string) error
 }
 
 // NewService returns the models service. hc must honour the proxy and CA settings.
@@ -289,6 +292,11 @@ func (s *Service) SetRole(ctx context.Context, actor audit.Actor, spaceID uuid.U
 		if strings.TrimSpace(targets[i].Model) == "" {
 			return errors.New("each target needs a model")
 		}
+		if s.AllowModel != nil {
+			if err := s.AllowModel(ctx, targets[i].Model); err != nil {
+				return err
+			}
+		}
 		if role == RoleOwner {
 			if p.SmokeAt == nil {
 				return ErrUntestedOwner
@@ -363,7 +371,14 @@ func (s *Service) Resolve(ctx context.Context, spaceID uuid.UUID, botID *uuid.UU
 		return nil, ErrRoleNoTargets
 	}
 	out := make([]Resolved, 0, len(row.Targets))
+	var refused error
 	for _, t := range row.Targets {
+		if s.AllowModel != nil {
+			if err := s.AllowModel(ctx, t.Model); err != nil {
+				refused = err
+				continue
+			}
+		}
 		p, err := s.Get(ctx, spaceID, t.ProviderID)
 		if err != nil {
 			continue
@@ -375,6 +390,9 @@ func (s *Service) Resolve(ctx context.Context, spaceID uuid.UUID, botID *uuid.UU
 		out = append(out, Resolved{Target: t, Conn: c, Name: p.Name})
 	}
 	if len(out) == 0 {
+		if refused != nil {
+			return nil, refused
+		}
 		return nil, ErrRoleNoTargets
 	}
 	return out, nil

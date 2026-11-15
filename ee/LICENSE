@@ -1,0 +1,42 @@
+Fettle Enterprise License
+
+Copyright (c) 2026 the Fettle authors.
+
+This license applies to all files in the ee/ directory of this repository and
+to any binary built with the Go build tag "ee". All files outside ee/ are under
+the GNU Affero General Public License version 3 (see LICENSE), except sdk/ and
+templates/, which are under the Apache License 2.0.
+
+1. Source available. You may read, copy and change the files in ee/ for the
+   purposes in section 2 and section 3.
+
+2. Development and testing. You may build and run the software that includes
+   ee/ without a license key for development, testing, evaluation and
+   demonstration. This use must not serve production work.
+
+3. Production use. Production use of the software that includes ee/ needs a
+   valid Fettle Enterprise license key for the number of seats and the
+   features that you use. A license key is valid only for the party named in it
+   and only until its expiry date. After the expiry date, the grace period that
+   the software applies is part of this license.
+
+4. No redistribution. You must not distribute, sublicense, sell or host for
+   third parties the files in ee/, changed or unchanged, or a binary that
+   includes them, except with written permission from the Fettle authors.
+
+5. Changes. You must not remove, change or disable the license key check or
+   the feature checks of the software.
+
+6. Contributions. Contributions to ee/ need the contributor license agreement
+   in CLA.md.
+
+7. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+   EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+8. Termination. This license ends at once when you break one of its terms. You
+   must then stop all use of the software that includes ee/.

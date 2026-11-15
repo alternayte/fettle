@@ -14,6 +14,7 @@ import (
 	"github.com/alternayte/fettle/internal/auth"
 	"github.com/alternayte/fettle/internal/bots"
 	"github.com/alternayte/fettle/internal/chats"
+	"github.com/alternayte/fettle/internal/computers"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/routines"
@@ -35,6 +36,7 @@ var errorMap = []struct {
 }{
 	{http.StatusNotFound, []error{routines.ErrNotFound, bots.ErrNotFound, chats.ErrNotFound, chats.ErrMsgNotFound, chats.ErrCardNotFound, vault.ErrNotFound, models.ErrNotFound, runs.ErrNotFound, envelopes.ErrNotFound, spaces.ErrNotMember, bots.ErrNoVersion}},
 	{http.StatusConflict, []error{bots.ErrNameTaken, chats.ErrCardAnswered, bots.ErrLimit, bots.ErrPrimaryLast, models.ErrRoleNoTargets}},
+	{http.StatusServiceUnavailable, []error{computers.ErrPrepare}},
 	{http.StatusUnprocessableEntity, []error{bots.ErrBadName, bots.ErrMemoryFull, bots.ErrFactNotFound, bots.ErrFactAmbiguous, chats.ErrEmptyMessage, chats.ErrMessageLength, models.ErrNoToolsOwner, models.ErrUntestedOwner, models.ErrUnknownRole, models.ErrInvalidBaseURL, settings.ErrUnknown, agent.ErrBadAction}},
 }
 
@@ -90,6 +92,10 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerLearning(api)
 	a.registerPatches(api)
 	a.registerMembers(api)
+	a.registerEdition(api)
+	for _, x := range extensions {
+		x.Routes(api)
+	}
 	a.registerSettings(api)
 	a.registerAdmin(api)
 	a.registerDiagnostics(api)

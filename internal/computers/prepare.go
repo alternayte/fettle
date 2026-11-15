@@ -93,6 +93,9 @@ func (m *Manager) StartPrepare(kind string) error {
 	return nil
 }
 
+// ErrPrepare is a provider preparation that failed (image pull, runtime install).
+var ErrPrepare = errors.New("the computer could not be prepared")
+
 // ensurePrepared lets a machine start only on a prepared provider. It starts the
 // preparation when it has not run and reports a PreparingError while it runs.
 func (m *Manager) ensurePrepared(kind string) error {
@@ -105,7 +108,7 @@ func (m *Manager) ensurePrepared(kind string) error {
 		if err := m.StartPrepare(kind); err != nil {
 			return err
 		}
-		return errors.New("the computer could not be prepared: " + s.Error)
+		return fmt.Errorf("%w: %s", ErrPrepare, s.Error)
 	case "idle":
 		if err := m.StartPrepare(kind); err != nil {
 			return err
@@ -117,7 +120,7 @@ func (m *Manager) ensurePrepared(kind string) error {
 		case "ready":
 			return nil
 		case "failed":
-			return errors.New("the computer could not be prepared: " + m.PrepareStatusOf(kind).Error)
+			return fmt.Errorf("%w: %s", ErrPrepare, m.PrepareStatusOf(kind).Error)
 		}
 	}
 	s = m.PrepareStatusOf(kind)

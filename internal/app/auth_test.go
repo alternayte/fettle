@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -18,6 +19,10 @@ import (
 func serverApp(t *testing.T, dialect, baseURL string) (*app.App, string) {
 	t.Helper()
 	t.Setenv("FETTLE_NO_KEYCHAIN", "1")
+	// Like apptest: the host's default provider (D-15) must not run in tests.
+	if os.Getenv("FETTLE_DEFAULT_PROVIDER") == "" {
+		t.Setenv("FETTLE_DEFAULT_PROVIDER", "docker")
+	}
 	cfg := testenv.Config(t, dialect)
 	cfg.Mode, cfg.BaseURL, cfg.Version = app.ModeServer, baseURL, "test"
 	ctx := context.Background()

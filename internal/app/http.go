@@ -42,6 +42,9 @@ func (a *App) Handler() http.Handler {
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}
+	for _, x := range extensions {
+		x.Public(r)
+	}
 	// Sign-up by invite link writes the session cookie, so it is outside the API group.
 	r.Post(APIPrefix+"/invites/{token}/signup", a.inviteSignup)
 	r.Group(func(g chi.Router) {
@@ -113,6 +116,11 @@ func spa() http.Handler {
 	files := http.FileServer(http.FS(dist))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+		// An unknown API path or a write to an app route is an error, never the UI page.
+		if p == "api" || strings.HasPrefix(p, "api/") || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+			writeJSON(w, http.StatusNotFound, map[string]any{"status": http.StatusNotFound, "title": "Not Found", "detail": "No such route."})
+			return
+		}
 		if p != "" {
 			if st, err := fs.Stat(dist, p); err == nil && !st.IsDir() {
 				switch {

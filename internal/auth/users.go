@@ -70,3 +70,20 @@ func (u *UserStore) Ensure(ctx context.Context, email, name string, admin bool) 
 	}
 	return usr, err
 }
+
+// SetStatus makes an account active or disabled. The sign-in refuses a disabled account.
+func (u *UserStore) SetStatus(ctx context.Context, id uuid.UUID, status string) error {
+	return u.e.WithTx(ctx, func(ctx context.Context) error {
+		usr, err := drel.Repo(drel.MustFromContext(ctx), UserMeta).Where(Users.ID.Eq(id)).FirstOrNil(ctx)
+		if err != nil || usr == nil {
+			return err
+		}
+		usr.Status = status
+		return nil
+	})
+}
+
+// ByEmail returns the user of an address, or nil.
+func (u *UserStore) ByEmail(ctx context.Context, email string) (*User, error) {
+	return drel.NewRepository(u.e, UserMeta).Where(Users.Email.Eq(strings.ToLower(strings.TrimSpace(email)))).FirstOrNil(ctx)
+}

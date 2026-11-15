@@ -21,9 +21,11 @@ const (
 
 // Errors of the zones service.
 var (
-	ErrNotFound     = errors.New("zone not found")
-	ErrNoAllowlist  = errors.New("this provider cannot enforce a network allowlist")
-	ErrBadZone      = errors.New("a zone needs a name, a size and a network policy")
+	ErrNotFound    = errors.New("zone not found")
+	ErrNoAllowlist = errors.New("this provider cannot enforce a network allowlist")
+	ErrBadZone     = errors.New("a zone needs a name, a size and a network policy")
+	// ErrPolicy wraps a refusal of the instance Policy check.
+	ErrPolicy       = errors.New("the instance policy refuses this zone")
 	ErrGrantMissing = errors.New("this zone has no grant for that item")
 	ErrProviderOff  = errors.New("this provider is off")
 	ErrNameTaken    = errors.New("a zone with this name exists")
@@ -36,6 +38,9 @@ type Service struct {
 	// CheckProvider refuses a provider that is off, or that cannot enforce the zone's
 	// allowlist (REQ-CMP-012). A nil provider ID means the default provider.
 	CheckProvider func(ctx context.Context, providerID *uuid.UUID, allowlist bool) error
+	// Policy is an instance-wide check of a zone (an Enterprise policy pack): its network,
+	// its hosts and its provider. Nil allows every zone.
+	Policy func(ctx context.Context, in Input) error
 }
 
 // New returns the zones service.
@@ -120,6 +125,11 @@ func (s *Service) validate(ctx context.Context, in Input) error {
 	}
 	if s.CheckProvider != nil {
 		if err := s.CheckProvider(ctx, in.ProviderID, in.Network == "allowlist"); err != nil {
+			return err
+		}
+	}
+	if s.Policy != nil {
+		if err := s.Policy(ctx, in); err != nil {
 			return err
 		}
 	}

@@ -304,7 +304,7 @@ func zoneError(err error) error {
 		return huma.Error404NotFound(err.Error())
 	case errors.Is(err, zones.ErrNameTaken):
 		return huma.Error409Conflict("A zone with this name exists.")
-	case errors.Is(err, zones.ErrNoAllowlist), errors.Is(err, zones.ErrBadZone), errors.Is(err, zones.ErrProviderOff):
+	case errors.Is(err, zones.ErrNoAllowlist), errors.Is(err, zones.ErrBadZone), errors.Is(err, zones.ErrProviderOff), errors.Is(err, zones.ErrPolicy):
 		return huma.Error422UnprocessableEntity(zoneMessage(err))
 	}
 	return err
@@ -316,6 +316,8 @@ func zoneMessage(err error) string {
 		return "This provider cannot limit the network. Choose another provider, or allow all sites."
 	case errors.Is(err, zones.ErrProviderOff):
 		return "This provider is off. Turn it on first."
+	case errors.Is(err, zones.ErrPolicy):
+		return strings.TrimPrefix(err.Error(), zones.ErrPolicy.Error()+": ")
 	}
 	return err.Error()
 }

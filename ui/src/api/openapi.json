@@ -867,6 +867,24 @@
         ],
         "type": "object"
       },
+      "Create-spaceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "time_zone": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "CreateOutBody": {
         "additionalProperties": false,
         "properties": {
@@ -965,6 +983,35 @@
         },
         "required": [
           "skill_md"
+        ],
+        "type": "object"
+      },
+      "EditionView": {
+        "additionalProperties": false,
+        "properties": {
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "license": {
+            "$ref": "#/components/schemas/LicenseView"
+          },
+          "name": {
+            "enum": [
+              "community",
+              "enterprise"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "features"
         ],
         "type": "object"
       },
@@ -1214,6 +1261,28 @@
         ],
         "type": "object"
       },
+      "FeatureView": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "description": "The feature works: the build has it and the licence names it.",
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "writable": {
+            "description": "The feature can change data; false after the licence grace ends.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "available",
+          "writable"
+        ],
+        "type": "object"
+      },
       "Get-skillResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1308,6 +1377,9 @@
           "desktop_first_run": {
             "type": "boolean"
           },
+          "edition": {
+            "$ref": "#/components/schemas/EditionView"
+          },
           "mode": {
             "enum": [
               "local",
@@ -1323,7 +1395,8 @@
           "mode",
           "version",
           "desktop",
-          "desktop_first_run"
+          "desktop_first_run",
+          "edition"
         ],
         "type": "object"
       },
@@ -1378,6 +1451,43 @@
           "role",
           "expires_at",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "LicenseView": {
+        "additionalProperties": false,
+        "properties": {
+          "customer": {
+            "type": "string"
+          },
+          "days_left": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "expires": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "seats": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "missing",
+              "invalid",
+              "valid",
+              "grace",
+              "read_only"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "days_left"
         ],
         "type": "object"
       },
@@ -4087,6 +4197,37 @@
         ]
       }
     },
+    "/api/v1/admin/edition": {
+      "get": {
+        "operationId": "get-edition",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditionView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The edition of this build, its licence and the Enterprise features (instance admins)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/telemetry": {
       "get": {
         "operationId": "get-telemetry",
@@ -4764,6 +4905,47 @@
         "summary": "Remove a push subscription of the caller",
         "tags": [
           "push"
+        ]
+      }
+    },
+    "/api/v1/spaces": {
+      "post": {
+        "operationId": "create-space",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-spaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Make a new space with its primary bot; the caller becomes its owner (instance admins)",
+        "tags": [
+          "spaces"
         ]
       }
     },

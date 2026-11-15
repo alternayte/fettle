@@ -212,6 +212,29 @@ func (s *Service) SetRole(ctx context.Context, actor audit.Actor, spaceID, userI
 	})
 }
 
+// AddMember puts a person in a space with a role; a member keeps their role. A
+// group mapping of the Enterprise build uses it.
+func (s *Service) AddMember(ctx context.Context, actor audit.Actor, spaceID, userID uuid.UUID, role string) error {
+	if !validRole(role) {
+		return ErrBadRole
+	}
+	return s.e.WithTx(ctx, func(ctx context.Context) error {
+		tx := drel.MustFromContext(ctx)
+		m, err := drel.Repo(tx, SpaceMemberMeta).Where(SpaceMembers.SpaceID.Eq(spaceID)).Where(SpaceMembers.UserID.Eq(userID)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if m != nil {
+			return nil
+		}
+		drel.Repo(tx, SpaceMemberMeta).Add(&SpaceMember{SpaceID: spaceID, UserID: userID, Role: role})
+		if err := tx.SaveChanges(ctx); err != nil {
+			return err
+		}
+		return s.audit.Record(ctx, actor, &spaceID, "member.add", "user:"+userID.String(), map[string]string{"role": role})
+	})
+}
+
 // RemoveMember takes a person out of a space. A space keeps at least one owner.
 func (s *Service) RemoveMember(ctx context.Context, actor audit.Actor, spaceID, userID uuid.UUID) error {
 	return s.e.WithTx(ctx, func(ctx context.Context) error {

@@ -4,12 +4,16 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/google/uuid"
 
+	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/auth"
+	"github.com/alternayte/fettle/internal/spaces"
 )
 
 // SpaceView is a space with the caller's role.
@@ -71,12 +75,17 @@ type InstanceView struct {
 	Desktop bool   `json:"desktop" doc:"The server runs inside the desktop app."`
 	// DesktopFirstRun asks the user to choose this computer or a server (§15.3).
 	DesktopFirstRun bool `json:"desktop_first_run"`
+	// Edition is community or enterprise, with the features that work; the licence
+	// details are on the admin route.
+	Edition EditionView `json:"edition"`
 }
 
 func (a *App) registerMe(api huma.API) {
 	huma.Register(api, op("get-instance", http.MethodGet, "/instance", "The mode and the version of this server. It needs no sign-in.", "auth"), func(ctx context.Context, _ *struct{}) (*struct{ Body InstanceView }, error) {
 		v := InstanceView{Mode: string(a.Cfg.Mode), Version: a.Cfg.Version, Desktop: a.Desktop != nil}
 		v.DesktopFirstRun = a.Desktop != nil && a.Desktop.FirstRun != nil && a.Desktop.FirstRun()
+		v.Edition = a.edition(ctx)
+		v.Edition.License = nil
 		return &struct{ Body InstanceView }{Body: v}, nil
 	})
 
@@ -112,6 +121,29 @@ func (a *App) registerMe(api huma.API) {
 			return nil, err
 		}
 		return &meOut{Body: v}, nil
+	})
+
+	huma.Register(api, op("create-space", http.MethodPost, "/spaces", "Make a new space with its primary bot; the caller becomes its owner (instance admins)", "spaces"), func(ctx context.Context, in *struct {
+		Body struct {
+			Name     string `json:"name" minLength:"1" maxLength:"80"`
+			TimeZone string `json:"time_zone,omitempty" maxLength:"64"`
+		}
+	}) (*spaceOut, error) {
+		p := auth.From(ctx)
+		if p == nil || !p.IsAdmin {
+			return nil, huma.Error403Forbidden("Only an instance admin can make a space.")
+		}
+		tz := strings.TrimSpace(in.Body.TimeZone)
+		if tz != "" {
+			if _, err := time.LoadLocation(tz); err != nil {
+				return nil, huma.Error422UnprocessableEntity("Use a time zone name such as Europe/Berlin.")
+			}
+		}
+		sp, err := a.CreateSpace(ctx, audit.Actor{Kind: "user", ID: p.UserID.String()}, strings.TrimSpace(in.Body.Name), tz, p.UserID)
+		if err != nil {
+			return nil, apiError(err)
+		}
+		return &spaceOut{Body: SpaceView{ID: sp.ID().String(), Name: sp.Name, TimeZone: sp.TimeZone, Role: spaces.RoleOwner}}, nil
 	})
 
 	huma.Register(api, op("get-space", http.MethodGet, "/spaces/{space}", "A space", "spaces"), func(ctx context.Context, in *SpacePath) (*spaceOut, error) {

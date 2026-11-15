@@ -47,6 +47,15 @@ func TestSCN_POL_004_RulePrecedence(t *testing.T) {
 	if Decide(ModeAsk, []*Rule{r}, Request{Tool: "send_email", Class: envelopes.ClassSend, Recipient: "x@evil.test"}).Effect != Card {
 		t.Fatal("recipient pattern matched another domain")
 	}
+	// A bare tool name matches that tool on every connector; a prefixed name only its own.
+	b := &Rule{Effect: "block", Tool: "send_email"}
+	b.SetID(uuid.New())
+	if Decide(ModeAuto, []*Rule{b}, Request{Tool: "fakemail__send_email", Connector: "fakemail", Class: envelopes.ClassSend}).Effect != Block {
+		t.Fatal("a bare tool rule did not match the connector tool")
+	}
+	if Decide(ModeAuto, []*Rule{{Effect: "block", Tool: "other__send_email"}}, Request{Tool: "fakemail__send_email", Class: envelopes.ClassSend}).Effect == Block {
+		t.Fatal("a rule of another connector matched")
+	}
 	s := &Rule{Effect: "block", SitePattern: "*.evil.test"}
 	s.SetID(uuid.New())
 	if Decide(ModeNever, []*Rule{s}, Request{Tool: "browser_act", Class: envelopes.ClassWriteExternal, Site: "https://www.evil.test/form"}).Effect != Block {

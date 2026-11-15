@@ -49,8 +49,9 @@ desktop: ui
     FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags desktopsmoke -timeout 20m ./tests/desktop/
 
 # recipe: smoke
-# Layer S: the server image, the Compose stack and install.sh in a Debian container with systemd.
+# Layer S: a goreleaser snapshot, the server image, the Compose stack and install.sh in a Debian container with systemd.
 smoke:
+    goreleaser release --snapshot --clean --skip=publish
     FETTLE_REPORT_DIR=$(pwd)/{{reports}} go test -count=1 -tags smoke -timeout 30m ./tests/smoke/
 
 # recipe: dev
@@ -87,14 +88,15 @@ fmt:
 # recipe: fmt-check
 # Fail when Go or UI code is not formatted.
 fmt-check:
-    test -z "$(gofmt -l cmd internal tools tests ui/embed.go)"
-    test -z "$(goimports -l -local github.com/alternayte/fettle cmd internal tools tests | grep -v -e '_drel.go$' -e '_gen.go$')"
+    test -z "$(gofmt -l cmd ee internal tools tests ui/embed.go)"
+    test -z "$(goimports -l -local github.com/alternayte/fettle cmd ee internal tools tests | grep -v -e '_drel.go$' -e '_gen.go$')"
     cd ui && bunx prettier --check src scripts
 
 # recipe: lint
 # Linters, type check, copy lint, forbidden words, licences and repository checks.
 lint:
     golangci-lint run ./...
+    golangci-lint run --build-tags ee ./ee/... ./cmd/fettle/
     cd ui && bunx eslint . && bunx tsc -b --noEmit && bun scripts/copylint.ts
     scripts/forbid.sh
     go run ./tools/licensecheck ui
@@ -107,6 +109,7 @@ test:
     set -euo pipefail
     go build -o bin/fettle-agentd ./cmd/fettle-agentd
     FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -race -count=1 ./...
+    go test -race -count=1 -tags ee ./ee/... ./internal/app/
     # The overhead step: the idle memory scenario waits 10 minutes beside the load scenarios.
     go test -count=1 -timeout 15m -run 'TestSCN_UX_012' ./cmd/fettle/ & idle=$!
     FETTLE_AGENTD_BIN=$(pwd)/bin/fettle-agentd go test -count=1 -run 'TestSCN_RUN_009|TestSCN_RUN_010' ./internal/agent/
@@ -121,6 +124,8 @@ contract:
     files=$(grep -rl --include='*_test.go' '^//go:build contract' internal tests cmd agentd 2>/dev/null || true)
     names=$(grep -h '^func Test' $files | sed -E 's/^func (Test[A-Za-z0-9_]+).*/\1/' | paste -sd'|' -)
     go test -race -count=1 -tags contract -run "^(${names})$" ./...
+    # The Enterprise contract scenarios need the ee build tag as well.
+    go test -race -count=1 -tags 'ee contract' -run '^TestSCN_EE_' ./ee/
 
 # recipe: image
 # Build the computer image fettle-computer:dev for this host's Docker.
@@ -133,6 +138,7 @@ e2e: build image
     go build -tags fakes -o bin/fettle-fakes ./cmd/fettle
     GOOS=linux GOARCH=$(docker version -f '{{{{.Server.Arch}}') CGO_ENABLED=0 go build -tags fakes -o bin/linux/fettle-fakes ./cmd/fettle
     go test -count=1 -tags e2e ./tests/flows/...
+    go test -count=1 -tags 'e2e ee' -run '^TestSCN_EE_' ./tests/flows/
     cd tests/e2e && FETTLE_BIN=../../bin/fettle FETTLE_FAKES_BIN=../../bin/fettle-fakes FETTLE_REPORT_DIR=$(cd ../.. && pwd)/{{reports}} bunx playwright test
 
 # recipe: providers
@@ -143,7 +149,7 @@ providers: image
 
 # recipe: ci
 # The gate (grows by slice, D-105).
-ci: gen-check fmt-check lint test contract e2e providers
+ci: gen-check fmt-check lint test contract e2e providers smoke
 
 # recipe: check
 # The owner's gate name; runs the same recipes as ci (D-101).

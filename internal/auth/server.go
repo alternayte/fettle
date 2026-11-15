@@ -189,3 +189,37 @@ func PublicError(err error) (int, string, bool) {
 	}
 	return 0, "", false
 }
+
+// Users is the store of Fettle users.
+func (s *Server) Users() *UserStore { return s.users }
+
+// Provision creates an account without a password (provisioning such as SCIM); the person
+// signs in with single sign-on or sets a password. An existing account is returned.
+func (s *Server) Provision(ctx context.Context, email, name string) (*User, error) {
+	if _, err := s.Auth.GetUserByEmail(ctx, email); err != nil {
+		if _, err := s.Auth.CreateUser(ctx, authall.CreateUserInput{Email: email, DisplayName: name, EmailVerified: true}); err != nil {
+			return nil, err
+		}
+	}
+	return s.users.Ensure(ctx, email, name, false)
+}
+
+// SetActive enables or disables an account. Disabling it ends its sessions.
+func (s *Server) SetActive(ctx context.Context, u *User, active bool) error {
+	status := "active"
+	if !active {
+		status = "disabled"
+	}
+	if err := s.users.SetStatus(ctx, u.ID(), status); err != nil {
+		return err
+	}
+	if active {
+		return nil
+	}
+	au, err := s.Auth.GetUserByEmail(ctx, u.Email)
+	if err != nil {
+		return nil
+	}
+	_, err = s.Auth.RevokeUserSessions(ctx, au.ID)
+	return err
+}

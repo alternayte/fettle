@@ -906,6 +906,13 @@ func (x *exec) checkBudget(ctx context.Context, estimate float64) (bool, error) 
 				}
 			}
 		}
+		if scope == "" && a.OrgBudget != nil {
+			user := ""
+			if x.env.Requester.Type == "user" {
+				user = x.env.Requester.ID
+			}
+			scope, left = a.OrgBudget(ctx, x.run.SpaceID, user, estimate)
+		}
 	}
 	if scope == "" {
 		return false, nil

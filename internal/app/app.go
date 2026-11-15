@@ -170,6 +170,9 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.registerSelfTools()
 	a.registerChanges()
 	a.registerPrimaryChange()
+	if err := a.installExtensions(); err != nil {
+		return nil, err
+	}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})
 	river.AddWorker(workers, &maintenanceWorker{a: a})
