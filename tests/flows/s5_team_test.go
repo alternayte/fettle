@@ -3,12 +3,16 @@
 package flows
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/alternayte/fettle/internal/apptest"
+	"github.com/alternayte/fettle/internal/computers"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 	"github.com/alternayte/fettle/internal/fakes/web"
 )
@@ -366,5 +370,76 @@ func TestSCN_TEAM_008_HandoffWaitFilesAndLoopGuard(t *testing.T) {
 	r = e.WaitRun(run, "done", "failed", "escalated")
 	if res := toolResults(r, "handoff"); len(res) != 1 || !strings.Contains(res[0], "No hops are left") {
 		t.Fatalf("hops 0: %v", res)
+	}
+}
+
+func TestSCN_TEAM_004_ForkedDiffsMergeAndConflict(t *testing.T) {
+	e := dockerApp(t)
+	var writer apptest.Bot
+	e.MustDo("POST", e.SP("/bots"), map[string]any{"name": "Writer", "job": "Edits notes", "zone_id": zoneID(e, "personal")}, &writer)
+	e.MustDo("PATCH", e.SP("/bots/%s", writer.ID), map[string]any{"name": "Writer", "job": "Edits notes", "instructions": "[[script:writer]]"}, nil)
+	add := func(name string, m fakemodel.Match, steps ...fakemodel.Step) {
+		e.Fake.AddScript(fakemodel.Script{Name: name, Match: m, Steps: steps})
+	}
+	write := func(path, content string) fakemodel.Step {
+		return fakemodel.Step{ToolCalls: call("write_file", map[string]any{"path": path, "content": content})}
+	}
+	add("seed", fakemodel.Match{System: "[[script:writer]]", User: "[[seed]]"}, write("a.txt", "base A"), write("b.txt", "base B"), fakemodel.Step{Text: "Seeded."})
+	run, _ := e.Post(writer.ChatID, "[[seed]] Make the two notes.")
+	if r := e.WaitRun(run, "done", "failed", "escalated"); r.Line.State != "done" {
+		t.Fatalf("seed: %s", r.EventTypes())
+	}
+
+	parts := []map[string]any{
+		{"goal": "[[fork-1]] Rewrite a.txt.", "acceptance": "a.txt is new.", "needs": "write_local"},
+		{"goal": "[[fork-2]] Rewrite b.txt.", "acceptance": "b.txt is new.", "needs": "write_local"},
+		{"goal": "[[fork-3]] Also rewrite a.txt.", "acceptance": "a.txt is new.", "needs": "write_local"},
+	}
+	add("route-fork", fakemodel.Match{System: "You route one piece of work", User: "[[fork]]"}, fakemodel.Step{JSON: map[string]any{"step": "forked", "owner_bot_id": "", "parts": parts, "rationale": "three file edits", "confidence": 0.9}})
+	report := fakemodel.Step{ToolCalls: call("report_result", map[string]any{"summary": "Rewrote the file.", "findings": []map[string]any{}})}
+	add("h1", fakemodel.Match{System: "You are a helper", User: "[[fork-1]]"}, write("a.txt", "A from helper one"), report)
+	add("h2", fakemodel.Match{System: "You are a helper", User: "[[fork-2]]"}, write("b.txt", "B from helper two"), report)
+	add("h3", fakemodel.Match{System: "You are a helper", User: "[[fork-3]]"}, write("a.txt", "A from helper three"), report)
+	add("resolve", fakemodel.Match{System: "[[script:writer]]", User: "Result of merging your helpers' files"}, write("a.txt", "A resolved by the owner"), fakemodel.Step{Text: "Merged the notes."})
+	run, _ = e.Post(writer.ChatID, "[[fork]] Rewrite both notes in parallel.")
+	r := e.WaitRun(run, "done", "failed", "escalated")
+	if d := routeOf(t, r); d.Step != "forked" {
+		t.Fatalf("route %+v", d)
+	}
+	var merge struct {
+		Applied   []string `json:"applied"`
+		Conflicts []struct {
+			Path     string `json:"path"`
+			Versions []struct {
+				Content string `json:"content"`
+			} `json:"versions"`
+		} `json:"conflicts"`
+	}
+	for _, ev := range r.Events {
+		if ev.Type == "merge_result" {
+			_ = json.Unmarshal(ev.Data, &merge)
+		}
+	}
+	if len(merge.Applied) != 1 || merge.Applied[0] != "home/b.txt" || len(merge.Conflicts) != 1 || merge.Conflicts[0].Path != "home/a.txt" || len(merge.Conflicts[0].Versions) != 2 {
+		t.Fatalf("merge %+v: %s", merge, r.EventTypes())
+	}
+	if r.Line.State != "done" {
+		t.Fatalf("run %s: %s", r.Line.State, r.EventTypes())
+	}
+	read := func(name string) string {
+		ctx := context.Background()
+		l, err := e.App.Computers.Acquire(ctx, uuid.MustParse(zoneID(e, "personal")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer l.Release()
+		b, err := l.Client.ReadFile(ctx, computers.BotHome(uuid.MustParse(writer.ID))+"/"+name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSpace(string(b))
+	}
+	if a, b := read("a.txt"), read("b.txt"); a != "A resolved by the owner" || b != "B from helper two" {
+		t.Fatalf("workspace a=%q b=%q", a, b)
 	}
 }

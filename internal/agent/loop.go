@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -189,7 +190,7 @@ func (x *exec) loop(ctx context.Context) error {
 		if x.run.Kind == "verifier" {
 			return x.runVerifier(ctx, st)
 		}
-		if x.run.Kind == "owner" && st.step == "fanout" && !st.subStarted {
+		if x.run.Kind == "owner" && (st.step == "fanout" || st.step == "forked") && !st.subStarted {
 			if err := x.startFanout(ctx, st); err != nil {
 				return err
 			}
@@ -197,6 +198,12 @@ func (x *exec) loop(ctx context.Context) error {
 		}
 		if st.subStarted && len(st.subResults) < len(st.subRuns) {
 			return x.wait(ctx, "subagents")
+		}
+		if x.run.Kind == "owner" && st.step == "forked" && st.subStarted && !st.merged {
+			if err := x.merge(ctx, st); err != nil {
+				return err
+			}
+			continue
 		}
 		if x.run.Kind == "owner" && st.step == "handoff" && x.env.Decision.Route != nil {
 			// The router gave the whole work to another bot: hand it off and wait (§9.2).
@@ -271,6 +278,7 @@ func (x *exec) park(ctx context.Context, status, reason string) error {
 // finish appends run_finished and ends the envelope.
 func (x *exec) finish(ctx context.Context, st *state, status, summary string) error {
 	a := x.a
+	x.forkFinish(ctx)
 	envStatus := map[string]string{runs.StatusDone: "done", runs.StatusFailed: "failed", runs.StatusCancelled: "cancelled", runs.StatusEscalated: "escalated"}[status]
 	err := a.E.WithTx(ctx, func(ctx context.Context) error {
 		if _, err := x.append(ctx, &runs.Update{Status: strp(status), Finished: status != runs.StatusEscalated}, runs.New{Type: runs.EvRunFinished, Data: evFinished{Status: status, Summary: truncate(summary, 2000)}}); err != nil {
@@ -599,8 +607,9 @@ func (x *exec) fail(ctx context.Context, st *state, userText string, cause error
 func (x *exec) tools(ctx context.Context) []Tool {
 	sub := x.run.Kind == "subagent"
 	var out []Tool
-	for _, t := range x.a.Tools.For(x.env.Capabilities, sub) {
-		if (sub && t.NoSubagent) || (!sub && t.SubagentOnly) {
+	for _, n := range x.a.Tools.Names() {
+		t, _ := x.a.Tools.Get(n)
+		if !x.allowed(t.Class) || (sub && t.NoSubagent) || (!sub && t.SubagentOnly) {
 			continue
 		}
 		out = append(out, t)
@@ -611,7 +620,7 @@ func (x *exec) tools(ctx context.Context) []Tool {
 			x.a.Log.Warn("connector tools unavailable", "bot", x.run.BotID, "error", x.a.Vault.Redactor.Global(err.Error()))
 		}
 		for _, t := range dyn {
-			if Allowed(x.env.Capabilities, sub, t.Class) {
+			if x.allowed(t.Class) {
 				out = append(out, t)
 			}
 		}
@@ -648,10 +657,10 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 	if call.Name == "request_takeover" {
 		return x.requestTakeover(ctx, st, call)
 	}
-	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}, Subagent: x.run.Kind == "subagent"}
+	env := &ToolEnv{SpaceID: x.run.SpaceID, BotID: x.run.BotID, RunID: x.run.ID(), ChatID: x.env.ChatID, Actor: audit.Actor{Kind: "bot", ID: x.run.BotID.String()}, Origin: x.env.Origin, ReadData: st.readData, Seq: st.lastSeq + 1, Checked: map[string]string{}, Subagent: x.run.Kind == "subagent", Fork: x.forkRun()}
 	// The computer comes first: a full host makes the run wait before any card, and
 	// ClassOf may need the computer to see what the call touches.
-	if tool.NeedsComputer && a.Computer != nil {
+	if tool.NeedsComputer && a.Computer != nil && !x.forkRun() {
 		if err := a.Computer(ctx, x.run.SpaceID, x.run.BotID); err != nil {
 			if errors.Is(err, ErrNoComputer) {
 				return x.waitForComputer(ctx, st)
@@ -676,7 +685,7 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		defer release()
 	}
 	class := tool.classOf(ctx, env, call.Args)
-	if !Allowed(x.env.Capabilities, x.run.Kind == "subagent", class) {
+	if !x.allowed(class) {
 		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Class: class, Args: call.Args, Error: "This action is of class " + class + ", which this work may not use."}})
 		return err
 	}
@@ -983,4 +992,18 @@ func (x *exec) attachments(ctx context.Context) []chats.Attachment {
 		return nil
 	}
 	return m.Attachments
+}
+
+// forkRun reports a forked sub-agent, which works on its own fork (§9.4).
+func (x *exec) forkRun() bool {
+	return x.run.Kind == "subagent" && x.env.Step != nil && *x.env.Step == "forked"
+}
+
+// allowed applies the envelope's capabilities and the sub-agent limits: fanout helpers
+// read only; forked helpers read and write local files in their fork (SI-09).
+func (x *exec) allowed(class string) bool {
+	if x.forkRun() {
+		return (class == envelopes.ClassRead || class == envelopes.ClassWriteLocal) && slices.Contains(x.env.Capabilities, class)
+	}
+	return Allowed(x.env.Capabilities, x.run.Kind == "subagent", class)
 }

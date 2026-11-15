@@ -127,6 +127,7 @@ func (a *App) setupComputers(ctx context.Context) {
 		return nil
 	}
 	a.Agent.Checker = a.checker
+	a.Agent.Forker = forker{a: a}
 	a.Agent.DeliverAttachments = func(ctx context.Context, spaceID, botID uuid.UUID, atts []chats.Attachment) error {
 		b, err := a.Bots.Get(ctx, spaceID, botID)
 		if err != nil || b.ZoneID == nil {

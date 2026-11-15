@@ -3,8 +3,11 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/models"
@@ -31,6 +34,8 @@ type (
 	evSubStarted struct {
 		Brief string       `json:"brief"`
 		Runs  []evSubStart `json:"runs"`
+		// Base is the manifest of the forks when they started (forked step).
+		Base map[string]string `json:"base,omitempty"`
 	}
 	evSubStart struct {
 		RunID      string `json:"run_id"`
@@ -65,8 +70,25 @@ func (a *Agent) registerSubagentTools() {
 	})
 }
 
+// Forker makes the forks of forked sub-agents and turns their work into diffs. Paths are
+// "home/<path>" for the bot home and "shared/<path>" for the zone's shared folder.
+type Forker interface {
+	// Start forks the zone computer of a bot for one sub-agent run and returns the
+	// manifest (path to hash) of the fork.
+	Start(ctx context.Context, spaceID, botID, runID uuid.UUID) (map[string]string, error)
+	// Finish returns the diff of the fork against base and destroys the fork.
+	Finish(ctx context.Context, botID, runID uuid.UUID, base map[string]string) ([]FileDiff, error)
+	// Current returns the manifest of the bot's zone computer now.
+	Current(ctx context.Context, spaceID, botID uuid.UUID) (map[string]string, error)
+	// Apply writes or deletes one file of a diff on the bot's zone computer.
+	Apply(ctx context.Context, spaceID, botID uuid.UUID, d FileDiff) error
+	// Drop destroys the fork of a run that never started.
+	Drop(ctx context.Context, runID uuid.UUID)
+}
+
 // startFanout writes the context brief, starts one sub-agent run per part and parks the
-// owner run until each sub-agent reports (§9.2, §9.4).
+// owner run until each sub-agent reports (§9.2, §9.4). A forked step gives each sub-agent
+// a fork of the zone computer and write_local tools in it.
 func (x *exec) startFanout(ctx context.Context, st *state) error {
 	a := x.a
 	var parts []envelopes.Part
@@ -86,9 +108,36 @@ func (x *exec) startFanout(ctx context.Context, st *state) error {
 	// The owner keeps one share for the synthesis.
 	share := envelopes.Budget{USD: left / float64(n+1), Tokens: x.env.Budget.Tokens / int64(n+1), WallMS: x.env.Budget.WallMS}
 	ev := evSubStarted{Brief: brief}
+	step := st.step
+	caps := []string{envelopes.ClassRead}
+	if step == "forked" {
+		caps = []string{envelopes.ClassRead, envelopes.ClassWriteLocal}
+	}
+	// Forks start before the transaction, so each run ID has its fork when it runs.
+	runIDs := make([]uuid.UUID, len(parts))
+	bases := make([]map[string]string, len(parts))
+	for i := range parts {
+		runIDs[i] = uuid.Must(uuid.NewV7())
+		if step != "forked" {
+			continue
+		}
+		if a.Forker == nil {
+			return errors.New("this server cannot fork computers")
+		}
+		base, err := a.Forker.Start(ctx, x.run.SpaceID, x.run.BotID, runIDs[i])
+		if err != nil {
+			for _, id := range runIDs[:i] {
+				a.Forker.Drop(ctx, id)
+			}
+			return fmt.Errorf("fork the computer: %w", err)
+		}
+		bases[i] = base
+		if ev.Base == nil {
+			ev.Base = base
+		}
+	}
 	err = a.E.WithTx(ctx, func(ctx context.Context) error {
 		parent := &envelopes.Remainder{Budget: envelopes.Budget{USD: left, Tokens: x.env.Budget.Tokens, WallMS: x.env.Budget.WallMS, HopsRemaining: x.env.Budget.HopsRemaining, MaxSubagents: x.env.Budget.MaxSubagents}, Capabilities: x.env.Capabilities, SpaceID: x.run.SpaceID}
-		step := "fanout"
 		for i, p := range parts {
 			check := envelopes.Check{Kind: "llm", Spec: strings.TrimSpace(p.Acceptance)}
 			if check.Spec == "" {
@@ -97,14 +146,15 @@ func (x *exec) startFanout(ctx context.Context, st *state) error {
 			child := &envelopes.Envelope{
 				ParentID: ptr(x.env.ID()), RootID: x.env.RootID, SpaceID: x.run.SpaceID, Kind: "part", Origin: x.env.Origin,
 				Requester: envelopes.Requester{Type: "bot", ID: x.run.BotID.String()}, OwnerBotID: ptr(x.run.BotID),
-				Goal: p.Goal, Acceptance: []envelopes.Check{check}, Capabilities: []string{envelopes.ClassRead},
+				Goal: p.Goal, Acceptance: []envelopes.Check{check}, Capabilities: caps,
 				Budget: share, Step: &step, IdempotencyKey: fmt.Sprintf("%s:part:%d", x.run.ID(), i),
-				Decision: envelopes.Decision{Brief: brief},
+				Decision: envelopes.Decision{Brief: brief, ForkBase: bases[i]},
 			}
 			if err := a.Envelopes.Create(ctx, child, parent); err != nil {
 				return err
 			}
 			r := &runs.Run{SpaceID: x.run.SpaceID, EnvelopeID: child.ID(), BotID: x.run.BotID, ParentRunID: ptr(x.run.ID()), Kind: "subagent"}
+			r.SetID(runIDs[i])
 			if err := a.Runs.Create(ctx, r, x.queue); err != nil {
 				return err
 			}
@@ -114,6 +164,11 @@ func (x *exec) startFanout(ctx context.Context, st *state) error {
 		return err
 	})
 	if err != nil {
+		for _, id := range runIDs {
+			if step == "forked" {
+				a.Forker.Drop(ctx, id)
+			}
+		}
 		return err
 	}
 	a.publishRun(ctx, x.run.ID())

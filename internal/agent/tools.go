@@ -76,6 +76,8 @@ type ToolEnv struct {
 	Checked map[string]string
 	// Subagent is set for a sub-agent run, which has its own ephemeral browser context.
 	Subagent bool
+	// Fork is set for a forked sub-agent: its tools act on its fork of the zone computer.
+	Fork bool
 }
 
 // Registry holds the built-in tools.

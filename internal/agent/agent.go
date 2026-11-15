@@ -46,6 +46,8 @@ type Agent struct {
 	// Hire creates the bots of an allowed proposal card: bots, paused routines, skills and
 	// grant cards (§9.8).
 	Hire func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, list []Proposal) error
+	// Forker makes and ends the forks of forked sub-agents (§9.4).
+	Forker Forker
 	// DeliverAttachments copies the attachments of a user message into a bot's home at
 	// attachments/<id>/<name>.
 	DeliverAttachments func(ctx context.Context, spaceID, botID uuid.UUID, atts []chats.Attachment) error

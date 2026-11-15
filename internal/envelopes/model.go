@@ -78,6 +78,8 @@ type Decision struct {
 	FromRun  string `json:"from_run,omitempty"`
 	FromCall string `json:"from_call,omitempty"`
 	Wait     bool   `json:"wait,omitempty"`
+	// ForkBase is the manifest (path to hash) of a forked part's fork when it started.
+	ForkBase map[string]string `json:"fork_base,omitempty"`
 }
 
 // Envelope is one unit of work (Appendix C).

@@ -125,6 +125,8 @@ type state struct {
 	notes          []string // results from other bots since the last model turn
 	handoffs       map[string]evHandoffSent
 	handoffResults map[string]evHandoffResult
+	forkBase       map[string]string
+	merged         bool
 	subStarted     bool
 	subRuns        []evSubStart
 	subResults     map[string]evSubResult
@@ -249,6 +251,11 @@ func rebuild(evs []*runs.RunEvent) *state {
 			var d evHandoffResult
 			_ = json.Unmarshal([]byte(ev.Data), &d)
 			st.handoffResults[d.CallID] = d
+		case runs.EvMergeResult:
+			var d evMerge
+			_ = json.Unmarshal([]byte(ev.Data), &d)
+			st.merged = true
+			st.turns = append(st.turns, TurnRecord{Seq: ev.Seq, Kind: "merge", Text: renderMerge(d), Origin: OriginTool})
 		case runs.EvVerifyStarted:
 			st.verifyStarted++
 		case runs.EvVerifyResult:
@@ -268,7 +275,7 @@ func rebuild(evs []*runs.RunEvent) *state {
 		case runs.EvSubagentsStarted:
 			var d evSubStarted
 			_ = json.Unmarshal([]byte(ev.Data), &d)
-			st.subStarted, st.subRuns = true, d.Runs
+			st.subStarted, st.subRuns, st.forkBase = true, d.Runs, d.Base
 		case runs.EvSubagentResult:
 			var d evSubResult
 			_ = json.Unmarshal([]byte(ev.Data), &d)

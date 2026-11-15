@@ -69,6 +69,7 @@ type Manager struct {
 	mu       sync.Mutex
 	live     map[uuid.UUID]*live // by computer ID; tokens live only in memory (SI-02)
 	creating map[uuid.UUID]chan struct{}
+	forks    map[uuid.UUID]*Fork // by sub-agent run ID
 }
 
 type live struct {
@@ -110,7 +111,7 @@ type Lease struct {
 
 // Release ends the lease.
 func (l *Lease) Release() {
-	if l.released {
+	if l.released || l.m == nil {
 		return
 	}
 	l.released = true
@@ -949,4 +950,44 @@ func (m *Manager) DeleteBotHome(ctx context.Context, botID uuid.UUID, zoneID *uu
 	defer l.Release()
 	_, err = l.Client.Exec(ctx, client.ExecRequest{Argv: []string{"rm", "-rf", BotHome(botID)}, TimeoutMS: 60000}, func(string, string) {})
 	return err
+}
+
+// AddFork keeps a fork for a sub-agent run until DropFork.
+func (m *Manager) AddFork(runID uuid.UUID, f *Fork) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.forks == nil {
+		m.forks = map[uuid.UUID]*Fork{}
+	}
+	m.forks[runID] = f
+}
+
+// ForkOf returns the fork of a sub-agent run.
+func (m *Manager) ForkOf(runID uuid.UUID) (*Fork, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	f, ok := m.forks[runID]
+	return f, ok
+}
+
+// ForkLease is a lease on the fork of a sub-agent run, for its tools. Releasing it does
+// nothing; DropFork ends the fork.
+func (m *Manager) ForkLease(runID uuid.UUID) (*Lease, bool) {
+	f, ok := m.ForkOf(runID)
+	if !ok {
+		return nil, false
+	}
+	return &Lease{ZoneID: f.ZoneID, Client: f.Client}, true
+}
+
+// DropFork destroys the fork of a sub-agent run.
+func (m *Manager) DropFork(ctx context.Context, runID uuid.UUID) error {
+	m.mu.Lock()
+	f, ok := m.forks[runID]
+	delete(m.forks, runID)
+	m.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return f.Destroy(ctx)
 }

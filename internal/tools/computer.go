@@ -33,6 +33,13 @@ var ErrNoZone = errors.New("this bot has no zone, so it has no computer")
 
 // lease acquires the computer of the bot's zone and prepares the bot home.
 func (c *Computer) lease(ctx context.Context, env *agent.ToolEnv) (*computers.Lease, string, error) {
+	if env.Fork {
+		l, ok := c.Computers.ForkLease(env.RunID)
+		if !ok {
+			return nil, "", errors.New("the fork of this helper is gone; report what you have")
+		}
+		return l, computers.BotHome(env.BotID), nil
+	}
 	b, err := c.Bots.Get(ctx, env.SpaceID, env.BotID)
 	if err != nil {
 		return nil, "", err

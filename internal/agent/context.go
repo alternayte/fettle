@@ -228,6 +228,8 @@ func Assemble(in Input) Context {
 		switch t.Kind {
 		case "summary":
 			add(Item{Section: SecRunEvents, Name: "summary", Origin: OriginSystem, Role: "user", Text: "Summary of your earlier steps in this run:\n" + t.Text})
+		case "merge":
+			add(Item{Section: SecRunEvents, Name: "merge", Origin: OriginTool, Role: "user", Text: "Result of merging your helpers' files:\n" + dataTag(OriginTool, "merge", t.Text)})
 		case "verify":
 			add(Item{Section: SecRunEvents, Name: "verify", Origin: OriginSystem, Role: "user", Text: "The verifier did not accept your result. Fix these problems, then give the whole result again:\n" + t.Text})
 		case "helper":
