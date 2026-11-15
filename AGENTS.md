@@ -15,7 +15,7 @@ One Go binary, fettle, is the server, the CLI and the desktop backend. A second 
 ## Test
 - `just ci` is the gate; `just check` runs the same recipes.
 - `just test` runs unit and integration tests on SQLite and on PostgreSQL in a testcontainer, so Docker must run. The load and overhead scenarios run in a second step without the race detector.
-- `just contract` runs tests tagged contract; `just e2e` builds the binaries and the computer image, runs the fixture sites in Docker, and runs tests/flows and the Playwright suite in tests/e2e.
+- `just contract` runs tests tagged contract; they start MinIO and Skael containers, so Docker must run. `just e2e` builds the binaries and the computer image, runs the fixture sites in Docker, and runs tests/flows and the Playwright suite in tests/e2e.
 - `just providers` runs the provider conformance suite on this host and writes its results to the reports folder.
 - Storage tests use `internal/testenv/testenv.go`; app-level tests use `internal/apptest/apptest.go` with the fake model in `internal/fakes/model`.
 - `checks/agents-md.sh` checks this file.
