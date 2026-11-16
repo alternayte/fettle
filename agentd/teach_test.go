@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -23,9 +22,6 @@ import (
 // The teach terminal records each command with its folder, exit code and output, and
 // keeps no input that the person typed while echo was off (SCN-TCH-002, the terminal part).
 func TestTeachTerminalRecordsCommandsButNotHiddenInput(t *testing.T) {
-	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skip("no bash on this host")
-	}
 	home, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
