@@ -132,7 +132,7 @@
           "name": "role",
           "type": "text",
           "notNull": true,
-          "check": "role IN ('router','owner','verifier','computer_use','summarizer')"
+          "check": "role IN ('router','owner','verifier','computer_use','summarizer','transcribe')"
         },
         {
           "name": "targets",

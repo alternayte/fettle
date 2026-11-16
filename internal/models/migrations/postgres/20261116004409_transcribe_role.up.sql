@@ -1,0 +1,2 @@
+ALTER TABLE "model_roles" DROP CONSTRAINT IF EXISTS "chk_model_roles_role";
+ALTER TABLE "model_roles" ADD CONSTRAINT "chk_model_roles_role" CHECK (role IN ('router','owner','verifier','computer_use','summarizer','transcribe'));

@@ -58,8 +58,10 @@ Each role has an ordered list of models.
 | `verifier` | Checks a result against the acceptance checks of its envelope. |
 | `computer_use` | Uses the screen of a computer. |
 | `summarizer` | Makes long runs shorter. |
+| `transcribe` | Turns spoken teach notes into text. |
 
-A role without a model uses the owner models.
+A role without a model uses the owner models. The `transcribe` role is the exception: without a model, it has no model, and the teach view shows no microphone.
+The `transcribe` role needs an OpenAI-compatible provider, because Fettle calls its `/audio/transcriptions` endpoint from the server.
 Bots cannot work until the owner role has a model.
 A bot can override a role. Open the settings page of the bot and go to **Models**. Pick a model for the role, then select **Use for this bot**. **Use the space models** removes the override. In the API, `PUT /api/v1/spaces/{space}/model-roles/{role}` with `bot_id` sets it, and an empty list removes it.
 

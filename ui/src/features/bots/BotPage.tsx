@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { CircleAlert, History, MessageSquare, Monitor } from "lucide-react";
+import { CircleAlert, GraduationCap, History, MessageSquare, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
@@ -28,6 +28,7 @@ import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import { BotMark } from "@/features/chat/BotMark";
 import { ModelRoles } from "@/features/settings/ModelsPage";
 import { NativeSelect } from "@/features/settings/ProviderForm";
+import { TeachDialog } from "@/features/teach/TeachDialog";
 import { t } from "@/lib/copy";
 import { formatClock, formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -307,6 +308,22 @@ function Computer({ bot }: { bot: SchemaBotView }) {
       ) : (
         <p className="text-xs text-ink-faint">{t("botPage.noScreen")}</p>
       )}
+      <TeachButton botId={bot.id} botName={bot.name} />
+    </div>
+  );
+}
+
+/** TeachButton starts teaching the bot a task on its screen (§13.3). */
+function TeachButton({ botId, botName }: { botId: string; botName: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-1">
+      <Btn size="sm" onClick={() => setOpen(true)}>
+        <GraduationCap aria-hidden className="size-3.5" />
+        {t("teach.action")}
+      </Btn>
+      <p className="text-xs text-ink-faint">{t("botPage.teachHint", { bot: botName })}</p>
+      {open && <TeachDialog botId={botId} botName={botName} open={open} onOpenChange={setOpen} />}
     </div>
   );
 }

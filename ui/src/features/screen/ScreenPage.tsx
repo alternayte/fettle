@@ -1,52 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { CircleAlert, Hand, Monitor, X } from "lucide-react";
 import { toast } from "sonner";
-import RFB from "@novnc/novnc/lib/rfb";
 import { errorText } from "@/api/client";
 import { useBot, useControlScreen, useOpenScreen, useScreenDone } from "@/api/hooks";
 import { Btn, inputCls } from "@/components/form";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
-
-type Mode = { token: string; control: boolean };
-
-function streamURL(token: string): string {
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}/api/v1/screen/stream?t=${encodeURIComponent(token)}`;
-}
-
-/** Stream shows one VNC stream. A new mode makes a new connection. */
-function Stream({ mode, onLost }: { mode: Mode; onLost: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    const rfb = new RFB(ref.current, streamURL(mode.token), { wsProtocols: ["binary"], shared: true });
-    rfb.viewOnly = !mode.control;
-    rfb.scaleViewport = true;
-    rfb.resizeSession = false;
-    rfb.background = "transparent";
-    let closing = false;
-    const lost = () => {
-      if (!closing) onLost();
-    };
-    rfb.addEventListener("disconnect", lost);
-    if (mode.control) rfb.focus();
-    return () => {
-      closing = true;
-      rfb.removeEventListener("disconnect", lost);
-      rfb.disconnect();
-    };
-  }, [mode, onLost]);
-  return (
-    <div
-      ref={ref}
-      role="img"
-      aria-label={mode.control ? t("screen.youControl") : t("screen.viewOnly")}
-      className={cn("h-full w-full", mode.control && "outline-2 outline-offset-[-2px] outline-glaze")}
-    />
-  );
-}
+import { Stream, type Mode } from "./Stream";
 
 /** ScreenPage is the full-screen panel of a bot's screen (§10.8). */
 export function ScreenPage() {

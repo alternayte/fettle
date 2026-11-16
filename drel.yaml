@@ -62,3 +62,6 @@ modules:
   - name: skills
     packages: [./internal/skills]
     migrations: ./internal/skills/migrations/sqlite
+  - name: teach
+    packages: [./internal/teach]
+    migrations: ./internal/teach/migrations/sqlite

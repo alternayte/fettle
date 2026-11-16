@@ -83,6 +83,11 @@ export async function createAppRouter() {
     component: lazyRouteComponent(() => import("@/features/screen/ScreenPage"), "ScreenPage"),
     validateSearch: (s: Record<string, unknown>): { card?: string } => ({ card: optionalString(s.card) }),
   });
+  const teachRoute = createRoute({
+    getParentRoute: () => app,
+    path: "/teach/$teachId",
+    component: lazyRouteComponent(() => import("@/features/teach/TeachPage"), "TeachPage"),
+  });
   const bot = createRoute({
     getParentRoute: () => app,
     path: "/bots/$botId",
@@ -139,6 +144,7 @@ export async function createAppRouter() {
       skillsRoute,
       skillRoute,
       screenRoute,
+      teachRoute,
       botsRoute,
       bot,
       filesRoute,

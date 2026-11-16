@@ -23,4 +23,4 @@ jobs:
           path-to-signatures: signatures/cla.json
           path-to-document: https://github.com/alternayte/fettle/blob/main/CLA.md
           branch: cla-signatures
-          allowlist: dependabot[bot]
+          allowlist: alternayte,dependabot[bot]

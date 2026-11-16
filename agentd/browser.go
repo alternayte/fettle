@@ -14,11 +14,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 
 	"github.com/alternayte/fettle/agentd/client"
@@ -42,6 +44,9 @@ type browserCtx struct {
 	// seen holds the elements of the last snapshot that agentd returned to the bot. An
 	// action refuses when the element differs from what the bot saw (§10.7).
 	seen map[string]client.Element
+
+	// teach is the recorder of a teach session on this context, or nil (§13.3).
+	teach atomic.Pointer[teachSession]
 }
 
 func (c *browserCtx) remember(s client.Snapshot) {
@@ -114,6 +119,12 @@ func (s *Server) openBrowser(req client.BrowserContextRequest) (*browserCtx, err
 			return nil, err
 		}
 	}
+	// A profile restored from a checkpoint holds the singleton links of the Chromium of the
+	// computer that made it, and Chromium refuses a profile that another host seems to use.
+	// agentd runs the only browser of this profile here, so the links are stale.
+	for _, n := range []string{"SingletonLock", "SingletonCookie", "SingletonSocket"} {
+		_ = os.Remove(filepath.Join(c.profile, n))
+	}
 	opts := append([]chromedp.ExecAllocatorOption{}, chromedp.DefaultExecAllocatorOptions[:]...)
 	opts = append(opts,
 		chromedp.UserDataDir(c.profile),
@@ -146,12 +157,25 @@ func (s *Server) openBrowser(req client.BrowserContextRequest) (*browserCtx, err
 	tab, cancelTab := chromedp.NewContext(allocCtx)
 	c.tab, c.cancelAlloc, c.cancelTab = tab, cancelAlloc, cancelTab
 	chromedp.ListenTarget(tab, func(ev any) {
-		if d, ok := ev.(*page.EventJavascriptDialogOpening); ok {
+		switch e := ev.(type) {
+		case *page.EventJavascriptDialogOpening:
 			c.dmu.Lock()
-			c.dialogs = append(c.dialogs, fmt.Sprintf("%s: %s", d.Type, d.Message))
+			c.dialogs = append(c.dialogs, fmt.Sprintf("%s: %s", e.Type, e.Message))
 			c.dmu.Unlock()
 			// Dialogs are never accepted automatically (§10.7).
 			go func() { _ = chromedp.Run(tab, page.HandleJavaScriptDialog(false)) }()
+		case *runtime.EventBindingCalled:
+			if t := c.teach.Load(); t != nil && e.Name == teachBinding {
+				t.queue(teachEvent{payload: e.Payload})
+			}
+		case *page.EventFrameRequestedNavigation:
+			if t := c.teach.Load(); t != nil && e.Disposition == page.ClientNavigationDispositionCurrentTab {
+				t.queue(teachEvent{requested: true, frame: e.FrameID})
+			}
+		case *page.EventFrameNavigated:
+			if t := c.teach.Load(); t != nil && e.Frame != nil && e.Frame.ParentID == "" {
+				t.queue(teachEvent{navigated: e.Frame.URL, frame: e.Frame.ID})
+			}
 		}
 	})
 	// The first Run starts the browser and binds it to the context it gets, so it gets the
@@ -227,11 +251,10 @@ func (s *Server) deleteBrowserContext(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// snapshotJS lists the page's interactive elements and gives each a stable ref. Password and
-// card fields are masked (§10.7).
-const snapshotJS = `(() => {
-  const sel = 'a[href],button,input,select,textarea,summary,[role=button],[role=link],[role=checkbox],[role=radio],[role=menuitem],[role=tab],[role=option],[role=switch],[contenteditable=""],[contenteditable=true],[onclick]';
-  let n = window.__fettleNext || 0;
+// domHelpersJS holds what the snapshot and the teach recorder share: the selector of
+// interactive elements, and the role and the accessible name of an element. The snapshot
+// and a recorded step name an element the same way, so a bot finds a taught element.
+const domHelpersJS = `  const sel = 'a[href],button,input,select,textarea,summary,[role=button],[role=link],[role=checkbox],[role=radio],[role=menuitem],[role=tab],[role=option],[role=switch],[contenteditable=""],[contenteditable=true],[onclick]';
   const clip = (s, m) => { s = (s || '').replace(/\s+/g, ' ').trim(); return s.length > m ? s.slice(0, m) : s; };
   const roleOf = (el) => {
     const r = el.getAttribute('role'); if (r) return r;
@@ -262,7 +285,13 @@ const snapshotJS = `(() => {
     if (t !== 'input' && t !== 'select' && t !== 'textarea') { s = clip(el.innerText, 100); if (s) return s; const img = el.querySelector('img[alt]'); if (img) return clip(img.alt, 100); }
     return clip(el.getAttribute('placeholder') || el.getAttribute('title') || el.getAttribute('name') || '', 100);
   };
-  const isSecret = (el) => {
+`
+
+// snapshotJS lists the page's interactive elements and gives each a stable ref. Password and
+// card fields are masked (§10.7).
+const snapshotJS = `(() => {
+  let n = window.__fettleNext || 0;
+` + domHelpersJS + `  const isSecret = (el) => {
     if (el.tagName.toLowerCase() !== 'input') return false;
     if ((el.type || '').toLowerCase() === 'password') return true;
     const ac = (el.getAttribute('autocomplete') || '').toLowerCase();

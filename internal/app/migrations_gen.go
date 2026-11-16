@@ -39,6 +39,8 @@ import (
 	skillslite "github.com/alternayte/fettle/internal/skills/migrations/sqlite"
 	spacespg "github.com/alternayte/fettle/internal/spaces/migrations/postgres"
 	spaceslite "github.com/alternayte/fettle/internal/spaces/migrations/sqlite"
+	teachpg "github.com/alternayte/fettle/internal/teach/migrations/postgres"
+	teachlite "github.com/alternayte/fettle/internal/teach/migrations/sqlite"
 	usagepg "github.com/alternayte/fettle/internal/usage/migrations/postgres"
 	usagelite "github.com/alternayte/fettle/internal/usage/migrations/sqlite"
 	vaultpg "github.com/alternayte/fettle/internal/vault/migrations/postgres"
@@ -50,7 +52,7 @@ import (
 // migrationSets returns the embedded migrations of every drel module for one dialect.
 func migrationSets(postgres bool) []fs.FS {
 	if postgres {
-		return []fs.FS{authpg.FS, spacespg.FS, settingspg.FS, auditpg.FS, vaultpg.FS, modelspg.FS, botspg.FS, chatspg.FS, envelopespg.FS, runspg.FS, usagepg.FS, policypg.FS, zonespg.FS, computerspg.FS, routinespg.FS, pushpg.FS, learningpg.FS, screenspg.FS, connectorspg.FS, skillspg.FS}
+		return []fs.FS{authpg.FS, spacespg.FS, settingspg.FS, auditpg.FS, vaultpg.FS, modelspg.FS, botspg.FS, chatspg.FS, envelopespg.FS, runspg.FS, usagepg.FS, policypg.FS, zonespg.FS, computerspg.FS, routinespg.FS, pushpg.FS, learningpg.FS, screenspg.FS, connectorspg.FS, skillspg.FS, teachpg.FS}
 	}
-	return []fs.FS{authlite.FS, spaceslite.FS, settingslite.FS, auditlite.FS, vaultlite.FS, modelslite.FS, botslite.FS, chatslite.FS, envelopeslite.FS, runslite.FS, usagelite.FS, policylite.FS, zoneslite.FS, computerslite.FS, routineslite.FS, pushlite.FS, learninglite.FS, screenslite.FS, connectorslite.FS, skillslite.FS}
+	return []fs.FS{authlite.FS, spaceslite.FS, settingslite.FS, auditlite.FS, vaultlite.FS, modelslite.FS, botslite.FS, chatslite.FS, envelopeslite.FS, runslite.FS, usagelite.FS, policylite.FS, zoneslite.FS, computerslite.FS, routineslite.FS, pushlite.FS, learninglite.FS, screenslite.FS, connectorslite.FS, skillslite.FS, teachlite.FS}
 }

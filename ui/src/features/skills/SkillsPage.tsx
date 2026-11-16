@@ -23,6 +23,7 @@ import { Notice, Page, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import { Switch } from "@/components/ui/switch";
 import { NativeSelect } from "@/features/settings/ProviderForm";
+import { DiffView } from "@/components/DiffView";
 import { t, tn } from "@/lib/copy";
 import { formatClock, formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -233,10 +234,13 @@ function DraftFromRun({ run, onDone }: { run: string; onDone: () => void }) {
     );
   return (
     <div className="rounded-sm border border-glaze/50 bg-surface p-4">
-      <p className="mb-3 max-w-[var(--measure)] text-sm text-ink-soft">{t("skills.draftIntro")}</p>
+      <p className="mb-3 max-w-[var(--measure)] text-sm text-ink-soft">
+        {draft.data.diff ? t("skills.draftChanges", { name: draft.data.name }) : t("skills.draftIntro")}
+      </p>
+      {draft.data.diff && <DiffView diff={draft.data.diff} label={t("skills.draftDiff")} className="mb-3" />}
       <SkillEditor
         label={t("skills.draftLabel")}
-        initial={draft.data}
+        initial={draft.data.skill_md}
         onCancel={onDone}
         onSaved={(sk) => {
           toast.success(t("skills.saved", { name: sk.name, version: sk.current_version }));

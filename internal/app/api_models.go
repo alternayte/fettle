@@ -219,7 +219,7 @@ func (a *App) registerModels(api huma.API) {
 
 	huma.Register(api, op("set-model-role", http.MethodPut, "/spaces/{space}/model-roles/{role}", "Set the ordered targets of a role. An empty list removes a bot override.", "models"), func(ctx context.Context, in *struct {
 		SpacePath
-		Role string `path:"role" enum:"router,owner,verifier,computer_use,summarizer"`
+		Role string `path:"role" enum:"router,owner,verifier,computer_use,summarizer,transcribe"`
 		Body struct {
 			BotID   string          `json:"bot_id,omitempty"`
 			Targets []models.Target `json:"targets"`

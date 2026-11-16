@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
-import { CircleAlert, Monitor, Settings2 } from "lucide-react";
+import { CircleAlert, GraduationCap, Monitor, MoreHorizontal, Settings2 } from "lucide-react";
 import { uploadAttachment, useBots, useChats, useSession, useStopRun } from "@/api/hooks";
 import { errorText } from "@/api/client";
 import { Notice, Page } from "@/app/Page";
 import { useShell } from "@/app/shell-context";
 import { Btn } from "@/components/form";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TeachDialog } from "@/features/teach/TeachDialog";
 import { t } from "@/lib/copy";
 import { attachmentHref } from "@/lib/format";
 import { toast } from "sonner";
@@ -38,6 +45,7 @@ function ChatScreen({ chatId }: { chatId: string }) {
   const cardParam = useRouterState({ select: (s) => (s.location.search as { card?: string }).card });
   const c = useChat(space.id, chatId, me.id);
   const stop = useStopRun();
+  const [teaching, setTeaching] = useState(false);
 
   const botMap = useMemo(() => Object.fromEntries((bots.data ?? []).map((b) => [b.id, toBot(b)])), [bots.data]);
   const chat = chats.data?.find((x) => x.id === chatId);
@@ -148,6 +156,24 @@ function ChatScreen({ chatId }: { chatId: string }) {
             >
               <Settings2 className="size-4" aria-hidden />
             </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("chat.menu", { name: bot.name })}
+                  className="inline-flex size-8 items-center justify-center rounded-sm text-ink-soft hover:bg-surface-sunk hover:text-ink"
+                >
+                  <MoreHorizontal className="size-4" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setTeaching(true)}>
+                  <GraduationCap aria-hidden className="size-3.5" />
+                  {t("teach.action")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {teaching && <TeachDialog botId={bot.id} botName={bot.name} open={teaching} onOpenChange={setTeaching} />}
           </>
         ) : undefined
       }

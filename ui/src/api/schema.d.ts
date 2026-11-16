@@ -657,6 +657,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/bots/{bot}/teach-ready": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Whether a bot can be taught now: teaching needs the desktop size (§13.3) */
+    get: operations["teach-ready"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/bots/{bot}/zone": {
     parameters: {
       query?: never;
@@ -1390,7 +1407,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Draft a SKILL.md from a finished run (Save as skill) */
+    /** Draft a skill from a finished run with the bot's owner role (Save as skill). When the run did the task of a skill, the draft changes that skill and has a diff. */
     post: operations["draft-skill"];
     delete?: never;
     options?: never;
@@ -1621,6 +1638,193 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start teaching a bot a task on its screen. It takes the control lease of the screen and starts the recorder. */
+    post: operations["start-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** A teach session with its steps, questions and draft. While it records, it reads the new steps first. */
+    get: operations["get-teach"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/discard": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Discard a teach session and its screenshots */
+    post: operations["discard-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/done": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** End the demo: stop the recorder, return the screen, and let the bot ask its questions */
+    post: operations["finish-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Change the draft on the review card: SKILL.md, the inputs, the steps and the evals */
+    put: operations["edit-teach-draft"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add a typed note to the current step, or as a step of its own */
+    post: operations["add-teach-note"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/notes/audio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add a spoken note to the current step. The transcribe role turns it into text; Fettle keeps the text, not the audio. */
+    post: operations["add-teach-voice-note"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Try the questions or the draft of a failed teach session again */
+    post: operations["retry-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/save": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Save the reviewed draft as a skill version and give it to the bot (owners) */
+    post: operations["save-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/steps/{seq}/screenshot": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The screenshot of a step. It stays with the teach session and is not in the skill. */
+    get: operations["teach-screenshot"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/teach/{teach}/try": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Try the saved skill: a normal run of the bot with new inputs, under the normal approval mode. Fettle never replays the demo. */
+    post: operations["try-teach"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/templates/{template}": {
     parameters: {
       query?: never;
@@ -1820,6 +2024,11 @@ export interface components {
       site_pattern?: string;
       /** @description A tool name, or * for every tool. */
       tool?: string;
+    };
+    "Add-teach-noteRequest": {
+      /** @description The note is a step of its own, for example a step in another app. */
+      new_step?: boolean;
+      text: string;
     };
     "Add-zone-grantRequest": {
       /** @enum {string} */
@@ -2091,9 +2300,6 @@ export interface components {
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
     };
-    "Draft-skillResponse": {
-      skill_md: string;
-    };
     EditionView: {
       features: components["schemas"]["FeatureView"][] | null;
       license?: components["schemas"]["LicenseView"];
@@ -2226,6 +2432,11 @@ export interface components {
       /** Format: int64 */
       revision: number;
       updated_by: string;
+    };
+    Input: {
+      description: string;
+      example?: string;
+      name: string;
     };
     InstanceView: {
       /** @description The server runs inside the desktop app. */
@@ -2507,6 +2718,12 @@ export interface components {
     "Put-shared-memoryRequest": {
       content: string;
     };
+    Question: {
+      answer?: string;
+      card_id: string;
+      text: string;
+      topic: string;
+    };
     ReactRequest: {
       emoji: string;
     };
@@ -2751,6 +2968,16 @@ export interface components {
       step: string;
       type: string;
     };
+    SkillDraftView: {
+      /** @description The skill that the draft changes, when the work did its task. */
+      base_skill_id?: string;
+      /** Format: int64 */
+      base_version?: number;
+      /** @description The change of SKILL.md against the current version of the base skill. */
+      diff?: string;
+      name: string;
+      skill_md: string;
+    };
     SkillVersionView: {
       /** Format: date-time */
       created_at: string;
@@ -2791,6 +3018,19 @@ export interface components {
       role: string;
       time_zone: string;
     };
+    "Start-teachRequest": {
+      bot_id: string;
+      /** @description Change the bot's zone to the desktop size first (owners). */
+      change_size?: boolean;
+      /** @description Record the work of a takeover card as a skill. */
+      takeover_card?: string;
+      /** @description What the task is, in a few words. */
+      title?: string;
+    };
+    "Start-teachResponse": {
+      control: components["schemas"]["ScreenControl"];
+      session: components["schemas"]["TeachView"];
+    };
     StepRow: {
       /** Format: double */
       avg_cost_usd: number;
@@ -2825,6 +3065,95 @@ export interface components {
       /** Format: double */
       price_out?: number;
       provider_id: string;
+    };
+    TeachDraftView: {
+      base_skill_id?: string;
+      /** Format: int64 */
+      base_version?: number;
+      diff?: string;
+      evals_json: string;
+      inputs: components["schemas"]["Input"][] | null;
+      name: string;
+      skill_md: string;
+    };
+    TeachEdit: {
+      evals_json?: string;
+      inputs?: components["schemas"]["Input"][] | null;
+      skill_md?: string;
+      steps?: components["schemas"]["TeachStepEdit"][] | null;
+    };
+    TeachReady: {
+      /** @description You may change the zone to the desktop size (owners). */
+      can_change: boolean;
+      /** @description The bot's zone has the desktop size. */
+      ready: boolean;
+      /** @description Your teach session of this bot that records now. */
+      session_id?: string;
+      /** @enum {string} */
+      size?: "small" | "browser" | "desktop" | "";
+      zone_id?: string;
+      zone_name?: string;
+    };
+    TeachStepEdit: {
+      command?: string;
+      notes?: string[] | null;
+      removed?: boolean;
+      /** Format: int64 */
+      seq: number;
+      value?: string;
+      vault_item?: string;
+    };
+    TeachStepView: {
+      action?: string;
+      command?: string;
+      cwd?: string;
+      /** Format: int64 */
+      exit_code: number;
+      /** @enum {string} */
+      kind: "browser" | "command" | "note";
+      /**
+       * Format: int64
+       * @description The number of the login step that this step belongs to.
+       */
+      login?: number;
+      name?: string;
+      notes: string[] | null;
+      output?: string;
+      removed: boolean;
+      role?: string;
+      screenshot: boolean;
+      /** @description The kind of a secret field or input. Fettle keeps no value for it. */
+      secret?: string;
+      /** Format: int64 */
+      seq: number;
+      url?: string;
+      value?: string;
+      vault_item?: string;
+    };
+    TeachView: {
+      bot_id: string;
+      /** @description You are an owner, so you can save the skill. */
+      can_save: boolean;
+      card_id?: string;
+      chat_id: string;
+      /** Format: date-time */
+      created_at: string;
+      draft?: components["schemas"]["TeachDraftView"];
+      error?: string;
+      id: string;
+      /** @description You teach this session. */
+      mine: boolean;
+      questions: components["schemas"]["Question"][] | null;
+      skill_id?: string;
+      /** Format: int64 */
+      skill_version?: number;
+      /** @enum {string} */
+      status: "recording" | "asking" | "drafting" | "review" | "saved" | "discarded" | "failed";
+      steps: components["schemas"]["TeachStepView"][] | null;
+      title: string;
+      /** @description A transcribe model is set, so spoken notes work. */
+      transcribe: boolean;
+      user_id: string;
     };
     TelemetryCounts: {
       arch: string;
@@ -2879,6 +3208,15 @@ export interface components {
     ToolSetting: {
       class?: string;
       disabled?: boolean;
+    };
+    "Try-teachRequest": {
+      inputs?: {
+        [key: string]: string;
+      };
+    };
+    "Try-teachResponse": {
+      chat_id: string;
+      run_id?: string;
     };
     "Update-meRequest": {
       name: string;
@@ -2971,6 +3309,7 @@ export type SchemaAccountView = components["schemas"]["AccountView"];
 export type SchemaAddComposioRequest = components["schemas"]["Add-composioRequest"];
 export type SchemaAddConnectorAccountRequest = components["schemas"]["Add-connector-accountRequest"];
 export type SchemaAddPolicyRuleRequest = components["schemas"]["Add-policy-ruleRequest"];
+export type SchemaAddTeachNoteRequest = components["schemas"]["Add-teach-noteRequest"];
 export type SchemaAddZoneGrantRequest = components["schemas"]["Add-zone-grantRequest"];
 export type SchemaAnswerCardRequest = components["schemas"]["Answer-cardRequest"];
 export type SchemaAssignSkillRequest = components["schemas"]["Assign-skillRequest"];
@@ -3007,7 +3346,6 @@ export type SchemaDesktopConnectResponse = components["schemas"]["Desktop-connec
 export type SchemaDesktopOpenRequest = components["schemas"]["Desktop-openRequest"];
 export type SchemaDesktopWindowRequest = components["schemas"]["Desktop-windowRequest"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
-export type SchemaDraftSkillResponse = components["schemas"]["Draft-skillResponse"];
 export type SchemaEditionView = components["schemas"]["EditionView"];
 export type SchemaEntry = components["schemas"]["Entry"];
 export type SchemaErrorDetail = components["schemas"]["ErrorDetail"];
@@ -3021,6 +3359,7 @@ export type SchemaFileView = components["schemas"]["FileView"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
+export type SchemaInput = components["schemas"]["Input"];
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
 export type SchemaInviteView = components["schemas"]["InviteView"];
@@ -3069,6 +3408,7 @@ export type SchemaPushSubBody = components["schemas"]["PushSubBody"];
 export type SchemaPushSubBodyKeysStruct = components["schemas"]["PushSubBodyKeysStruct"];
 export type SchemaPutBotMemoryRequest = components["schemas"]["Put-bot-memoryRequest"];
 export type SchemaPutSharedMemoryRequest = components["schemas"]["Put-shared-memoryRequest"];
+export type SchemaQuestion = components["schemas"]["Question"];
 export type SchemaReactRequest = components["schemas"]["ReactRequest"];
 export type SchemaRerunRunResponse = components["schemas"]["Rerun-runResponse"];
 export type SchemaRoleView = components["schemas"]["RoleView"];
@@ -3101,15 +3441,24 @@ export type SchemaSettingHistoryResponse = components["schemas"]["Setting-histor
 export type SchemaSettingView = components["schemas"]["SettingView"];
 export type SchemaSetupState = components["schemas"]["SetupState"];
 export type SchemaSignalView = components["schemas"]["SignalView"];
+export type SchemaSkillDraftView = components["schemas"]["SkillDraftView"];
 export type SchemaSkillVersionView = components["schemas"]["SkillVersionView"];
 export type SchemaSkillView = components["schemas"]["SkillView"];
 export type SchemaSmoke = components["schemas"]["Smoke"];
 export type SchemaSpaceInBody = components["schemas"]["SpaceInBody"];
 export type SchemaSpaceView = components["schemas"]["SpaceView"];
+export type SchemaStartTeachRequest = components["schemas"]["Start-teachRequest"];
+export type SchemaStartTeachResponse = components["schemas"]["Start-teachResponse"];
 export type SchemaStepRow = components["schemas"]["StepRow"];
 export type SchemaSuggestion = components["schemas"]["Suggestion"];
 export type SchemaSyncResult = components["schemas"]["SyncResult"];
 export type SchemaTarget = components["schemas"]["Target"];
+export type SchemaTeachDraftView = components["schemas"]["TeachDraftView"];
+export type SchemaTeachEdit = components["schemas"]["TeachEdit"];
+export type SchemaTeachReady = components["schemas"]["TeachReady"];
+export type SchemaTeachStepEdit = components["schemas"]["TeachStepEdit"];
+export type SchemaTeachStepView = components["schemas"]["TeachStepView"];
+export type SchemaTeachView = components["schemas"]["TeachView"];
 export type SchemaTelemetryCounts = components["schemas"]["TelemetryCounts"];
 export type SchemaTelemetryView = components["schemas"]["TelemetryView"];
 export type SchemaTemplateView = components["schemas"]["TemplateView"];
@@ -3118,6 +3467,8 @@ export type SchemaTestConnectorResponse = components["schemas"]["Test-connectorR
 export type SchemaTestModelProviderRequest = components["schemas"]["Test-model-providerRequest"];
 export type SchemaToolInfo = components["schemas"]["ToolInfo"];
 export type SchemaToolSetting = components["schemas"]["ToolSetting"];
+export type SchemaTryTeachRequest = components["schemas"]["Try-teachRequest"];
+export type SchemaTryTeachResponse = components["schemas"]["Try-teachResponse"];
 export type SchemaUpdateMeRequest = components["schemas"]["Update-meRequest"];
 export type SchemaUsageViewResponse = components["schemas"]["Usage-viewResponse"];
 export type SchemaUserView = components["schemas"]["UserView"];
@@ -4581,6 +4932,39 @@ export interface operations {
       };
     };
   };
+  "teach-ready": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachReady"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "move-bot-zone": {
     parameters: {
       query?: never;
@@ -6003,7 +6387,7 @@ export interface operations {
       path: {
         /** @description Space ID */
         space: string;
-        role: "router" | "owner" | "verifier" | "computer_use" | "summarizer";
+        role: "router" | "owner" | "verifier" | "computer_use" | "summarizer" | "transcribe";
       };
       cookie?: never;
     };
@@ -6456,7 +6840,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Draft-skillResponse"];
+          "application/json": components["schemas"]["SkillDraftView"];
         };
       };
       /** @description Error */
@@ -7024,6 +7408,397 @@ export interface operations {
                 retry?: number;
               }
           )[];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "start-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Start-teachRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Start-teachResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "discard-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "finish-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "edit-teach-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeachEdit"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-teach-note": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Add-teach-noteRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachStepView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "add-teach-voice-note": {
+    parameters: {
+      query?: never;
+      header?: {
+        "Content-Type"?: string;
+      };
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/octet-stream": string;
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachStepView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "retry-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "save-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeachEdit"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeachView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "teach-screenshot": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+        seq: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          "Cache-Control"?: string;
+          "Content-Type"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": string;
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "try-teach": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        teach: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Try-teachRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Try-teachResponse"];
         };
       };
       /** @description Error */
