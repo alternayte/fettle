@@ -21,10 +21,13 @@ const (
 	RoleVerifier    = "verifier"
 	RoleComputerUse = "computer_use"
 	RoleSummarizer  = "summarizer"
+	// RoleTranscribe turns spoken teach notes into text (§13.3). It is optional and never
+	// uses the owner targets.
+	RoleTranscribe = "transcribe"
 )
 
-// AllRoles lists the five roles in display order.
-var AllRoles = []string{RoleOwner, RoleRouter, RoleVerifier, RoleComputerUse, RoleSummarizer}
+// AllRoles lists the roles in display order.
+var AllRoles = []string{RoleOwner, RoleRouter, RoleVerifier, RoleComputerUse, RoleSummarizer, RoleTranscribe}
 
 // Part is one piece of message content.
 type Part struct {

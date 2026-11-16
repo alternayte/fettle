@@ -23,6 +23,7 @@ import (
 	settings "github.com/alternayte/fettle/internal/settings"
 	skills "github.com/alternayte/fettle/internal/skills"
 	spaces "github.com/alternayte/fettle/internal/spaces"
+	teach "github.com/alternayte/fettle/internal/teach"
 	usage "github.com/alternayte/fettle/internal/usage"
 	vault "github.com/alternayte/fettle/internal/vault"
 	zones "github.com/alternayte/fettle/internal/zones"
@@ -66,6 +67,8 @@ type DB struct {
 	Invites             *spaces.InviteRepository
 	Spaces              *spaces.SpaceRepository
 	SpaceMembers        *spaces.SpaceMemberRepository
+	Sessions            *teach.SessionRepository
+	Steps               *teach.StepRepository
 	UsageEvents         *usage.UsageEventRepository
 	DataKeys            *vault.DataKeyRepository
 	InstanceSecrets     *vault.InstanceSecretRepository
@@ -118,6 +121,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		Invites:             &spaces.InviteRepository{Repository: drel.NewRepository(engine, spaces.InviteMeta)},
 		Spaces:              &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
+		Sessions:            &teach.SessionRepository{Repository: drel.NewRepository(engine, teach.SessionMeta)},
+		Steps:               &teach.StepRepository{Repository: drel.NewRepository(engine, teach.StepMeta)},
 		UsageEvents:         &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
 		DataKeys:            &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
 		InstanceSecrets:     &vault.InstanceSecretRepository{Repository: drel.NewRepository(engine, vault.InstanceSecretMeta)},
@@ -195,6 +200,10 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				Spaces:       &spaces.SpaceRepository{Repository: drel.NewRepository(engine, spaces.SpaceMeta)},
 				SpaceMembers: &spaces.SpaceMemberRepository{Repository: drel.NewRepository(engine, spaces.SpaceMemberMeta)},
 			},
+			Teach: TeachRepos{
+				Sessions: &teach.SessionRepository{Repository: drel.NewRepository(engine, teach.SessionMeta)},
+				Steps:    &teach.StepRepository{Repository: drel.NewRepository(engine, teach.StepMeta)},
+			},
 			Usage: UsageRepos{
 				UsageEvents: &usage.UsageEventRepository{Repository: drel.NewRepository(engine, usage.UsageEventMeta)},
 			},
@@ -250,6 +259,8 @@ type TxRepos struct {
 	Invites             *spaces.TxInviteRepository
 	Spaces              *spaces.TxSpaceRepository
 	SpaceMembers        *spaces.TxSpaceMemberRepository
+	Sessions            *teach.TxSessionRepository
+	Steps               *teach.TxStepRepository
 	UsageEvents         *usage.TxUsageEventRepository
 	DataKeys            *vault.TxDataKeyRepository
 	InstanceSecrets     *vault.TxInstanceSecretRepository
@@ -300,6 +311,8 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		Invites:             &spaces.TxInviteRepository{TxRepository: drel.NewTxRepository(tx, spaces.InviteMeta)},
 		Spaces:              &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
 		SpaceMembers:        &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
+		Sessions:            &teach.TxSessionRepository{TxRepository: drel.NewTxRepository(tx, teach.SessionMeta)},
+		Steps:               &teach.TxStepRepository{TxRepository: drel.NewTxRepository(tx, teach.StepMeta)},
 		UsageEvents:         &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
 		DataKeys:            &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
 		InstanceSecrets:     &vault.TxInstanceSecretRepository{TxRepository: drel.NewTxRepository(tx, vault.InstanceSecretMeta)},
@@ -376,6 +389,10 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				Invites:      &spaces.TxInviteRepository{TxRepository: drel.NewTxRepository(tx, spaces.InviteMeta)},
 				Spaces:       &spaces.TxSpaceRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMeta)},
 				SpaceMembers: &spaces.TxSpaceMemberRepository{TxRepository: drel.NewTxRepository(tx, spaces.SpaceMemberMeta)},
+			},
+			Teach: TeachTxRepos{
+				Sessions: &teach.TxSessionRepository{TxRepository: drel.NewTxRepository(tx, teach.SessionMeta)},
+				Steps:    &teach.TxStepRepository{TxRepository: drel.NewTxRepository(tx, teach.StepMeta)},
 			},
 			Usage: UsageTxRepos{
 				UsageEvents: &usage.TxUsageEventRepository{TxRepository: drel.NewTxRepository(tx, usage.UsageEventMeta)},
@@ -601,6 +618,18 @@ type SpacesTxRepos struct {
 	SpaceMembers *spaces.TxSpaceMemberRepository
 }
 
+// TeachRepos holds the untracked repositories of the "teach" module.
+type TeachRepos struct {
+	Sessions *teach.SessionRepository
+	Steps    *teach.StepRepository
+}
+
+// TeachTxRepos holds the tracked repositories of the "teach" module.
+type TeachTxRepos struct {
+	Sessions *teach.TxSessionRepository
+	Steps    *teach.TxStepRepository
+}
+
 // UsageRepos holds the untracked repositories of the "usage" module.
 type UsageRepos struct {
 	UsageEvents *usage.UsageEventRepository
@@ -657,6 +686,7 @@ type Modules struct {
 	Settings   SettingsRepos
 	Skills     SkillsRepos
 	Spaces     SpacesRepos
+	Teach      TeachRepos
 	Usage      UsageRepos
 	Vault      VaultRepos
 	Zones      ZonesRepos
@@ -682,6 +712,7 @@ type TxModules struct {
 	Settings   SettingsTxRepos
 	Skills     SkillsTxRepos
 	Spaces     SpacesTxRepos
+	Teach      TeachTxRepos
 	Usage      UsageTxRepos
 	Vault      VaultTxRepos
 	Zones      ZonesTxRepos

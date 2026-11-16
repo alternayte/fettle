@@ -112,7 +112,17 @@ func (s *Service) Count(ctx context.Context, userID uuid.UUID) (int, error) {
 
 // NotifySpace sends a notification to every subscription of the members of a space.
 func (s *Service) NotifySpace(ctx context.Context, spaceID uuid.UUID, n Notification) {
-	rows, err := s.e.Query(ctx, "SELECT user_id FROM space_members WHERE space_id = $1", spaceID)
+	s.notify(ctx, n, "SELECT user_id FROM space_members WHERE space_id = $1", spaceID)
+}
+
+// NotifyOwners sends a notification to the owners of a space only, for a card that only
+// an owner can answer (§13.3).
+func (s *Service) NotifyOwners(ctx context.Context, spaceID uuid.UUID, n Notification) {
+	s.notify(ctx, n, "SELECT user_id FROM space_members WHERE space_id = $1 AND role = 'owner'", spaceID)
+}
+
+func (s *Service) notify(ctx context.Context, n Notification, query string, args ...any) {
+	rows, err := s.e.Query(ctx, query, args...)
 	if err != nil {
 		s.log.Warn("push: list members", "error", err)
 		return

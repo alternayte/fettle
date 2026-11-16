@@ -270,6 +270,14 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 				return err
 			}
 		}
+		if card.Kind == "question" && card.Data["teach_id"] != "" {
+			if a.TeachAnswer == nil {
+				return errors.New("this server cannot record teach answers")
+			}
+			if err := a.TeachAnswer(ctx, user, spaceID, card); err != nil {
+				return err
+			}
+		}
 		if runID == uuid.Nil {
 			return nil
 		}

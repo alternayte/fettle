@@ -18,12 +18,14 @@ import (
 
 // Errors of the models service.
 var (
-	ErrNotFound       = errors.New("model provider not found")
-	ErrNoToolsOwner   = errors.New("this provider failed the tool call check, so it cannot fill the owner role")
-	ErrUntestedOwner  = errors.New("test this provider before you use it for the owner role")
-	ErrRoleNoTargets  = errors.New("no model is set for this role")
-	ErrUnknownRole    = errors.New("unknown model role")
-	ErrInvalidBaseURL = errors.New("the base URL must start with http:// or https://")
+	ErrNotFound      = errors.New("model provider not found")
+	ErrNoToolsOwner  = errors.New("this provider failed the tool call check, so it cannot fill the owner role")
+	ErrUntestedOwner = errors.New("test this provider before you use it for the owner role")
+	ErrRoleNoTargets = errors.New("no model is set for this role")
+	ErrUnknownRole   = errors.New("unknown model role")
+	// ErrNoTranscribeAPI means a provider cannot transcribe audio.
+	ErrNoTranscribeAPI = errors.New("the transcribe role needs an OpenAI-compatible provider with /audio/transcriptions")
+	ErrInvalidBaseURL  = errors.New("the base URL must start with http:// or https://")
 )
 
 // Service manages model providers and roles of a space.
@@ -297,6 +299,9 @@ func (s *Service) SetRole(ctx context.Context, actor audit.Actor, spaceID uuid.U
 				return err
 			}
 		}
+		if role == RoleTranscribe && !transcribeAPI(p.APIType) {
+			return ErrNoTranscribeAPI
+		}
 		if role == RoleOwner {
 			if p.SmokeAt == nil {
 				return ErrUntestedOwner
@@ -363,8 +368,8 @@ func (s *Service) Resolve(ctx context.Context, spaceID uuid.UUID, botID *uuid.UU
 		}
 		row = r
 	}
-	if row == nil && role != RoleOwner {
-		// Roles without targets use the owner targets.
+	if row == nil && role != RoleOwner && role != RoleTranscribe {
+		// Roles without targets use the owner targets. The transcribe role has none then.
 		return s.Resolve(ctx, spaceID, botID, RoleOwner)
 	}
 	if row == nil || len(row.Targets) == 0 {

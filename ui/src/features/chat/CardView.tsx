@@ -6,6 +6,7 @@ import {
   CircleHelp,
   Coins,
   GitCompare,
+  GraduationCap,
   Hand,
   KeyRound,
   ListChecks,
@@ -17,6 +18,9 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { useBot } from "@/api/hooks";
+import { DiffView } from "@/components/DiffView";
+import { TeachDialog } from "@/features/teach/TeachDialog";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import type { Card } from "./types";
@@ -37,7 +41,77 @@ const icons = {
   proposal: UserPlus,
   connect: Plug,
   patch: GitCompare,
+  teach: GraduationCap,
 } as const;
+
+type TeachCardStep = {
+  seq: number;
+  kind: string;
+  action?: string;
+  role?: string;
+  name?: string;
+  url?: string;
+  command?: string;
+  login?: number;
+};
+
+/** TeachSteps lists the steps of a teach review card with their role, name or command. */
+function TeachSteps({ raw }: { raw: string }) {
+  let list: TeachCardStep[] = [];
+  try {
+    list = JSON.parse(raw) as TeachCardStep[];
+  } catch {
+    return null;
+  }
+  return (
+    <ol aria-label={t("card.teach.steps")} className="space-y-1 border-t border-dashed border-rule pt-2 text-sm">
+      {list.map((s, i) => (
+        <li key={s.seq} className="flex gap-2">
+          <span className="figures w-4 shrink-0 text-right text-ink-faint">{i + 1}</span>
+          <span className="min-w-0 break-words">
+            {s.kind === "command" ? (
+              <code className="font-mono text-xs text-ink">{s.command}</code>
+            ) : s.kind === "note" ? (
+              <span className="text-ink-soft">{t("card.teach.note")}</span>
+            ) : s.action === "navigate" ? (
+              <span className="text-ink-soft">{t("card.teach.open", { url: s.url ?? "" })}</span>
+            ) : (
+              <>
+                <span className="text-ink-faint">{s.login ? t("card.teach.login", { n: s.login }) : s.action} </span>
+                <span className="text-ink">
+                  {s.role} “{s.name}”
+                </span>
+              </>
+            )}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** RecordTakeover starts a teach session from a takeover card (§13.3). */
+function RecordTakeover({ botId, cardId }: { botId: string; cardId: string }) {
+  const [open, setOpen] = useState(false);
+  const bot = useBot(botId);
+  return (
+    <>
+      <ActionButton onClick={() => setOpen(true)}>
+        <GraduationCap aria-hidden className="size-3.5" />
+        {t("card.takeover.record")}
+      </ActionButton>
+      {open && (
+        <TeachDialog
+          botId={botId}
+          botName={bot.data?.name ?? ""}
+          takeoverCard={cardId}
+          open={open}
+          onOpenChange={setOpen}
+        />
+      )}
+    </>
+  );
+}
 
 type Proposed = { name: string; job: string; instructions: string; [k: string]: unknown };
 
@@ -236,25 +310,9 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
           </dl>
         )}
         {card.hard_ask && <p className="text-xs text-ink-faint">{t("card.approval.hardAsk")}</p>}
-        {card.kind === "patch" && card.data?.diff && (
-          <pre
-            aria-label={t("card.patch.diff")}
-            className="max-h-72 overflow-auto rounded-xs border border-rule bg-surface-sunk p-2 font-mono text-xs leading-relaxed"
-          >
-            {card.data.diff.split("\n").map((line, i) => (
-              <div
-                key={i}
-                className={cn(
-                  line.startsWith("+") && !line.startsWith("+++") && "text-ok",
-                  line.startsWith("-") && !line.startsWith("---") && "text-danger",
-                  (line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++")) && "text-ink-faint",
-                )}
-              >
-                {line || " "}
-              </div>
-            ))}
-          </pre>
-        )}
+        {card.kind === "patch" && card.data?.diff && <DiffView diff={card.data.diff} label={t("card.patch.diff")} />}
+        {card.kind === "teach" && card.data?.steps && <TeachSteps raw={card.data.steps} />}
+        {card.kind === "teach" && card.data?.diff && <DiffView diff={card.data.diff} label={t("card.patch.diff")} />}
       </div>
       {editing && card.kind === "approval" && card.preview && (
         <DraftEditor
@@ -417,14 +475,27 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
           </>
         )}
         {card.kind === "takeover" && card.data?.bot_id && (
+          <>
+            <Link
+              to="/screen/$botId"
+              params={{ botId: card.data.bot_id }}
+              search={{ card: card.id }}
+              className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-glaze px-3 text-sm font-[var(--weight-medium)] text-glaze-ink hover:brightness-105"
+            >
+              <Monitor aria-hidden className="size-3.5" />
+              {t("card.takeover.open")}
+            </Link>
+            <RecordTakeover botId={card.data.bot_id} cardId={card.id} />
+          </>
+        )}
+        {card.kind === "teach" && card.data?.teach_id && (
           <Link
-            to="/screen/$botId"
-            params={{ botId: card.data.bot_id }}
-            search={{ card: card.id }}
+            to="/teach/$teachId"
+            params={{ teachId: card.data.teach_id }}
             className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-glaze px-3 text-sm font-[var(--weight-medium)] text-glaze-ink hover:brightness-105"
           >
-            <Monitor aria-hidden className="size-3.5" />
-            {t("card.takeover.open")}
+            <GraduationCap aria-hidden className="size-3.5" />
+            {t("card.teach.review")}
           </Link>
         )}
         <span className="figures ml-auto hidden text-ink-faint sm:inline">{t("card.waits")}</span>

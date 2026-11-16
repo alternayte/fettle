@@ -64,6 +64,6 @@ type ModelRole struct {
 	SpaceID               uuid.UUID  `db:"space_id,references=spaces,on_delete=cascade"`
 	BotID                 *uuid.UUID `db:"bot_id"`
 	BotKey                string     `db:"bot_key"`
-	Role                  string     `db:"role,check=role IN ('router','owner','verifier','computer_use','summarizer')"`
+	Role                  string     `db:"role,check=role IN ('router','owner','verifier','computer_use','summarizer','transcribe')"`
 	Targets               []Target   `db:"targets"`
 }

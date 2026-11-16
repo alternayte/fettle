@@ -14,7 +14,7 @@ import type {
 } from "./schema";
 
 export type UsageDimension = "run" | "bot" | "zone" | "step" | "role" | "model" | "day" | "month";
-export type ModelRole = "owner" | "router" | "verifier" | "computer_use" | "summarizer";
+export type ModelRole = "owner" | "router" | "verifier" | "computer_use" | "summarizer" | "transcribe";
 
 /** Session holds the caller and the space the UI works in. The layout provides it after /me loads. */
 export interface Session {
@@ -910,8 +910,7 @@ export function useDraftSkill() {
   const space = useSpaceId();
   return useMutation({
     mutationFn: async (run: string) =>
-      (await must(api.POST("/api/v1/spaces/{space}/runs/{run}/draft-skill", { params: { path: { space, run } } })))
-        .skill_md,
+      must(api.POST("/api/v1/spaces/{space}/runs/{run}/draft-skill", { params: { path: { space, run } } })),
   });
 }
 
@@ -989,6 +988,138 @@ export function useScreenDone() {
         }),
       ),
   });
+}
+
+// ---------------------------------------------------------------- teaching (§13.3)
+
+const teachKey = (s: string, id: string) => ["s", s, "teach", id] as const;
+
+export function useTeachReady(bot: string, enabled = true) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: ["s", space, "bots", bot, "teach-ready"],
+    enabled,
+    staleTime: 0,
+    queryFn: () => must(api.GET("/api/v1/spaces/{space}/bots/{bot}/teach-ready", { params: { path: { space, bot } } })),
+  });
+}
+
+export function useStartTeach() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: { bot_id: string; title?: string; takeover_card?: string; change_size?: boolean }) =>
+      must(api.POST("/api/v1/spaces/{space}/teach", { params: { path: { space } }, body })),
+  });
+}
+
+/** useTeach polls a session while it records or waits for the bot. */
+export function useTeach(id: string) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: teachKey(space, id),
+    queryFn: () => must(api.GET("/api/v1/spaces/{space}/teach/{teach}", { params: { path: { space, teach: id } } })),
+    refetchInterval: (q) => {
+      const st = q.state.data?.status;
+      if (st === "recording") return 1500;
+      if (st === "asking" || st === "drafting") return 3000;
+      return false;
+    },
+  });
+}
+
+function useTeachMutation<V, R>(fn: (space: string, id: string, v: V) => Promise<R>, id: string) {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (v: V) => fn(space, id, v),
+    onSuccess: () => qc.invalidateQueries({ queryKey: teachKey(space, id) }),
+  });
+}
+
+export function useTeachNote(id: string) {
+  return useTeachMutation(
+    (space, teach, body: { text: string; new_step?: boolean }) =>
+      must(api.POST("/api/v1/spaces/{space}/teach/{teach}/notes", { params: { path: { space, teach } }, body })),
+    id,
+  );
+}
+
+export function useTeachVoiceNote(id: string) {
+  return useTeachMutation(async (space, teach, audio: Blob) => {
+    const res = await fetch(`/api/v1/spaces/${space}/teach/${teach}/notes/audio`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": audio.type || "application/octet-stream" },
+      body: audio,
+    });
+    if (!res.ok) {
+      const p = (await res.json().catch(() => ({}))) as { detail?: string };
+      throw new ApiError(res.status, p.detail ?? `HTTP ${res.status}`);
+    }
+    return res.json();
+  }, id);
+}
+
+export function useTeachDone(id: string) {
+  return useTeachMutation(
+    (space, teach) =>
+      must(api.POST("/api/v1/spaces/{space}/teach/{teach}/done", { params: { path: { space, teach } } })),
+    id,
+  );
+}
+
+export type TeachEdit = {
+  skill_md?: string;
+  inputs?: { name: string; description: string; example?: string }[];
+  evals_json?: string;
+  steps?: { seq: number; value?: string; command?: string; notes?: string[]; vault_item?: string; removed?: boolean }[];
+};
+
+export function useTeachEdit(id: string) {
+  return useTeachMutation(
+    (space, teach, body: TeachEdit) =>
+      must(api.PUT("/api/v1/spaces/{space}/teach/{teach}/draft", { params: { path: { space, teach } }, body })),
+    id,
+  );
+}
+
+export function useTeachSave(id: string) {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: TeachEdit) =>
+      must(api.POST("/api/v1/spaces/{space}/teach/{teach}/save", { params: { path: { space, teach: id } }, body })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: teachKey(space, id) });
+      void qc.invalidateQueries({ queryKey: keys.skills(space) });
+    },
+  });
+}
+
+export function useTeachDiscard(id: string) {
+  return useTeachMutation(
+    (space, teach) =>
+      must(api.POST("/api/v1/spaces/{space}/teach/{teach}/discard", { params: { path: { space, teach } } })),
+    id,
+  );
+}
+
+export function useTeachRetry(id: string) {
+  return useTeachMutation(
+    (space, teach) =>
+      must(api.POST("/api/v1/spaces/{space}/teach/{teach}/retry", { params: { path: { space, teach } } })),
+    id,
+  );
+}
+
+export function useTryTeach(id: string) {
+  return useTeachMutation(
+    (space, teach, inputs: Record<string, string>) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/teach/{teach}/try", { params: { path: { space, teach } }, body: { inputs } }),
+      ),
+    id,
+  );
 }
 
 // ---------------------------------------------------------------- connectors

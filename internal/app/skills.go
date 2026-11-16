@@ -176,20 +176,21 @@ func (a *App) SyncSkael(ctx context.Context) {
 
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
-// DraftSkill writes a SKILL.md draft from a finished run: its goal, the steps it took
-// with their tools, and its result (Save as skill, §13.1).
-func (a *App) DraftSkill(ctx context.Context, spaceID, runID uuid.UUID) (string, error) {
+// DraftSkill drafts a skill from a finished run: its goal, the steps it took with their
+// tools, and its result (Save as skill, §13.1). The bot's owner role writes the draft;
+// when the run did the task of a skill, the draft changes that skill.
+func (a *App) DraftSkill(ctx context.Context, spaceID, runID uuid.UUID) (*skillDraft, error) {
 	r, err := a.Runs.Get(ctx, spaceID, runID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	env, err := a.Envs.Get(ctx, spaceID, r.EnvelopeID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	evs, err := a.Journal.Load(ctx, runID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var steps []string
 	result := ""
@@ -246,33 +247,7 @@ func (a *App) DraftSkill(ctx context.Context, spaceID, runID uuid.UUID) (string,
 			}
 		}
 	}
-	goal := strings.TrimSpace(env.Goal)
-	name := strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(goal), "-"), "-")
-	if len(name) > 40 {
-		name = strings.Trim(name[:40], "-")
-	}
-	if name == "" {
-		name = "new-skill"
-	}
-	desc := strings.ReplaceAll(goal, "\n", " ")
-	if len(desc) > 200 {
-		desc = desc[:200]
-	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "---\nname: %s\ndescription: %q\n---\n\n# %s\n\n## Steps\n\n", name, desc, strings.SplitN(goal, "\n", 2)[0])
-	if len(steps) == 0 {
-		b.WriteString("1. Answer the request directly.\n")
-	}
-	for i, s := range steps {
-		fmt.Fprintf(&b, "%d. %s\n", i+1, s)
-	}
-	if result != "" {
-		if len(result) > 1500 {
-			result = result[:1500] + "…"
-		}
-		fmt.Fprintf(&b, "\n## Result of the run that this skill comes from\n\n%s\n", result)
-	}
-	return a.Vault.Redactor.String(ctx, spaceID, b.String()), nil
+	return a.draftSkill(ctx, draftMaterial{SpaceID: spaceID, BotID: r.BotID, Task: env.Goal, Steps: steps, Result: result})
 }
 
 // turnCalls returns the tool calls of a model turn as skill steps, and the turn's text.

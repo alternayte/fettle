@@ -1,0 +1,235 @@
+{
+  "tables": [
+    {
+      "name": "teach_sessions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "bot_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "bots",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "user_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "chat_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "status IN ('recording','asking','drafting','review','saved','discarded','failed')"
+        },
+        {
+          "name": "takeover_card",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "pulled",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "questions",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "draft",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "card_id",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "error",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "skill_id",
+          "type": "TEXT",
+          "notNull": false
+        },
+        {
+          "name": "skill_version",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_teach_sessions_bot",
+          "columns": [
+            "bot_id",
+            "created_at"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "teach_steps",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "session_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "teach_sessions",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "seq",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('browser','command','note')"
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "action",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "value",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "secret",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "command",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "cwd",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "exit_code",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "output",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "notes",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "screenshot",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "vault_item",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "removed",
+          "type": "INTEGER",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_teach_steps",
+          "columns": [
+            "session_id",
+            "seq"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

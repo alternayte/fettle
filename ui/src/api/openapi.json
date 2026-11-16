@@ -95,6 +95,24 @@
         ],
         "type": "object"
       },
+      "Add-teach-noteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "new_step": {
+            "description": "The note is a step of its own, for example a step in another app.",
+            "type": "boolean"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
       "Add-zone-grantRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1063,18 +1081,6 @@
         ],
         "type": "object"
       },
-      "Draft-skillResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "skill_md": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "skill_md"
-        ],
-        "type": "object"
-      },
       "EditionView": {
         "additionalProperties": false,
         "properties": {
@@ -1499,6 +1505,25 @@
           "new_value",
           "updated_by",
           "at"
+        ],
+        "type": "object"
+      },
+      "Input": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
         ],
         "type": "object"
       },
@@ -2680,6 +2705,29 @@
         ],
         "type": "object"
       },
+      "Question": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "card_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "text",
+          "card_id"
+        ],
+        "type": "object"
+      },
       "ReactRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3606,6 +3654,34 @@
         ],
         "type": "object"
       },
+      "SkillDraftView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_skill_id": {
+            "description": "The skill that the draft changes, when the work did its task.",
+            "type": "string"
+          },
+          "base_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "diff": {
+            "description": "The change of SKILL.md against the current version of the base skill.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "skill_md": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_md",
+          "name"
+        ],
+        "type": "object"
+      },
       "SkillVersionView": {
         "additionalProperties": false,
         "properties": {
@@ -3766,6 +3842,47 @@
         ],
         "type": "object"
       },
+      "Start-teachRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_id": {
+            "type": "string"
+          },
+          "change_size": {
+            "description": "Change the bot's zone to the desktop size first (owners).",
+            "type": "boolean"
+          },
+          "takeover_card": {
+            "description": "Record the work of a takeover card as a skill.",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the task is, in a few words.",
+            "maxLength": 300,
+            "type": "string"
+          }
+        },
+        "required": [
+          "bot_id"
+        ],
+        "type": "object"
+      },
+      "Start-teachResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "control": {
+            "$ref": "#/components/schemas/ScreenControl"
+          },
+          "session": {
+            "$ref": "#/components/schemas/TeachView"
+          }
+        },
+        "required": [
+          "session",
+          "control"
+        ],
+        "type": "object"
+      },
       "StepRow": {
         "additionalProperties": false,
         "properties": {
@@ -3869,6 +3986,333 @@
         "required": [
           "provider_id",
           "model"
+        ],
+        "type": "object"
+      },
+      "TeachDraftView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_skill_id": {
+            "type": "string"
+          },
+          "base_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "diff": {
+            "type": "string"
+          },
+          "evals_json": {
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/Input"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "skill_md": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "skill_md",
+          "inputs",
+          "evals_json"
+        ],
+        "type": "object"
+      },
+      "TeachEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "evals_json": {
+            "maxLength": 200000,
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/Input"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "skill_md": {
+            "maxLength": 200000,
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TeachStepEdit"
+            },
+            "maxItems": 2000,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "TeachReady": {
+        "additionalProperties": false,
+        "properties": {
+          "can_change": {
+            "description": "You may change the zone to the desktop size (owners).",
+            "type": "boolean"
+          },
+          "ready": {
+            "description": "The bot's zone has the desktop size.",
+            "type": "boolean"
+          },
+          "session_id": {
+            "description": "Your teach session of this bot that records now.",
+            "type": "string"
+          },
+          "size": {
+            "enum": [
+              "small",
+              "browser",
+              "desktop",
+              ""
+            ],
+            "type": "string"
+          },
+          "zone_id": {
+            "type": "string"
+          },
+          "zone_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ready",
+          "can_change"
+        ],
+        "type": "object"
+      },
+      "TeachStepEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "removed": {
+            "type": "boolean"
+          },
+          "seq": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "value": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "vault_item": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq"
+        ],
+        "type": "object"
+      },
+      "TeachStepView": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "exit_code": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "browser",
+              "command",
+              "note"
+            ],
+            "type": "string"
+          },
+          "login": {
+            "description": "The number of the login step that this step belongs to.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "output": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string"
+          },
+          "screenshot": {
+            "type": "boolean"
+          },
+          "secret": {
+            "description": "The kind of a secret field or input. Fettle keeps no value for it.",
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "vault_item": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "kind",
+          "exit_code",
+          "notes",
+          "screenshot",
+          "removed"
+        ],
+        "type": "object"
+      },
+      "TeachView": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_id": {
+            "type": "string"
+          },
+          "can_save": {
+            "description": "You are an owner, so you can save the skill.",
+            "type": "boolean"
+          },
+          "card_id": {
+            "type": "string"
+          },
+          "chat_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/TeachDraftView"
+          },
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mine": {
+            "description": "You teach this session.",
+            "type": "boolean"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "skill_id": {
+            "type": "string"
+          },
+          "skill_version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "recording",
+              "asking",
+              "drafting",
+              "review",
+              "saved",
+              "discarded",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TeachStepView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "transcribe": {
+            "description": "A transcribe model is set, so spoken notes work.",
+            "type": "boolean"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bot_id",
+          "chat_id",
+          "user_id",
+          "title",
+          "status",
+          "steps",
+          "questions",
+          "transcribe",
+          "can_save",
+          "mine",
+          "created_at"
         ],
         "type": "object"
       },
@@ -4074,6 +4518,34 @@
             "type": "boolean"
           }
         },
+        "type": "object"
+      },
+      "Try-teachRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "inputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 20,
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "Try-teachResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "chat_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chat_id"
+        ],
         "type": "object"
       },
       "Update-meRequest": {
@@ -6351,6 +6823,57 @@
         "summary": "Return control of a bot's screen. With a takeover card, it answers the card and the bot continues.",
         "tags": [
           "screens"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/teach-ready": {
+      "get": {
+        "operationId": "teach-ready",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachReady"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Whether a bot can be taught now: teaching needs the desktop size (§13.3)",
+        "tags": [
+          "teach"
         ]
       }
     },
@@ -8659,7 +9182,8 @@
                 "owner",
                 "verifier",
                 "computer_use",
-                "summarizer"
+                "summarizer",
+                "transcribe"
               ],
               "type": "string"
             }
@@ -9339,7 +9863,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Draft-skillResponse"
+                  "$ref": "#/components/schemas/SkillDraftView"
                 }
               }
             },
@@ -9356,7 +9880,7 @@
             "description": "Error"
           }
         },
-        "summary": "Draft a SKILL.md from a finished run (Save as skill)",
+        "summary": "Draft a skill from a finished run with the bot's owner role (Save as skill). When the run did the task of a skill, the draft changes that skill and has a diff.",
         "tags": [
           "skills"
         ]
@@ -10299,6 +10823,650 @@
         "summary": "Server-sent events of a space: run lines and bot activity",
         "tags": [
           "chats"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach": {
+      "post": {
+        "operationId": "start-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Start-teachRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Start-teachResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start teaching a bot a task on its screen. It takes the control lease of the screen and starts the recorder.",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}": {
+      "get": {
+        "operationId": "get-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A teach session with its steps, questions and draft. While it records, it reads the new steps first.",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/discard": {
+      "post": {
+        "operationId": "discard-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Discard a teach session and its screenshots",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/done": {
+      "post": {
+        "operationId": "finish-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "End the demo: stop the recorder, return the screen, and let the bot ask its questions",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/draft": {
+      "put": {
+        "operationId": "edit-teach-draft",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeachEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change the draft on the review card: SKILL.md, the inputs, the steps and the evals",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/notes": {
+      "post": {
+        "operationId": "add-teach-note",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-teach-noteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachStepView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add a typed note to the current step, or as a step of its own",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/notes/audio": {
+      "post": {
+        "operationId": "add-teach-voice-note",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachStepView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add a spoken note to the current step. The transcribe role turns it into text; Fettle keeps the text, not the audio.",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/retry": {
+      "post": {
+        "operationId": "retry-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Try the questions or the draft of a failed teach session again",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/save": {
+      "post": {
+        "operationId": "save-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeachEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeachView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save the reviewed draft as a skill version and give it to the bot (owners)",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/steps/{seq}/screenshot": {
+      "get": {
+        "operationId": "teach-screenshot",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "seq",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Type": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The screenshot of a step. It stays with the teach session and is not in the skill.",
+        "tags": [
+          "teach"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/teach/{teach}/try": {
+      "post": {
+        "operationId": "try-teach",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "teach",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Try-teachRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Try-teachResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Try the saved skill: a normal run of the bot with new inputs, under the normal approval mode. Fettle never replays the demo.",
+        "tags": [
+          "teach"
         ]
       }
     },

@@ -34,6 +34,9 @@ func OwnerOnlyRoute(method, rest string) bool {
 		return !read
 	case "runs":
 		return len(seg) >= 3 && seg[2] == "draft-skill"
+	case "teach":
+		// Members teach; only owners save a taught skill (§13.3).
+		return len(seg) >= 3 && seg[2] == "save"
 	case "members":
 		// A member may leave (DELETE of themself); the handler checks the rest.
 		return method == http.MethodPut || method == http.MethodPost

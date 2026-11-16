@@ -39,6 +39,8 @@ func (a *App) Handler() http.Handler {
 	r.Get(APIPrefix+"/oauth/callback", a.oauthCallback)
 	// A screen stream carries its own short-lived token (§10.8).
 	r.Get(APIPrefix+"/screen/stream", a.screenStream)
+	// The teach terminal carries the control token of the screen (§13.3).
+	r.Get(APIPrefix+"/teach/pty", a.teachPTYStream)
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}

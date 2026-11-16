@@ -33,6 +33,23 @@ type SkillVersionView struct {
 	SkillMD   string    `json:"skill_md"`
 }
 
+// SkillDraftView is a skill draft for review.
+type SkillDraftView struct {
+	SkillMD     string `json:"skill_md"`
+	Name        string `json:"name"`
+	BaseSkillID string `json:"base_skill_id,omitempty" doc:"The skill that the draft changes, when the work did its task."`
+	BaseVersion int    `json:"base_version,omitempty"`
+	Diff        string `json:"diff,omitempty" doc:"The change of SKILL.md against the current version of the base skill."`
+}
+
+func draftView(d *skillDraft) SkillDraftView {
+	v := SkillDraftView{SkillMD: d.SkillMD, Name: d.Name}
+	if d.BaseSkill != nil {
+		v.BaseSkillID, v.BaseVersion, v.Diff = d.BaseSkill.ID().String(), d.BaseVersion, skillDiff(d.BaseSkillMD, d.SkillMD)
+	}
+	return v
+}
+
 type SkillPath struct {
 	Space uuid.UUID `path:"space" doc:"Space ID"`
 	Skill uuid.UUID `path:"skill"`
@@ -225,27 +242,17 @@ func (a *App) registerSkills(api huma.API) {
 		return &struct{ Body skills.SyncResult }{Body: res}, nil
 	})
 
-	huma.Register(api, op("draft-skill", http.MethodPost, "/spaces/{space}/runs/{run}/draft-skill", "Draft a SKILL.md from a finished run (Save as skill)", "skills"), func(ctx context.Context, in *struct {
+	huma.Register(api, op("draft-skill", http.MethodPost, "/spaces/{space}/runs/{run}/draft-skill", "Draft a skill from a finished run with the bot's owner role (Save as skill). When the run did the task of a skill, the draft changes that skill and has a diff.", "skills"), func(ctx context.Context, in *struct {
 		SpacePath
 		Run uuid.UUID `path:"run"`
-	}) (*struct {
-		Body struct {
-			SkillMD string `json:"skill_md"`
-		}
-	}, error) {
+	}) (*struct{ Body SkillDraftView }, error) {
 		if _, _, err := a.ctxSpace(ctx, in.Space, true); err != nil {
 			return nil, err
 		}
-		md, err := a.DraftSkill(ctx, in.Space, in.Run)
+		d, err := a.DraftSkill(ctx, in.Space, in.Run)
 		if err != nil {
 			return nil, apiError(err)
 		}
-		out := &struct {
-			Body struct {
-				SkillMD string `json:"skill_md"`
-			}
-		}{}
-		out.Body.SkillMD = md
-		return out, nil
+		return &struct{ Body SkillDraftView }{Body: draftView(d)}, nil
 	})
 }

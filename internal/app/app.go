@@ -40,6 +40,7 @@ import (
 	"github.com/alternayte/fettle/internal/settings"
 	"github.com/alternayte/fettle/internal/skills"
 	"github.com/alternayte/fettle/internal/spaces"
+	"github.com/alternayte/fettle/internal/teach"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
 	"github.com/alternayte/fettle/internal/zones"
@@ -64,6 +65,7 @@ type App struct {
 	Learning *learning.Service
 	Skael    *skills.Skael
 	Screens  *screens.Service
+	Teach    *teach.Service
 	// Desktop is set when the desktop app runs this server in process (§15.1).
 	Desktop *Desktop
 	// Connectors holds the MCP connectors (§12).
@@ -172,6 +174,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupConnectors()
 	a.setupSkills()
 	a.setupScreens()
+	a.setupTeach()
 	a.registerSelfTools()
 	a.registerChanges()
 	a.registerPrimaryChange()
@@ -181,6 +184,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &agent.Worker{A: a.Agent})
 	river.AddWorker(workers, &maintenanceWorker{a: a})
+	river.AddWorker(workers, &teachWorker{a: a})
 	interactive, background := 4, 2
 	if cfg.Mode == ModeServer {
 		interactive, background = 16, 8

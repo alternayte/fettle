@@ -10,13 +10,16 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 )
@@ -291,9 +294,35 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handle(w, r, "openai-responses", fl)
 	case r.Method == http.MethodPost && path == "/messages":
 		s.handle(w, r, "anthropic-messages", fl)
+	case r.Method == http.MethodPost && path == "/audio/transcriptions":
+		s.transcribe(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// transcribe is the OpenAI-compatible /audio/transcriptions endpoint. The fake "hears" the
+// audio bytes as text when they are UTF-8 text, so a test chooses what a note says.
+func (s *Server) transcribe(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		apiError(w, http.StatusBadRequest, "the body is not a multipart form: "+err.Error())
+		return
+	}
+	f, _, err := r.FormFile("file")
+	if err != nil {
+		apiError(w, http.StatusBadRequest, "no file part")
+		return
+	}
+	defer func() { _ = f.Close() }()
+	b, _ := io.ReadAll(io.LimitReader(f, 32<<20))
+	text := "A spoken note."
+	if len(b) > 0 && utf8.Valid(b) && !strings.ContainsRune(string(b), 0) {
+		text = strings.TrimSpace(string(b))
+	}
+	s.mu.Lock()
+	s.requests = append(s.requests, Recorded{API: "audio-transcriptions", Model: r.FormValue("model"), LastUser: text, At: time.Now()})
+	s.mu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{"text": text})
 }
 
 func (s *Server) models(w http.ResponseWriter, fl flags) {
@@ -463,6 +492,23 @@ func (s *Server) builtin(req nreq) Step {
 	if strings.HasPrefix(req.system, "You read a person's new message to a bot and decide whether it corrects") {
 		return Step{JSON: map[string]any{"correction": false, "reason": "The fake model finds no correction."}}
 	}
+	// An unscripted skill match finds no matching skill.
+	if strings.HasPrefix(req.system, "You decide whether a task that was done once") {
+		return Step{JSON: map[string]any{"match": "", "reason": "The fake model finds no matching skill."}}
+	}
+	// Unscripted teach questions ask for the changing values and the check.
+	if strings.HasPrefix(req.system, "You prepare the questions that a bot asks") {
+		return Step{JSON: map[string]any{
+			"inputs":  "Which values change from one run to the next?",
+			"success": "Which result shows that the work is done correctly?",
+			"unclear": "",
+		}}
+	}
+	// An unscripted skill draft follows the material: its task, its steps as they are,
+	// and the answers as inputs and the check.
+	if strings.HasPrefix(req.system, "You draft a skill for a bot") {
+		return Step{JSON: fakeDraft(req.lastUser())}
+	}
 	if req.schema != nil {
 		return Step{JSON: synth(req.schema)}
 	}
@@ -552,3 +598,70 @@ func synthArgs(schema json.RawMessage, user string) map[string]any {
 	}
 	return args
 }
+
+// section returns the text under a "Heading:" line of the draft material, up to the next
+// heading.
+func section(text, heading string) string {
+	i := strings.Index(text, heading+":\n")
+	if i < 0 {
+		return ""
+	}
+	rest := text[i+len(heading)+2:]
+	for _, h := range []string{"\n\nSteps:\n", "\n\nAnswers:\n", "\n\nResult:\n", "\nSkills:\n", "\nThe task is the skill", "\nThis draft comes from a run", "\n\nCurrent SKILL.md:\n"} {
+		if j := strings.Index(rest, h); j >= 0 {
+			rest = rest[:j]
+		}
+	}
+	return strings.TrimRight(rest, "\n")
+}
+
+func fakeDraft(user string) map[string]any {
+	task := strings.TrimSpace(section(user, "Task"))
+	steps := section(user, "Steps")
+	name := strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(task), "-"), "-")
+	if len(name) > 40 {
+		name = strings.Trim(name[:40], "-")
+	}
+	if name == "" {
+		name = "new-skill"
+	}
+	title := strings.SplitN(task, "\n", 2)[0]
+	var inputs []any
+	check := ""
+	for _, line := range strings.Split(section(user, "Answers"), "\n") {
+		_, ans, ok := strings.Cut(line, "): ")
+		if !ok {
+			continue
+		}
+		switch {
+		case strings.Contains(line, "(inputs)"):
+			inputs = append(inputs, map[string]any{"name": "value", "description": ans, "example": ans})
+		case strings.Contains(line, "(success)"):
+			check = ans
+		}
+	}
+	md := ""
+	if i := strings.Index(user, "Current SKILL.md:\n"); i >= 0 {
+		md = strings.TrimRight(user[i+len("Current SKILL.md:\n"):], "\n") + "\n\n## Steps that a demo or run showed\n\n" + steps + "\n"
+	} else {
+		desc, _ := json.Marshal(strings.ReplaceAll(task, "\n", " "))
+		md = "---\nname: " + name + "\ndescription: " + string(desc) + "\n---\n\n# " + title + "\n\n## Steps\n\n" + steps + "\n"
+		if check != "" {
+			md += "\n## How to check the result\n\n" + check + "\n"
+		}
+		if r := strings.TrimSpace(section(user, "Result")); r != "" {
+			md += "\n## Result of the work that this skill comes from\n\n" + r + "\n"
+		}
+	}
+	if inputs == nil {
+		inputs = []any{}
+	}
+	exp := []any{}
+	if check != "" {
+		exp = append(exp, check)
+	}
+	return map[string]any{"name": name, "description": task, "skill_md": md, "inputs": inputs,
+		"eval": map[string]any{"prompt": title, "expected_output": check, "expectations": exp}}
+}
+
+var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)

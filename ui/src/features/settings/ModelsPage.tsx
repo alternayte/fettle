@@ -20,7 +20,7 @@ import { ModelPicker } from "./ModelPicker";
 import { NativeSelect, ProviderForm } from "./ProviderForm";
 import { ProviderTest } from "./ProviderTest";
 
-const ROLES: ModelRole[] = ["owner", "router", "verifier", "computer_use", "summarizer"];
+const ROLES: ModelRole[] = ["owner", "router", "verifier", "computer_use", "summarizer", "transcribe"];
 
 function ProviderItem({ p }: { p: SchemaProviderView }) {
   const [editing, setEditing] = useState(false);
@@ -115,6 +115,8 @@ function RoleRow({
   inherited?: SchemaTarget[];
 }) {
   const setRole = useSetRole();
+  // Transcription uses the OpenAI-compatible /audio/transcriptions endpoint.
+  if (role === "transcribe") providers = providers.filter((p) => p.api_type !== "anthropic-messages");
   const [providerId, setProviderId] = useState(providers[0]?.id ?? "");
   const [model, setModel] = useState("");
   const provider = providers.find((p) => p.id === providerId) ?? providers[0];
@@ -144,9 +146,11 @@ function RoleRow({
               ? t("models.roles.botInherits", { models: inherited.map((x) => x.model).join(", ") })
               : role === "owner"
                 ? t("models.roles.ownerMissing")
-                : bot
-                  ? t("models.roles.botInheritsOwner")
-                  : t("models.roles.inherit")}
+                : role === "transcribe"
+                  ? t("models.roles.transcribeMissing")
+                  : bot
+                    ? t("models.roles.botInheritsOwner")
+                    : t("models.roles.inherit")}
           </p>
         ) : (
           <ol className="space-y-1" aria-label={t("models.roles.order", { role: t(`models.roles.${role}.name`) })}>

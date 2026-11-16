@@ -48,6 +48,9 @@ type Agent struct {
 	OrgBudget func(ctx context.Context, spaceID uuid.UUID, userID string, estimate float64) (scope string, left float64)
 	// ApplyPatch makes a new skill version from an applied patch card (§14.3).
 	ApplyPatch func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, card chats.Card) error
+	// TeachAnswer records the answer to a question of a teach session, in the transaction
+	// of the answer (§13.3).
+	TeachAnswer func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, card chats.Card) error
 	// bg counts background work that uses the database after a request returns.
 	bg     *sync.WaitGroup
 	Vault  *vault.Vault

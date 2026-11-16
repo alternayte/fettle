@@ -105,7 +105,8 @@
     "download": "Download {name}",
     "mentions": "Bots of this group",
     "quoted": "Reply to {name}",
-    "openScreen": "Open the screen of {name}"
+    "openScreen": "Open the screen of {name}",
+    "menu": "More for {name}"
   },
   "card": {
     "waits": "This card waits for you",
@@ -122,7 +123,8 @@
       "check": "Your check",
       "proposal": "Proposal",
       "connect": "Connect",
-      "patch": "Skill patch"
+      "patch": "Skill patch",
+      "teach": "Skill review"
     },
     "patch": {
       "diff": "Changes to the skill",
@@ -157,7 +159,8 @@
       "stop": "Stop"
     },
     "takeover": {
-      "open": "Open the screen"
+      "open": "Open the screen",
+      "record": "Record this as a skill"
     },
     "resolved": {
       "allowed": "Allowed",
@@ -193,6 +196,13 @@
     "question": {
       "answer": "Your answer",
       "send": "Answer"
+    },
+    "teach": {
+      "steps": "Recorded steps",
+      "note": "A note",
+      "open": "Open {url}",
+      "login": "login {n}",
+      "review": "Review"
     }
   },
   "run": {
@@ -424,7 +434,12 @@
       "botInheritsOwner": "Uses the owner models of this bot.",
       "override": "Use for this bot",
       "useSpace": "Use the space models",
-      "usingSpace": "This role uses the space models again"
+      "usingSpace": "This role uses the space models again",
+      "transcribe": {
+        "name": "Transcribe",
+        "body": "Turns spoken teach notes into text. Optional."
+      },
+      "transcribeMissing": "No model. The teach view has no microphone."
     }
   },
   "setup": {
@@ -658,7 +673,8 @@
     "moveFailed": "Fettle did not move the bot",
     "moveHint": "The bot uses the new computer from its next run. Its own files move with it.",
     "openScreen": "Open the screen",
-    "noScreen": "Only a desktop zone has a screen you can watch and take over."
+    "noScreen": "Only a desktop zone has a screen you can watch and take over.",
+    "teachHint": "Show {bot} how to do some work once, and it drafts a skill."
   },
   "settings": {
     "nav": "Settings pages",
@@ -1203,7 +1219,9 @@
         "other": "The set has {n} skills. {updated} changed."
       },
       "failed": "The Skael sync failed"
-    }
+    },
+    "draftChanges": "This run did the work of the skill {name}. Read the change, then save a new version.",
+    "draftDiff": "Change to the skill"
   },
   "screen": {
     "title": "Screen of {bot}",
@@ -1492,5 +1510,130 @@
       "body": "Someone used it or stopped it, or it is too old. Ask an owner for a new link."
     },
     "loadFailed": "Fettle cannot load the invite link"
+  },
+  "teach": {
+    "action": "Teach a skill",
+    "dialogTitle": "Teach {bot} a skill",
+    "dialogBody": "Do the work once on the bot's screen and in its terminal. Fettle records each step. Then the bot asks up to 3 questions and drafts a skill.",
+    "checking": "Checking the computer…",
+    "noZone": "{bot} has no zone, so it has no screen. Give the bot a zone first.",
+    "resume": "You are teaching this bot now.",
+    "resumeOpen": "Open the teach view",
+    "needsDesktop": "Teaching needs the desktop size. The zone {zone} has the {size} size.",
+    "offerChange": "Fettle can change the zone to the desktop size. Its computer then starts again.",
+    "askOwner": "Ask an owner to change the zone {zone} to the desktop size.",
+    "taskLabel": "What do you show the bot?",
+    "taskHint": "A few words, for example: save the total of the acme invoice.",
+    "taskPlaceholder": "Save the total of the acme invoice",
+    "changeAndStart": "Change to desktop and start",
+    "start": "Start",
+    "startFailed": "Teaching did not start",
+    "title": "Teach {bot}",
+    "recording": "Recording",
+    "screen": "Screen",
+    "terminal": "Terminal",
+    "terminalConnecting": "Connecting to the terminal…",
+    "terminalReconnect": "The terminal closed. Open it again",
+    "steps": "Steps",
+    "noSteps": "No steps yet. Use the browser or the terminal, and each step shows here.",
+    "kind": {
+      "navigate": "Open",
+      "click": "Click",
+      "type": "Type",
+      "select": "Select",
+      "check": "Check",
+      "press": "Press",
+      "command": "Command",
+      "note": "Note"
+    },
+    "step": {
+      "secret": "{target}: a {kind}, not recorded",
+      "value": "{target}: {value}",
+      "exit": "In {cwd} · exit code {code}",
+      "home": "the bot home"
+    },
+    "secret": {
+      "password": "password",
+      "card": "card number",
+      "one_time_code": "one-time code",
+      "echo_off": "hidden input"
+    },
+    "noteLabel": "Note on the current step",
+    "notePlaceholder": "Why you did this step, or a step in another app",
+    "addNote": "Add note",
+    "addNoteStep": "Add as a step",
+    "noteFailed": "The note was not added",
+    "voice": "Speak",
+    "voiceStart": "Speak a note",
+    "voiceStop": "Stop and add",
+    "voiceFailed": "The spoken note was not added",
+    "micFailed": "Fettle cannot use the microphone",
+    "controlFailed": "Fettle cannot take control of the screen",
+    "discard": "Discard",
+    "done": "Done",
+    "doneHint": "Stop recording and return the screen to the bot",
+    "doneFailed": "Teaching did not stop",
+    "close": "Close",
+    "loading": "Loading…",
+    "status": {
+      "recording": "Recording",
+      "asking": "Questions",
+      "drafting": "Drafting",
+      "review": "Review",
+      "saved": "Saved",
+      "discarded": "Discarded",
+      "failed": "Failed"
+    },
+    "otherRecording": "Another person is teaching this bot now.",
+    "preparing": "{bot} prepares its questions.",
+    "asking": "{bot} asks its questions in the chat. Answer them, and the bot drafts the skill.",
+    "drafting": "{bot} drafts the skill.",
+    "notAnswered": "Not answered",
+    "answerInChat": "Answer in the chat",
+    "retry": "Try again",
+    "discarded": "This teach session was discarded.",
+    "saved": "Saved as {name}, version {version}.",
+    "openSkill": "Open the skill",
+    "save": "Save",
+    "saveFailed": "The skill was not saved",
+    "ownerSaves": "Only an owner saves a skill. The owners got this review.",
+    "keepChanges": "Keep changes",
+    "changesKept": "The changes are kept",
+    "try": "Try it",
+    "tryTitle": "Try the skill",
+    "tryBody": "The bot does the work again with these inputs, as a normal run. It asks before each action that needs approval.",
+    "tryFailed": "The run did not start",
+    "review": {
+      "intro": "Read the draft. Change what is wrong, choose a vault item for each login, and save.",
+      "introPatch": "What you showed is the skill {name}. Read the change, then save a new version.",
+      "diff": "Change to {name}",
+      "inputs": "Inputs",
+      "noInputs": "No inputs. Each run uses the same values.",
+      "input": {
+        "name": "Name of input {n}",
+        "description": "Description of input {n}",
+        "example": "Example of input {n}",
+        "namePlaceholder": "month",
+        "descriptionPlaceholder": "What the value is",
+        "examplePlaceholder": "2026-10"
+      },
+      "addInput": "Add input",
+      "removeInput": "Remove input {n}",
+      "steps": "Recorded steps",
+      "stepsHint": "The screenshots stay with this session. They are not part of the skill.",
+      "evalsHint": "One case from the demo and your answers. Fettle uses it to check later changes to the skill.",
+      "shot": "Screenshot of step {n}",
+      "login": "Login {n}",
+      "remove": "Remove step {n}",
+      "restore": "Restore step {n}",
+      "value": "Value of step {n}",
+      "command": "Command of step {n}",
+      "notes": "Notes of step {n}",
+      "notesPlaceholder": "Notes, one on each line",
+      "vaultLogin": "Sign in with fill_login and the vault login",
+      "vaultSecret": "Give the hidden input with use_secret and the vault item",
+      "chooseItem": "Choose an item",
+      "addItem": "Add an item to the vault"
+    }
   }
 }
