@@ -51,7 +51,11 @@ type Manager struct {
 	// Providers by kind; Default names the provider of zones without one.
 	Providers map[string]Provider
 	Default   string
-	Image     string
+	// Image is the computer image at start; SetImage changes it.
+	Image string
+	// Network returns the extra roots and the proxy that computers get. The host provider
+	// gets none of them.
+	Network func(ctx context.Context) (Network, error)
 	// MaxRunning is the admission limit; 0 means no limit.
 	MaxRunning func(ctx context.Context) int
 	// ExtraHosts are test DNS entries inside computers.
@@ -96,6 +100,56 @@ func NewManager(mm *Manager) *Manager {
 		mm.Log = slog.Default()
 	}
 	return mm
+}
+
+// Network is what a computer needs to work on a network with TLS inspection or a proxy.
+type Network struct {
+	// RootsPEM holds the extra root certificates.
+	RootsPEM string
+	// Proxy is the upstream proxy URL with the user name, but without the password.
+	Proxy string
+	// ProxyPassword is the password of the proxy user.
+	ProxyPassword string
+}
+
+// image returns the current computer image.
+func (m *Manager) image() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Image
+}
+
+// SetImage changes the computer image. The next machine that starts prepares and uses it;
+// running machines keep theirs.
+func (m *Manager) SetImage(image string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Image = image
+}
+
+// networkEnv adds the extra roots and the proxy of the computer network to env. The host
+// provider runs on the host itself and gets nothing.
+func (m *Manager) networkEnv(ctx context.Context, prov Provider, env map[string]string) error {
+	if m.Network == nil || prov.Kind() == "host" {
+		return nil
+	}
+	n, err := m.Network(ctx)
+	if err != nil {
+		return err
+	}
+	if n.RootsPEM != "" {
+		env["FETTLE_AGENTD_CA"] = n.RootsPEM
+	}
+	if n.Proxy != "" {
+		env["FETTLE_AGENTD_PROXY"] = n.Proxy
+		if n.ProxyPassword != "" {
+			env["FETTLE_AGENTD_PROXY_PASSWORD"] = n.ProxyPassword
+			if m.Redact != nil {
+				m.Redact("proxy password", n.ProxyPassword)
+			}
+		}
+	}
+	return nil
 }
 
 // SetClock replaces the clock (tests).
@@ -322,7 +376,17 @@ func (m *Manager) bringUp(ctx context.Context, z *zones.Zone, c *Computer) (*liv
 		return nil, nil, err
 	}
 	netCfg, _ := json.Marshal(map[string]any{"mode": z.Network, "allow_hosts": z.AllowHosts})
-	nc := &Computer{ZoneID: z.ID(), ProviderID: row.ID(), State: StateStarting, TokenHash: hashToken(token), CertPEM: string(certPEM), ImageDigest: m.Image}
+	image := m.image()
+	env := map[string]string{
+		"FETTLE_AGENTD_TOKEN":    token,
+		"FETTLE_AGENTD_TLS_CERT": string(certPEM),
+		"FETTLE_AGENTD_TLS_KEY":  string(keyPEM),
+		"FETTLE_AGENTD_NETWORK":  string(netCfg),
+	}
+	if err := m.networkEnv(ctx, prov, env); err != nil {
+		return nil, nil, err
+	}
+	nc := &Computer{ZoneID: z.ID(), ProviderID: row.ID(), State: StateStarting, TokenHash: hashToken(token), CertPEM: string(certPEM), ImageDigest: image}
 	if c != nil {
 		nc.WorkspaceRev = c.WorkspaceRev
 	}
@@ -335,12 +399,7 @@ func (m *Manager) bringUp(ctx context.Context, z *zones.Zone, c *Computer) (*liv
 	if m.Redact != nil {
 		m.Redact("computer token", token)
 	}
-	spec := Spec{ZoneID: z.ID().String(), Image: m.Image, Size: Size(z.Size), DiskGiB: Sizes[Size(z.Size)].DiskGiB, ExtraHosts: m.ExtraHosts, Env: map[string]string{
-		"FETTLE_AGENTD_TOKEN":    token,
-		"FETTLE_AGENTD_TLS_CERT": string(certPEM),
-		"FETTLE_AGENTD_TLS_KEY":  string(keyPEM),
-		"FETTLE_AGENTD_NETWORK":  string(netCfg),
-	}}
+	spec := Spec{ZoneID: z.ID().String(), Image: image, Size: Size(z.Size), DiskGiB: Sizes[Size(z.Size)].DiskGiB, ExtraHosts: m.ExtraHosts, Env: env}
 	mach, err := prov.Create(ctx, spec)
 	if err != nil {
 		_ = m.setState(context.WithoutCancel(ctx), nc.ID(), StateError, err.Error())
@@ -794,9 +853,14 @@ func (m *Manager) Fork(ctx context.Context, zoneID uuid.UUID, botIDs []uuid.UUID
 		m.Redact("computer token", token)
 	}
 	netCfg, _ := json.Marshal(map[string]any{"mode": z.Network, "allow_hosts": z.AllowHosts})
-	mach, err := prov.Create(ctx, Spec{ZoneID: zoneID.String(), Image: m.Image, Size: Size(z.Size), ExtraHosts: m.ExtraHosts, Env: map[string]string{
+	env := map[string]string{
 		"FETTLE_AGENTD_TOKEN": token, "FETTLE_AGENTD_TLS_CERT": string(certPEM), "FETTLE_AGENTD_TLS_KEY": string(keyPEM), "FETTLE_AGENTD_NETWORK": string(netCfg),
-	}})
+	}
+	// A fork gets the same roots and proxy as the computer it copies.
+	if err := m.networkEnv(ctx, prov, env); err != nil {
+		return nil, err
+	}
+	mach, err := prov.Create(ctx, Spec{ZoneID: zoneID.String(), Image: m.image(), Size: Size(z.Size), ExtraHosts: m.ExtraHosts, Env: env})
 	if err != nil {
 		return nil, err
 	}

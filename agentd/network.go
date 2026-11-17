@@ -91,3 +91,43 @@ func rulesetHash(ruleset string) string {
 	sum := sha256.Sum256([]byte(ruleset))
 	return hex.EncodeToString(sum[:])
 }
+
+// buildProxyRuleset returns the nftables ruleset of a computer with a proxy, in an open or
+// an allowlist zone. Only the filter proxy user (uid) reaches the upstream proxy and DNS;
+// every other process reaches only loopback, where the filter proxy listens. The filter
+// proxy checks host names, which the IP rules cannot see behind a proxy.
+func buildProxyRuleset(uid int, upstream []netip.AddrPort) (string, error) {
+	if len(upstream) == 0 {
+		return "", fmt.Errorf("ruleset: the upstream proxy has no address")
+	}
+	var b strings.Builder
+	b.WriteString("table inet fettle\n")
+	b.WriteString("delete table inet fettle\n")
+	b.WriteString("table inet fettle {\n")
+	b.WriteString("\tchain output {\n")
+	b.WriteString("\t\ttype filter hook output priority 0; policy drop;\n")
+	b.WriteString("\t\toif \"lo\" accept\n")
+	b.WriteString("\t\tct state established,related accept\n")
+	fmt.Fprintf(&b, "\t\tmeta skuid %d udp dport 53 accept\n", uid)
+	fmt.Fprintf(&b, "\t\tmeta skuid %d tcp dport 53 accept\n", uid)
+	list := append([]netip.AddrPort(nil), upstream...)
+	sort.Slice(list, func(i, j int) bool { return list[i].Compare(list[j]) < 0 })
+	seen := map[netip.AddrPort]bool{}
+	for _, ap := range list {
+		ap = netip.AddrPortFrom(ap.Addr().Unmap().WithZone(""), ap.Port())
+		if seen[ap] {
+			continue
+		}
+		seen[ap] = true
+		family := "ip"
+		if ap.Addr().Is6() {
+			family = "ip6"
+		}
+		fmt.Fprintf(&b, "\t\tmeta skuid %d %s daddr %s tcp dport %d accept\n", uid, family, ap.Addr(), ap.Port())
+	}
+	b.WriteString("\t\tmeta l4proto tcp reject with tcp reset\n")
+	b.WriteString("\t\treject with icmpx type admin-prohibited\n")
+	b.WriteString("\t}\n")
+	b.WriteString("}\n")
+	return b.String(), nil
+}

@@ -32,18 +32,6 @@ func init() {
 	settings.Register(settings.Def{Key: "computers.max_running", Scope: "instance", Default: 0, Doc: "Computers that run at the same time. Zero uses a value from the memory of this host."})
 }
 
-// ComputerImage returns the computer image reference: FETTLE_COMPUTER_IMAGE, else the
-// published image of this version.
-func ComputerImage(version string) string {
-	if v := os.Getenv("FETTLE_COMPUTER_IMAGE"); v != "" {
-		return v
-	}
-	if version == "" || version == "dev" || strings.Contains(version, "-") {
-		return "fettle-computer:dev"
-	}
-	return "ghcr.io/alternayte/fettle-computer:" + strings.TrimPrefix(version, "v")
-}
-
 // agentdBinary finds fettle-agentd for the host provider: FETTLE_AGENTD_BIN, else next to fettle.
 func agentdBinary() string {
 	if v := os.Getenv("FETTLE_AGENTD_BIN"); v != "" {
@@ -97,13 +85,16 @@ func DefaultProvider(provs map[string]computers.Provider) string {
 
 func (a *App) setupComputers(ctx context.Context) {
 	provs := map[string]computers.Provider{}
-	image := ComputerImage(a.Cfg.Version)
+	image := a.computerImage(ctx)
 	if d, err := docker.New(image); err == nil {
 		provs["docker"] = d
 	}
 	provs["host"] = host.New(agentdBinary(), filepath.Join(a.Cfg.Data, "runtime", "host"))
 	if applecontainer.Supported() == nil {
-		provs["applecontainer"] = applecontainer.New(filepath.Join(a.Cfg.Data, "runtime", "applecontainer"), image)
+		ac := applecontainer.New(filepath.Join(a.Cfg.Data, "runtime", "applecontainer"), image)
+		// The image size lookup goes through the proxy and roots of the server.
+		ac.HTTP = a.HTTP
+		provs["applecontainer"] = ac
 	}
 	def := os.Getenv("FETTLE_DEFAULT_PROVIDER")
 	if def == "" {
@@ -118,12 +109,12 @@ func (a *App) setupComputers(ctx context.Context) {
 	}
 	// E2B (D-15: remote, never a default unless FETTLE_DEFAULT_PROVIDER names it).
 	if key := os.Getenv("FETTLE_E2B_API_KEY"); key != "" {
-		provs["e2b"] = a.newE2B(key)
+		provs["e2b"] = a.newE2B(ctx, key)
 		a.Vault.Redactor.RegisterGlobal("E2B API key", key)
 	}
 	a.Computers = computers.NewManager(&computers.Manager{
 		E: a.DB.Engine, Zones: a.Zones, Vault: a.Vault, Objects: a.Objects, Log: a.Log, Audit: a.Audit,
-		Providers: provs, Default: def, Image: image, ExtraHosts: extraHosts(),
+		Providers: provs, Default: def, Image: image, ExtraHosts: extraHosts(), Network: a.computerNetwork,
 		MaxRunning: func(ctx context.Context) int {
 			if n := a.Settings.Int(ctx, nil, "computers.max_running"); n > 0 {
 				return n
@@ -231,10 +222,10 @@ func (a *App) setupComputers(ctx context.Context) {
 
 // newE2B returns the e2b provider for an API key. FETTLE_E2B_API_URL names another E2B API,
 // and FETTLE_E2B_IMAGE the registry image that the templates build from.
-func (a *App) newE2B(key string) *e2b.Provider {
+func (a *App) newE2B(ctx context.Context, key string) *e2b.Provider {
 	image := os.Getenv("FETTLE_E2B_IMAGE")
 	if image == "" {
-		image = ComputerImage(a.Cfg.Version)
+		image = a.computerImage(ctx)
 	}
 	p := e2b.New(key, image, a.Cfg.Version)
 	if u := os.Getenv("FETTLE_E2B_API_URL"); u != "" {
@@ -267,6 +258,12 @@ type maintenanceWorker struct {
 func (w *maintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceArgs]) error {
 	ctx = context.WithValue(ctx, maintenanceKey{}, true)
 	w.a.Computers.Meter(ctx)
+	if w.a.Cfg.HostSettings {
+		// The host roots and proxy can change while the app runs.
+		if err := w.a.applyNetwork(ctx); err != nil {
+			w.a.Log.Warn("network settings", "error", err)
+		}
+	}
 	if _, err := w.a.Computers.SleepIdle(ctx); err != nil {
 		w.a.Log.Warn("idle sleep failed", "error", err)
 	}

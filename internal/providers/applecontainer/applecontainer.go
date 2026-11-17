@@ -4,6 +4,7 @@
 package applecontainer
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -45,9 +47,23 @@ type Provider struct {
 	// Root holds the runtime: Root/install (binaries), Root/app (images and VMs).
 	Root  string
 	Image string
-	// HTTP downloads the runtime package.
+	// HTTP downloads the runtime package and reads the size of the image.
 	HTTP *http.Client
 	mu   sync.Mutex
+	imu  sync.Mutex
+}
+
+// SetImage changes the computer image for the next preparation and machine.
+func (p *Provider) SetImage(image string) {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	p.Image = image
+}
+
+func (p *Provider) image() string {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	return p.Image
 }
 
 // New returns the provider with its runtime under root.
@@ -159,16 +175,17 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 		}
 	}
 	report(computers.Progress{Step: "service", State: "pass"})
-	if _, err := p.cli(ctx, "image", "inspect", p.Image); err == nil {
-		report(computers.Progress{Step: "image", State: "pass", Detail: p.Image})
+	img := p.image()
+	if _, err := p.cli(ctx, "image", "inspect", img); err == nil {
+		report(computers.Progress{Step: "image", State: "pass", Detail: img})
 		return nil
 	}
-	report(computers.Progress{Step: "image", State: "running", Detail: p.Image})
-	if err := p.loadImage(ctx); err != nil {
+	report(computers.Progress{Step: "image", State: "running", Detail: img})
+	if err := p.loadImage(ctx, img, report); err != nil {
 		report(computers.Progress{Step: "image", State: "fail", Detail: err.Error()})
 		return err
 	}
-	report(computers.Progress{Step: "image", State: "pass", Detail: p.Image})
+	report(computers.Progress{Step: "image", State: "pass", Detail: img})
 	return nil
 }
 
@@ -188,13 +205,15 @@ func (p *Provider) ownsService(status string) bool {
 
 // loadImage pulls the image from its registry, or, for a local build without a registry
 // (fettle-computer:dev), copies it from Docker.
-func (p *Provider) loadImage(ctx context.Context) error {
-	if strings.Contains(strings.SplitN(p.Image, "/", 2)[0], ".") {
-		_, err := p.cli(ctx, "image", "pull", p.Image)
-		return err
+func (p *Provider) loadImage(ctx context.Context, img string, report func(computers.Progress)) error {
+	if strings.Contains(strings.SplitN(img, "/", 2)[0], ".") {
+		if err := p.pull(ctx, img, report); err != nil {
+			return computers.ImageError(img, err)
+		}
+		return nil
 	}
 	if _, err := exec.LookPath("docker"); err != nil {
-		return fmt.Errorf("the image %s is a local build and Docker is not here to copy it from", p.Image)
+		return fmt.Errorf("the image %s is a local build and Docker is not here to copy it from. %s", img, computers.LocalBuildHint)
 	}
 	tmp, err := os.CreateTemp("", "fettle-image-*.tar")
 	if err != nil {
@@ -202,11 +221,129 @@ func (p *Provider) loadImage(ctx context.Context) error {
 	}
 	_ = tmp.Close()
 	defer func() { _ = os.Remove(tmp.Name()) }()
-	if out, err := exec.CommandContext(ctx, "docker", "save", p.Image, "-o", tmp.Name()).CombinedOutput(); err != nil {
-		return fmt.Errorf("docker save: %s", strings.TrimSpace(string(out)))
+	if out, err := exec.CommandContext(ctx, "docker", "save", img, "-o", tmp.Name()).CombinedOutput(); err != nil {
+		return fmt.Errorf("docker save %s: %s. %s", img, strings.TrimSpace(string(out)), computers.LocalBuildHint)
 	}
 	_, err = p.cli(ctx, "image", "load", "-i", tmp.Name())
 	return err
+}
+
+// percentRe finds a percentage in the progress output of the container CLI.
+var percentRe = regexp.MustCompile(`(\d{1,3})(?:\.\d+)?%`)
+
+// pull runs `container image pull` and reports progress. The total comes from the registry
+// manifest; the percent is the larger of the CLI output and the growth of the image store.
+func (p *Provider) pull(ctx context.Context, img string, report func(computers.Progress)) error {
+	hc := p.HTTP
+	if hc == nil {
+		hc = http.DefaultClient
+	}
+	sctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	total, err := imageSize(sctx, hc, img)
+	cancel()
+	if err != nil {
+		// The pull itself reports a missing or private image; the size only adds progress.
+		total = 0
+	}
+	var mu sync.Mutex
+	pct := 0
+	update := func(n int) {
+		mu.Lock()
+		defer mu.Unlock()
+		if n <= pct || n > 100 {
+			return
+		}
+		pct = n
+		report(computers.Progress{Step: "image", State: "running", Percent: pct, Detail: computers.DownloadDetail(total), TotalMB: int(total >> 20)})
+	}
+	report(computers.Progress{Step: "image", State: "running", Detail: computers.DownloadDetail(total), TotalMB: int(total >> 20)})
+	cmd := exec.CommandContext(ctx, p.bin(), "image", "pull", img)
+	pr, pw := io.Pipe()
+	var tail bytes.Buffer
+	cmd.Stdout, cmd.Stderr = pw, pw
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	scanned := make(chan struct{})
+	go func() {
+		defer close(scanned)
+		sc := bufio.NewScanner(pr)
+		sc.Split(scanProgress)
+		for sc.Scan() {
+			line := sc.Text()
+			if strings.TrimSpace(line) != "" {
+				tail.Reset()
+				tail.WriteString(line)
+			}
+			if m := percentRe.FindAllStringSubmatch(line, -1); len(m) > 0 {
+				n, _ := strconv.Atoi(m[len(m)-1][1])
+				update(n)
+			}
+		}
+		_, _ = io.Copy(io.Discard, pr)
+	}()
+	done := make(chan struct{})
+	if total > 0 {
+		store := filepath.Join(p.app(), "content")
+		start := dirSize(store)
+		go func() {
+			t := time.NewTicker(time.Second)
+			defer t.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-t.C:
+					if grown := dirSize(store) - start; grown > 0 {
+						update(int(min(grown*100/total, 99)))
+					}
+				}
+			}
+		}()
+	}
+	werr := cmd.Wait()
+	close(done)
+	_ = pw.Close()
+	<-scanned
+	if werr != nil {
+		msg := strings.TrimSpace(tail.String())
+		if msg == "" {
+			msg = werr.Error()
+		}
+		return errors.New(msg)
+	}
+	return nil
+}
+
+// scanProgress splits CLI output at new lines and at carriage returns, which progress bars
+// use to redraw a line.
+func scanProgress(data []byte, atEOF bool) (int, []byte, error) {
+	for i, b := range data {
+		if b == '\n' || b == '\r' {
+			return i + 1, data[:i], nil
+		}
+	}
+	if atEOF && len(data) > 0 {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}
+
+// dirSize returns the size of the files under dir, or 0 when it does not exist.
+func dirSize(dir string) int64 {
+	var n int64
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.Type().IsRegular() {
+			if info, err := d.Info(); err == nil {
+				n += info.Size()
+			}
+		}
+		return nil
+	})
+	return n
 }
 
 // installRuntime downloads the pinned package, checks its checksum and Apple's signature,
@@ -298,7 +435,7 @@ func name(zoneID string) string {
 func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Machine, error) {
 	img := s.Image
 	if img == "" {
-		img = p.Image
+		img = p.image()
 	}
 	size := computers.Sizes[s.Size]
 	if size.VCPU == 0 {

@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { FlaskConical, Monitor, Moon, MoreHorizontal, Plus } from "lucide-react";
+import { FlaskConical, Monitor, Moon, MoreHorizontal, Network, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { errorText } from "@/api/client";
 import {
   useBots,
+  useCheckZoneNetwork,
   useComputerProviders,
   useCreateZone,
   useEnableHost,
   useSleepZoneComputer,
+  useSession,
   useTestZoneComputer,
   useUpdateZone,
   useZones,
 } from "@/api/hooks";
-import type { SchemaComputerProviderView, SchemaZoneBody, SchemaZoneView } from "@/api/schema";
+import type { SchemaComputerProviderView, SchemaNetworkCheck, SchemaZoneBody, SchemaZoneView } from "@/api/schema";
 import { Notice, Section } from "@/app/Page";
 import { Btn, Field, inputCls, textareaCls } from "@/components/form";
 import {
@@ -27,6 +29,7 @@ import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PendingChange, type Pending } from "./PendingChange";
 import { NativeSelect } from "./ProviderForm";
+import { ServerSettings } from "./ServerSettings";
 
 const SIZES = ["small", "browser", "desktop"] as const;
 type Size = (typeof SIZES)[number];
@@ -201,6 +204,38 @@ function ZoneForm({
   );
 }
 
+const stepTone: Record<string, string> = { pass: "text-ok", fail: "text-danger", skip: "text-ink-faint" };
+
+/** NetworkResult shows the DNS, connect and TLS steps of each fetch of Check network. */
+function NetworkResult({ r }: { r: SchemaNetworkCheck }) {
+  if (r.error) return <p className="mt-1 text-xs text-danger">{t("computers.checkNoStart", { error: r.error })}</p>;
+  const extra = [r.proxy && t("computers.checkProxy"), r.roots && t("computers.checkRoots")].filter(Boolean);
+  return (
+    <div role="status" className="mt-1 space-y-1 text-xs">
+      <p className={r.pass ? "text-ok" : "text-danger"}>
+        {r.pass ? t("computers.checkPass", { url: r.url }) : t("computers.checkFail", { url: r.url })}
+        {extra.length > 0 && <span className="text-ink-faint"> {extra.join(" ")}</span>}
+      </p>
+      <ul className="space-y-0.5">
+        {(r.probes ?? []).map((p) => (
+          <li key={p.tool} className="text-ink-soft">
+            <span className="font-[var(--weight-medium)] text-ink">{t(`computers.tools.${p.tool}`)}</span>
+            {": "}
+            {(p.steps ?? []).map((st, i) => (
+              <span key={st.name}>
+                {i > 0 && " · "}
+                {t(`computers.steps.${st.name}`)}{" "}
+                <span className={stepTone[st.state]}>{t(`computers.stepState.${st.state}`)}</span>
+              </span>
+            ))}
+            {!p.pass && p.detail && <span className="block text-ink-faint">{p.detail}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 const took = (ms: number) => (ms < 1000 ? t("computers.underSecond") : formatDuration(ms));
 
 function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaComputerProviderView[] }) {
@@ -208,6 +243,7 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
   const update = useUpdateZone();
   const bots = useBots();
   const test = useTestZoneComputer();
+  const check = useCheckZoneNetwork();
   const sleep = useSleepZoneComputer();
   // The screen belongs to the zone's computer; it opens through one of the zone's bots.
   const screenBot =
@@ -257,6 +293,10 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
                 <FlaskConical aria-hidden className="size-3.5" />
                 {t("computers.test")}
               </DropdownMenuItem>
+              <DropdownMenuItem disabled={check.isPending} onSelect={() => check.mutate(zone.id)}>
+                <Network aria-hidden className="size-3.5" />
+                {t("computers.check")}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={zone.computer_state !== "running" || sleep.isPending}
                 onSelect={() =>
@@ -290,6 +330,13 @@ function ZoneRow({ zone, providers }: { zone: SchemaZoneView; providers: SchemaC
         </p>
       )}
       {test.isError && <p className="mt-1 text-xs text-danger">{errorText(test.error)}</p>}
+      {check.isPending && (
+        <p role="status" className="mt-1 text-xs text-ink-faint">
+          {t("computers.checking")}
+        </p>
+      )}
+      {check.data && !check.isPending && <NetworkResult r={check.data} />}
+      {check.isError && <p className="mt-1 text-xs text-danger">{errorText(check.error)}</p>}
       {zone.computer_error && zone.computer_state === "error" && (
         <p className="mt-1 text-xs text-danger">{zone.computer_error}</p>
       )}
@@ -373,6 +420,7 @@ function ProviderRow({ p, onPending }: { p: SchemaComputerProviderView; onPendin
 }
 
 export function ComputersPage() {
+  const { me } = useSession();
   const zones = useZones();
   const providers = useComputerProviders();
   const create = useCreateZone();
@@ -455,6 +503,11 @@ export function ComputersPage() {
           ))}
         </ul>
       </Section>
+      {me.is_admin && (
+        <Section id="server" title={t("computers.server.title")}>
+          <ServerSettings />
+        </Section>
+      )}
     </div>
   );
 }

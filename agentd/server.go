@@ -30,6 +30,10 @@ type NetworkState struct {
 	Mode      string
 	Applied   bool
 	RulesHash string
+	// Proxy is the URL of the filter proxy that commands and the browser use, or "".
+	Proxy string
+	// Env is added to the environment of every command: the CA bundle and proxy variables.
+	Env map[string]string
 }
 
 // Server serves the agentd endpoints for one home folder.

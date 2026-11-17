@@ -14,6 +14,8 @@ type PrepareStatus struct {
 	State    string     `json:"state"` // idle, running, ready, failed
 	Steps    []Progress `json:"steps"`
 	Error    string     `json:"error,omitempty"`
+	// Image is the computer image that this preparation got.
+	Image string `json:"image,omitempty"`
 }
 
 // PreparingError means the provider still prepares (runtime or image download), so a run
@@ -58,11 +60,12 @@ func (m *Manager) StartPrepare(kind string) error {
 	}
 	p := m.prep()
 	p.mu.Lock()
-	if s, ok := p.status[kind]; ok && (s.State == "running" || s.State == "ready") {
+	image := m.image()
+	if s, ok := p.status[kind]; ok && (s.State == "running" || (s.State == "ready" && s.Image == image)) {
 		p.mu.Unlock()
 		return nil
 	}
-	st := &PrepareStatus{Provider: kind, State: "running", Steps: []Progress{}}
+	st := &PrepareStatus{Provider: kind, State: "running", Steps: []Progress{}, Image: image}
 	p.status[kind] = st
 	p.mu.Unlock()
 	go func() {
@@ -100,6 +103,10 @@ var ErrPrepare = errors.New("the computer could not be prepared")
 // preparation when it has not run and reports a PreparingError while it runs.
 func (m *Manager) ensurePrepared(kind string) error {
 	s := m.PrepareStatusOf(kind)
+	if s.State == "ready" && s.Image != m.image() {
+		// The image changed in the settings: prepare the new one.
+		s.State = "idle"
+	}
 	switch s.State {
 	case "ready":
 		return nil
@@ -118,7 +125,9 @@ func (m *Manager) ensurePrepared(kind string) error {
 	for deadline := time.Now().Add(60 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
 		switch m.PrepareStatusOf(kind).State {
 		case "ready":
-			return nil
+			if m.PrepareStatusOf(kind).Image == m.image() {
+				return nil
+			}
 		case "failed":
 			return fmt.Errorf("%w: %s", ErrPrepare, m.PrepareStatusOf(kind).Error)
 		}
@@ -128,8 +137,11 @@ func (m *Manager) ensurePrepared(kind string) error {
 	for _, st := range s.Steps {
 		if st.State == "running" {
 			detail = st.Step
+			if st.TotalMB > 0 {
+				detail = st.Detail
+			}
 			if st.Percent > 0 {
-				detail = fmt.Sprintf("%s %d%%", st.Step, st.Percent)
+				detail = fmt.Sprintf("%s %d%%", detail, st.Percent)
 			}
 		}
 	}

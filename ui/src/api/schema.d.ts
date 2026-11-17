@@ -38,6 +38,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The settings of this server: computer image, certificates and proxy (instance admins) */
+    get: operations["list-instance-settings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/settings/{key}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Change a setting of this server. An empty text resets it; a secret is write-only (instance admins) */
+    put: operations["set-instance-setting"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/telemetry": {
     parameters: {
       query?: never;
@@ -1930,6 +1964,23 @@ export interface paths {
     patch: operations["update-zone"];
     trace?: never;
   };
+  "/api/v1/spaces/{space}/zones/{zone}/computer/network-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start the zone's computer and fetch one HTTPS page with curl and Chromium; report DNS, connect and TLS apart */
+    post: operations["check-zone-network"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/zones/{zone}/computer/stop": {
     parameters: {
       query?: never;
@@ -2438,6 +2489,22 @@ export interface components {
       example?: string;
       name: string;
     };
+    InstanceSettingView: {
+      /** @description The value that applies when nothing is stored. */
+      default: unknown;
+      doc: string;
+      /** @description The environment variable that sets or would lock this value. */
+      env: string;
+      is_default: boolean;
+      key: string;
+      /** @description An environment variable sets this value, so the API cannot change it. */
+      locked: boolean;
+      secret: boolean;
+      /** @description A secret has a value. */
+      set: boolean;
+      /** @description The stored value; null for a secret. */
+      value: unknown;
+    };
     InstanceView: {
       /** @description The server runs inside the desktop app. */
       desktop: boolean;
@@ -2530,6 +2597,9 @@ export interface components {
     ListOutBody2: {
       skills: components["schemas"]["SkillView"][] | null;
     };
+    ListOutBody3: {
+      settings: components["schemas"]["InstanceSettingView"][] | null;
+    };
     LocalAuthInBody: {
       token: string;
     };
@@ -2601,6 +2671,34 @@ export interface components {
       /** Format: uuid */
       zone_id: string;
     };
+    NetworkCheck: {
+      error?: string;
+      pass: boolean;
+      probes: components["schemas"]["NetworkProbe"][] | null;
+      provider: string;
+      /** @description The computer uses a proxy. */
+      proxy: boolean;
+      /** @description The computer has extra root certificates. */
+      roots: boolean;
+      /** Format: int64 */
+      start_ms: number;
+      url: string;
+      zone: string;
+    };
+    NetworkProbe: {
+      detail?: string;
+      pass: boolean;
+      steps: components["schemas"]["NetworkStep"][] | null;
+      /** @enum {string} */
+      tool: "curl" | "chromium";
+    };
+    NetworkStep: {
+      detail?: string;
+      /** @enum {string} */
+      name: "dns" | "connect" | "tls";
+      /** @enum {string} */
+      state: "pass" | "fail" | "skip";
+    };
     OnboardingView: {
       chat_id?: string;
       run_id?: string;
@@ -2633,6 +2731,7 @@ export interface components {
     };
     PrepareStatus: {
       error?: string;
+      image?: string;
       provider: string;
       state: string;
       steps: components["schemas"]["Progress"][] | null;
@@ -2653,6 +2752,8 @@ export interface components {
       percent?: number;
       state: string;
       step: string;
+      /** Format: int64 */
+      total_mb?: number;
     };
     ProvOutBody: {
       providers: components["schemas"]["ComputerProviderView"][] | null;
@@ -2926,6 +3027,9 @@ export interface components {
       /** @enum {string} */
       class?: "read" | "write_local" | "write_external" | "send" | "admin";
       disabled: boolean;
+    };
+    "Set-instance-settingRequest": {
+      value: unknown;
     };
     "Set-member-roleRequest": {
       /** @enum {string} */
@@ -3360,6 +3464,7 @@ export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
 export type SchemaInput = components["schemas"]["Input"];
+export type SchemaInstanceSettingView = components["schemas"]["InstanceSettingView"];
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
 export type SchemaInviteView = components["schemas"]["InviteView"];
@@ -3382,6 +3487,7 @@ export type SchemaListVaultItemsResponse = components["schemas"]["List-vault-ite
 export type SchemaListOutBody = components["schemas"]["ListOutBody"];
 export type SchemaListOutBody1 = components["schemas"]["ListOutBody1"];
 export type SchemaListOutBody2 = components["schemas"]["ListOutBody2"];
+export type SchemaListOutBody3 = components["schemas"]["ListOutBody3"];
 export type SchemaLocalAuthInBody = components["schemas"]["LocalAuthInBody"];
 export type SchemaLocalAuthOutBody = components["schemas"]["LocalAuthOutBody"];
 export type SchemaMeView = components["schemas"]["MeView"];
@@ -3391,6 +3497,9 @@ export type SchemaMessagePage = components["schemas"]["MessagePage"];
 export type SchemaMessageView = components["schemas"]["MessageView"];
 export type SchemaModelInfo = components["schemas"]["ModelInfo"];
 export type SchemaMoveBotZoneRequest = components["schemas"]["Move-bot-zoneRequest"];
+export type SchemaNetworkCheck = components["schemas"]["NetworkCheck"];
+export type SchemaNetworkProbe = components["schemas"]["NetworkProbe"];
+export type SchemaNetworkStep = components["schemas"]["NetworkStep"];
 export type SchemaOnboardingView = components["schemas"]["OnboardingView"];
 export type SchemaPatchOutcome = components["schemas"]["PatchOutcome"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
@@ -3433,6 +3542,7 @@ export type SchemaScreenControl = components["schemas"]["ScreenControl"];
 export type SchemaScreenView = components["schemas"]["ScreenView"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
+export type SchemaSetInstanceSettingRequest = components["schemas"]["Set-instance-settingRequest"];
 export type SchemaSetMemberRoleRequest = components["schemas"]["Set-member-roleRequest"];
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
@@ -3525,6 +3635,70 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["EditionView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-instance-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ListOutBody3"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "set-instance-setting": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Set-instance-settingRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InstanceSettingView"];
         };
       };
       /** @description Error */
@@ -8112,6 +8286,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ZoneView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "check-zone-network": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        zone: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NetworkCheck"];
         };
       };
       /** @description Error */

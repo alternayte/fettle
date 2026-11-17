@@ -17,6 +17,16 @@ var version = "dev"
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	if len(os.Args) > 1 && os.Args[1] == "filter-proxy" {
+		// The filter proxy runs as its own user; agentd starts it at boot (§10.5).
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err := agentd.RunFilterProxy(ctx, os.Stdin, logger.With("process", "filter-proxy")); err != nil {
+			logger.Error("filter proxy stopped", "error", err.Error())
+			os.Exit(1)
+		}
+		return
+	}
 	cfg, err := agentd.ConfigFromEnv(os.Getenv)
 	for _, k := range agentd.SecretEnv {
 		_ = os.Unsetenv(k)

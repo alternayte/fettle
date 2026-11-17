@@ -100,6 +100,8 @@ func (a *App) registerAPI(api huma.API) {
 	}
 	a.registerSettings(api)
 	a.registerAdmin(api)
+	a.registerInstanceSettings(api)
+	a.registerNetworkCheck(api)
 	a.registerDiagnostics(api)
 }
 

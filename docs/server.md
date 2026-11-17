@@ -162,15 +162,18 @@ The server reads these variables. A flag overrides its variable.
 | `FETTLE_S3_SECRET_KEY` | | The secret key. | none |
 | `FETTLE_S3_PATH_STYLE` | | `true` uses path-style URLs, for example for MinIO. | not set |
 | `FETTLE_WORKERS` | | The number of run workers. | 4 in local mode, 16 in server mode |
-| `FETTLE_EXTRA_CA_FILE` | | A PEM file of more CA certificates to trust. | none |
+| `FETTLE_EXTRA_CA_FILE` | | A PEM file of more CA certificates to trust. The server and the computers use it. It locks the setting `computers.extra_ca`. | none |
 | `FETTLE_LOG_LEVEL` | | The log level. | `info` |
 | `FETTLE_TELEMETRY` | | `on` turns on telemetry at start. | off |
 | `FETTLE_TELEMETRY_URL` | | The endpoint that telemetry sends to. | none |
 | `FETTLE_DEFAULT_PROVIDER` | | The default computer provider. | detected |
-| `FETTLE_COMPUTER_IMAGE` | | The computer image. | `ghcr.io/alternayte/fettle-computer:<version>` |
+| `FETTLE_COMPUTER_IMAGE` | | The computer image. It locks the setting `computers.image`. | the image of the build: `ghcr.io/alternayte/fettle-computer:<version>` for a release, `fettle-computer:dev` for a development build |
+| `FETTLE_NETWORK_CHECK_URL` | | The HTTPS page that Check network fetches. | `https://example.com/` |
 | `FETTLE_AGENTD_BIN` | | The `fettle-agentd` binary of the `host` provider. | next to `fettle` |
 
 Fettle also reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` for its outbound requests.
+Computers use the same proxy through their filter proxy. `HTTPS_PROXY` or `HTTP_PROXY` locks the setting `computers.proxy`.
+Read [computers.md](computers.md) for the settings of this server.
 
 The CLI reads `FETTLE_SERVER`, `FETTLE_TOKEN`, `FETTLE_SPACE`, `FETTLE_PASSWORD` and `FETTLE_EXPORT_PASSPHRASE`.
 The Enterprise build reads `FETTLE_LICENSE` and the `FETTLE_AUDIT_*` variables. Read [enterprise.md](enterprise.md).
