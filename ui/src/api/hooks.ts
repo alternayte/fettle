@@ -1176,6 +1176,8 @@ export function useCatalog() {
   });
 }
 
+export type ConnectorVariable = { name: string; required: boolean; secret: boolean; doc?: string };
+
 export type NewConnector = {
   name: string;
   url?: string;
@@ -1184,7 +1186,49 @@ export type NewConnector = {
   auth?: "none" | "oauth" | "header";
   header_name?: string;
   icon?: string;
+  env?: Record<string, string>;
+  variables?: ConnectorVariable[];
 };
+
+export type ConnectorEdit = {
+  name?: string;
+  url?: string;
+  command?: string[];
+  env?: Record<string, string>;
+  header_name?: string;
+};
+
+export function useUpdateConnector() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: ConnectorEdit }) =>
+      must(
+        api.PATCH("/api/v1/spaces/{space}/connectors/{connector}", {
+          params: { path: { space, connector: id } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export type AccountEdit = { label?: string; value?: string; secret_env?: Record<string, string> };
+
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, account, body }: { id: string; account: string; body: AccountEdit }) =>
+      must(
+        api.PATCH("/api/v1/spaces/{space}/connectors/{connector}/accounts/{account}", {
+          params: { path: { space, connector: id, account } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
 
 export function useCreateConnector() {
   const qc = useQueryClient();
@@ -1210,11 +1254,21 @@ export function useAddAccount() {
   const qc = useQueryClient();
   const space = useSpaceId();
   return useMutation({
-    mutationFn: ({ id, label, value }: { id: string; label: string; value?: string }) =>
+    mutationFn: ({
+      id,
+      label,
+      value,
+      secret_env,
+    }: {
+      id: string;
+      label: string;
+      value?: string;
+      secret_env?: Record<string, string>;
+    }) =>
       must(
         api.POST("/api/v1/spaces/{space}/connectors/{connector}/accounts", {
           params: { path: { space, connector: id } },
-          body: { label, value },
+          body: { label, value, secret_env },
         }),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
@@ -1224,11 +1278,11 @@ export function useAddAccount() {
 export function useAuthorize() {
   const space = useSpaceId();
   return useMutation({
-    mutationFn: ({ id, label }: { id: string; label: string }) =>
+    mutationFn: ({ id, label, account }: { id: string; label: string; account?: string }) =>
       must(
         api.POST("/api/v1/spaces/{space}/connectors/{connector}/authorize", {
           params: { path: { space, connector: id } },
-          body: { label },
+          body: { label, account_id: account },
         }),
       ),
   });

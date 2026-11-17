@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plug, Plus, RotateCw, Trash2 } from "lucide-react";
+import { Pencil, Plug, Plus, RotateCw, Trash2, X } from "lucide-react";
 import { useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { api, errorText, must } from "@/api/client";
@@ -14,12 +14,25 @@ import {
   useSession,
   useSetTool,
   useTestConnector,
+  useUpdateAccount,
+  useUpdateConnector,
   useZones,
+  type AccountEdit,
+  type ConnectorEdit,
+  type ConnectorVariable,
   type NewConnector,
 } from "@/api/hooks";
-import type { SchemaConnectorView } from "@/api/schema";
+import type { SchemaAccountView, SchemaConnectorView } from "@/api/schema";
 import { Section } from "@/app/Page";
 import { Btn, Field, SecretInput, inputCls, textareaCls } from "@/components/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { t } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 import { PendingChange, type Pending } from "./PendingChange";
@@ -87,6 +100,346 @@ function ToolList({ c, account }: { c: SchemaConnectorView; account: string }) {
   );
 }
 
+// ---------------------------------------------------------------- variables
+
+type PlainRow = { name: string; value: string; declared?: ConnectorVariable };
+
+function plainRows(declared: ConnectorVariable[], env: Record<string, string>): PlainRow[] {
+  const rows: PlainRow[] = declared
+    .filter((v) => !v.secret)
+    .map((v) => ({ name: v.name, value: env[v.name] ?? "", declared: v }));
+  for (const [k, v] of Object.entries(env)) {
+    if (!rows.some((r) => r.name === k)) rows.push({ name: k, value: v });
+  }
+  return rows;
+}
+
+function plainEnv(rows: PlainRow[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const r of rows) if (r.name.trim() && r.value !== "") out[r.name.trim()] = r.value;
+  return out;
+}
+
+/** PlainVars edits the plain variables of a stdio connector. A declared variable keeps its name. */
+function PlainVars({ id, rows, onChange }: { id: string; rows: PlainRow[]; onChange: (rows: PlainRow[]) => void }) {
+  const put = (i: number, r: Partial<PlainRow>) => onChange(rows.map((x, j) => (j === i ? { ...x, ...r } : x)));
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-[var(--weight-medium)] text-ink">{t("connectors.variables")}</legend>
+      <p className="text-xs text-ink-faint">{t("connectors.variablesHint")}</p>
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] items-start gap-2"
+        >
+          {r.declared ? (
+            <span className="col-span-2 pt-2 font-mono text-sm break-all text-ink sm:col-span-1">
+              {r.name}
+              {r.declared.required && <span className="ml-1.5 text-xs text-ink-faint">{t("connectors.required")}</span>}
+            </span>
+          ) : (
+            <input
+              aria-label={t("connectors.varName")}
+              value={r.name}
+              spellCheck={false}
+              onChange={(e) => put(i, { name: e.target.value })}
+              className={cn(inputCls, "col-span-2 font-mono text-sm sm:col-span-1")}
+            />
+          )}
+          <input
+            id={`${id}-${i}`}
+            aria-label={t("connectors.varValue", { name: r.name || t("connectors.newVariable") })}
+            value={r.value}
+            spellCheck={false}
+            onChange={(e) => put(i, { value: e.target.value })}
+            className={cn(inputCls, "font-mono text-sm")}
+          />
+          {r.declared ? (
+            <span />
+          ) : (
+            <Btn
+              size="sm"
+              kind="quiet"
+              className="mt-1"
+              aria-label={t("connectors.removeVariable", { name: r.name || t("connectors.newVariable") })}
+              onClick={() => onChange(rows.filter((_, j) => j !== i))}
+            >
+              <X aria-hidden className="size-3.5" />
+            </Btn>
+          )}
+          {r.declared?.doc && (
+            <p className="col-span-2 text-xs text-ink-faint sm:col-span-1 sm:col-start-2">{r.declared.doc}</p>
+          )}
+        </div>
+      ))}
+      <Btn size="sm" onClick={() => onChange([...rows, { name: "", value: "" }])}>
+        <Plus aria-hidden className="size-3.5" />
+        {t("connectors.addVariable")}
+      </Btn>
+    </fieldset>
+  );
+}
+
+type SecretRow = {
+  name: string;
+  value: string;
+  set: boolean;
+  remove: boolean;
+  declared?: ConnectorVariable;
+  fresh?: boolean;
+};
+
+function secretRows(declared: ConnectorVariable[], set: string[]): SecretRow[] {
+  const rows: SecretRow[] = declared
+    .filter((v) => v.secret)
+    .map((v) => ({ name: v.name, value: "", set: set.includes(v.name), remove: false, declared: v }));
+  for (const n of set) {
+    if (!rows.some((r) => r.name === n)) rows.push({ name: n, value: "", set: true, remove: false });
+  }
+  return rows;
+}
+
+/** secretEnv returns the changes of secret rows: a new value, or "" to remove a set variable. */
+function secretEnv(rows: SecretRow[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const r of rows) {
+    const name = r.name.trim();
+    if (!name) continue;
+    if (r.remove && r.set) out[name] = "";
+    else if (r.value !== "") out[name] = r.value;
+  }
+  return out;
+}
+
+/** SecretVars edits secret variables. A set value never comes back: the row shows the name and "set". */
+function SecretVars({ id, rows, onChange }: { id: string; rows: SecretRow[]; onChange: (rows: SecretRow[]) => void }) {
+  const put = (i: number, r: Partial<SecretRow>) => onChange(rows.map((x, j) => (j === i ? { ...x, ...r } : x)));
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-[var(--weight-medium)] text-ink">{t("connectors.secretVariables")}</legend>
+      <p className="text-xs text-ink-faint">{t("connectors.secretHint")}</p>
+      {rows.map((r, i) => {
+        const status = r.set
+          ? r.remove
+            ? t("connectors.willRemove")
+            : t("connectors.set")
+          : r.declared?.required
+            ? t("connectors.required")
+            : t("connectors.notSet");
+        return (
+          <div
+            key={i}
+            className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] items-start gap-2"
+          >
+            {r.fresh ? (
+              <input
+                aria-label={t("connectors.varName")}
+                value={r.name}
+                spellCheck={false}
+                onChange={(e) => put(i, { name: e.target.value })}
+                className={cn(inputCls, "col-span-2 font-mono text-sm sm:col-span-1")}
+              />
+            ) : (
+              <label
+                htmlFor={`${id}-${i}`}
+                className="col-span-2 pt-2 font-mono text-sm break-all text-ink sm:col-span-1"
+              >
+                {r.name}
+                <span className={cn("ml-1.5 text-xs text-ink-faint", r.remove && "text-danger")}>{status}</span>
+              </label>
+            )}
+            <div>
+              {r.fresh && (
+                <label htmlFor={`${id}-${i}`} className="sr-only">
+                  {t("connectors.varValue", { name: r.name || t("connectors.newVariable") })}
+                </label>
+              )}
+              <SecretInput
+                id={`${id}-${i}`}
+                value={r.value}
+                disabled={r.remove}
+                onChange={(v) => put(i, { value: v })}
+                placeholder={r.set ? "••••••••" : undefined}
+                describedBy={r.set ? `${id}-${i}-hint` : undefined}
+              />
+              {r.set && (
+                <p id={`${id}-${i}-hint`} className="mt-1 text-xs text-ink-faint">
+                  {t("connectors.replaceHint")}
+                </p>
+              )}
+              {r.declared?.doc && <p className="mt-1 text-xs text-ink-faint">{r.declared.doc}</p>}
+            </div>
+            {r.set ? (
+              <Btn size="sm" kind="quiet" className="mt-1" onClick={() => put(i, { remove: !r.remove, value: "" })}>
+                {r.remove ? t("connectors.keep") : t("connectors.remove")}
+              </Btn>
+            ) : r.fresh ? (
+              <Btn
+                size="sm"
+                kind="quiet"
+                className="mt-1"
+                aria-label={t("connectors.removeVariable", { name: r.name || t("connectors.newVariable") })}
+                onClick={() => onChange(rows.filter((_, j) => j !== i))}
+              >
+                <X aria-hidden className="size-3.5" />
+              </Btn>
+            ) : (
+              <span />
+            )}
+          </div>
+        );
+      })}
+      <Btn
+        size="sm"
+        onClick={() => onChange([...rows, { name: "", value: "", set: false, remove: false, fresh: true }])}
+      >
+        <Plus aria-hidden className="size-3.5" />
+        {t("connectors.addVariable")}
+      </Btn>
+    </fieldset>
+  );
+}
+
+// ---------------------------------------------------------------- accounts
+
+function AccountEditor({ c, acc, onDone }: { c: SchemaConnectorView; acc: SchemaAccountView; onDone: () => void }) {
+  const update = useUpdateAccount();
+  const p = `acc-${acc.id}`;
+  const [label, setLabel] = useState(acc.label);
+  const [key, setKey] = useState("");
+  const [rows, setRows] = useState<SecretRow[]>(() => secretRows(c.variables ?? [], acc.secret_env ?? []));
+  return (
+    <form
+      noValidate
+      aria-label={t("connectors.editAccount", { label: acc.label })}
+      className="mt-2 space-y-3 border-t border-rule pt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const body: AccountEdit = {};
+        if (label.trim() && label.trim() !== acc.label) body.label = label.trim();
+        if (c.auth === "header" && key) body.value = key;
+        if (c.kind === "mcp_stdio") {
+          const env = secretEnv(rows);
+          if (Object.keys(env).length) body.secret_env = env;
+        }
+        if (Object.keys(body).length === 0) return onDone();
+        update.mutate(
+          { id: c.id, account: acc.id, body },
+          {
+            onSuccess: () => {
+              toast.success(t("connectors.accountSaved"));
+              onDone();
+            },
+            onError: (err) => toast.error(t("connectors.failed"), { description: errorText(err) }),
+          },
+        );
+      }}
+    >
+      <Field id={`${p}-label`} label={t("connectors.label")} className="w-64">
+        <input
+          id={`${p}-label`}
+          value={label}
+          maxLength={80}
+          onChange={(e) => setLabel(e.target.value)}
+          className={inputCls}
+        />
+      </Field>
+      {c.auth === "header" && (
+        <Field id={`${p}-key`} label={t("connectors.newKey")} hint={t("connectors.newKeyHint")} className="w-80">
+          <SecretInput id={`${p}-key`} value={key} onChange={setKey} placeholder="••••••••" />
+        </Field>
+      )}
+      {c.kind === "mcp_stdio" && <SecretVars id={`${p}-secret`} rows={rows} onChange={setRows} />}
+      <div className="flex justify-end gap-1.5">
+        <Btn kind="quiet" onClick={onDone}>
+          {t("common.cancel")}
+        </Btn>
+        <Btn type="submit" kind="primary" busy={update.isPending}>
+          {t("connectors.save")}
+        </Btn>
+      </div>
+    </form>
+  );
+}
+
+function AccountItem({
+  c,
+  acc,
+  onGrant,
+}: {
+  c: SchemaConnectorView;
+  acc: SchemaAccountView;
+  onGrant: (account: string, zone: string) => void;
+}) {
+  const zones = useZones();
+  const authorize = useAuthorize();
+  const [editing, setEditing] = useState(false);
+  const signInAgain = () =>
+    authorize.mutate(
+      { id: c.id, label: acc.label, account: acc.id },
+      { onSuccess: (r) => (window.location.href = r.url), onError: (err) => toast.error(errorText(err)) },
+    );
+  return (
+    <li className="rounded-sm border border-rule bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-[var(--weight-medium)] text-ink">{acc.label}</span>
+        <span className="text-xs text-ink-faint">
+          {(acc.zones ?? []).length
+            ? t("connectors.zones", { zones: (acc.zones ?? []).join(", ") })
+            : t("connectors.noZones")}
+        </span>
+        <Btn
+          size="sm"
+          kind="quiet"
+          aria-label={t("connectors.editAccount", { label: acc.label })}
+          aria-expanded={editing}
+          onClick={() => setEditing((x) => !x)}
+        >
+          <Pencil aria-hidden className="size-3.5" />
+        </Btn>
+        <NativeSelect
+          id={`conn-${c.id}-${acc.id}-grant`}
+          value=""
+          onChange={(z) => z && onGrant(acc.id, z)}
+          className="ml-auto w-44"
+        >
+          <option value="">{t("connectors.grant")}</option>
+          {(zones.data ?? [])
+            .filter((z) => !(acc.zones ?? []).includes(z.name))
+            .map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+              </option>
+            ))}
+        </NativeSelect>
+      </div>
+      {(c.auth === "header" || (acc.secret_env ?? []).length > 0) && (
+        <p className="mt-1 font-mono text-xs text-ink-faint">
+          {c.auth === "header"
+            ? t("connectors.keySet")
+            : (acc.secret_env ?? []).map((n) => `${n}: ${t("connectors.set")}`).join(" · ")}
+        </p>
+      )}
+      {acc.needs_sign_in && (
+        <div
+          role="status"
+          className="mt-2 flex flex-wrap items-center gap-2 rounded-sm border border-warn/40 bg-warn-wash px-2.5 py-1.5"
+        >
+          <p className="text-sm text-ink">{t("connectors.needsSignIn")}</p>
+          <Btn size="sm" kind="act" className="ml-auto" busy={authorize.isPending} onClick={signInAgain}>
+            {t("connectors.signInAgain")}
+          </Btn>
+        </div>
+      )}
+      {editing ? (
+        <AccountEditor c={c} acc={acc} onDone={() => setEditing(false)} />
+      ) : (
+        !acc.needs_sign_in && <ToolList c={c} account={acc.id} />
+      )}
+    </li>
+  );
+}
+
 function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p: Pending) => void }) {
   const { space } = useSession();
   const zones = useZones();
@@ -95,7 +448,9 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
   const del = useDeleteConnector();
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
+  const [secrets, setSecrets] = useState<SecretRow[]>(() => secretRows(c.variables ?? [], []));
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const p = `conn-${c.id}`;
   const grant = async (account: string, zone: string) => {
     try {
@@ -121,7 +476,7 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
   };
   return (
     <li className="border-b border-rule py-3">
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+      <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3">
         <Plug aria-hidden className="size-4 text-ink-faint" />
         <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="min-w-0 text-left">
           <span className="block text-sm font-[var(--weight-medium)] text-ink">{c.name}</span>
@@ -130,6 +485,22 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
             {t("connectors.accounts").toLowerCase()}
           </span>
         </button>
+        {c.kind !== "composio" ? (
+          <Btn
+            size="sm"
+            kind="quiet"
+            aria-label={t("connectors.edit")}
+            aria-expanded={editing}
+            onClick={() => {
+              setEditing((x) => !x);
+              setOpen(true);
+            }}
+          >
+            <Pencil aria-hidden className="size-3.5" />
+          </Btn>
+        ) : (
+          <span />
+        )}
         <Btn
           size="sm"
           kind="quiet"
@@ -142,42 +513,23 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
       </div>
       {open && (
         <div className="mt-3 ml-7 space-y-4">
+          {editing && (
+            <div className="rounded-sm border border-rule bg-surface p-4">
+              <ConnectorForm edit={c} onDone={() => setEditing(false)} />
+            </div>
+          )}
           <div>
             <h3 className="label-caps mb-1">{t("connectors.accounts")}</h3>
             {(c.accounts ?? []).length === 0 && <p className="text-sm text-ink-faint">{t("connectors.noAccounts")}</p>}
             <ul className="space-y-3">
               {(c.accounts ?? []).map((acc) => (
-                <li key={acc.id} className="rounded-sm border border-rule bg-surface px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-[var(--weight-medium)] text-ink">{acc.label}</span>
-                    <span className="text-xs text-ink-faint">
-                      {(acc.zones ?? []).length
-                        ? t("connectors.zones", { zones: (acc.zones ?? []).join(", ") })
-                        : t("connectors.noZones")}
-                    </span>
-                    <NativeSelect
-                      id={`${p}-${acc.id}-grant`}
-                      value=""
-                      onChange={(z) => z && void grant(acc.id, z)}
-                      className="ml-auto w-44"
-                    >
-                      <option value="">{t("connectors.grant")}</option>
-                      {(zones.data ?? [])
-                        .filter((z) => !(acc.zones ?? []).includes(z.name))
-                        .map((z) => (
-                          <option key={z.id} value={z.id}>
-                            {z.name}
-                          </option>
-                        ))}
-                    </NativeSelect>
-                  </div>
-                  <ToolList c={c} account={acc.id} />
-                </li>
+                <AccountItem key={acc.id} c={c} acc={acc} onGrant={(a, z) => void grant(a, z)} />
               ))}
             </ul>
           </div>
           <form
-            className="flex flex-wrap items-end gap-2"
+            noValidate
+            className="space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
               const l = label.trim() || "default";
@@ -188,35 +540,45 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
                 );
                 return;
               }
+              const env = c.kind === "mcp_stdio" ? secretEnv(secrets) : {};
               add.mutate(
-                { id: c.id, label: l, value: value || undefined },
+                {
+                  id: c.id,
+                  label: l,
+                  value: value || undefined,
+                  secret_env: Object.keys(env).length ? env : undefined,
+                },
                 {
                   onSuccess: () => {
                     setLabel("");
                     setValue("");
+                    setSecrets(secretRows(c.variables ?? [], []));
                   },
                   onError: (err) => toast.error(t("connectors.failed"), { description: errorText(err) }),
                 },
               );
             }}
           >
-            <Field id={`${p}-label`} label={t("connectors.label")} className="w-48">
-              <input
-                id={`${p}-label`}
-                value={label}
-                maxLength={80}
-                onChange={(e) => setLabel(e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            {c.auth === "header" && (
-              <Field id={`${p}-key`} label={t("connectors.key")} className="w-64">
-                <SecretInput id={`${p}-key`} value={value} onChange={setValue} />
+            {c.kind === "mcp_stdio" && <SecretVars id={`${p}-new-secret`} rows={secrets} onChange={setSecrets} />}
+            <div className="flex flex-wrap items-end gap-2">
+              <Field id={`${p}-label`} label={t("connectors.label")} className="w-48">
+                <input
+                  id={`${p}-label`}
+                  value={label}
+                  maxLength={80}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className={inputCls}
+                />
               </Field>
-            )}
-            <Btn type="submit" busy={add.isPending || authorize.isPending}>
-              {c.auth === "oauth" ? t("connectors.signIn") : t("connectors.addAccount")}
-            </Btn>
+              {c.auth === "header" && (
+                <Field id={`${p}-key`} label={t("connectors.key")} className="w-64">
+                  <SecretInput id={`${p}-key`} value={value} onChange={setValue} />
+                </Field>
+              )}
+              <Btn type="submit" busy={add.isPending || authorize.isPending}>
+                {c.auth === "oauth" ? t("connectors.signIn") : t("connectors.addAccount")}
+              </Btn>
+            </div>
           </form>
         </div>
       )}
@@ -224,53 +586,134 @@ function ConnectorRow({ c, onPending }: { c: SchemaConnectorView; onPending: (p:
   );
 }
 
-function CustomForm({ initial, onDone }: { initial?: NewConnector; onDone: () => void }) {
+// ---------------------------------------------------------------- connector form
+
+function lines(s: string): string[] {
+  return s
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function sameEnv(a: Record<string, string>, b: Record<string, string>): boolean {
+  const ka = Object.keys(a);
+  return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
+}
+
+/**
+ * ConnectorForm adds a connector, or edits one with `edit`. The kind and the sign-in stay
+ * fixed in an edit. A catalogue entry fills `initial` and names the variables to ask for.
+ */
+function ConnectorForm({
+  initial,
+  edit,
+  onDone,
+}: {
+  initial?: NewConnector;
+  edit?: SchemaConnectorView;
+  onDone: () => void;
+}) {
   const create = useCreateConnector();
-  const [name, setName] = useState(initial?.name ?? "");
-  const [stdio, setStdio] = useState(false);
-  const [url, setUrl] = useState(initial?.url ?? "");
-  const [command, setCommand] = useState("");
-  const [auth, setAuth] = useState<"none" | "oauth" | "header">(initial?.auth ?? "oauth");
-  const [header, setHeader] = useState(initial?.header_name ?? "Authorization");
+  const update = useUpdateConnector();
+  const addAccount = useAddAccount();
+  const declared = edit?.variables ?? initial?.variables ?? [];
+  const f = edit ? `edit-${edit.id}` : "conn";
+  const [name, setName] = useState(edit?.name ?? initial?.name ?? "");
+  const [stdio, setStdio] = useState((edit?.kind ?? initial?.kind) === "mcp_stdio");
+  const [url, setUrl] = useState(edit?.url ?? initial?.url ?? "");
+  const [command, setCommand] = useState((edit?.command ?? initial?.command ?? []).join("\n"));
+  const [auth, setAuth] = useState<"none" | "oauth" | "header">(
+    (edit?.auth as "none" | "oauth" | "header" | undefined) ?? initial?.auth ?? "oauth",
+  );
+  const [header, setHeader] = useState(edit?.header_name || initial?.header_name || "Authorization");
+  const [env, setEnv] = useState<PlainRow[]>(() => plainRows(declared, edit?.env ?? initial?.env ?? {}));
+  const [label, setLabel] = useState("");
+  const [secrets, setSecrets] = useState<SecretRow[]>(() => secretRows(declared, []));
+  const [warn, setWarn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const firstAccount = !edit && stdio && declared.some((v) => v.secret);
+  const busy = create.isPending || update.isPending || addAccount.isPending;
+
+  const saveEdit = (c: SchemaConnectorView) => {
+    const body: ConnectorEdit = {};
+    if (name.trim() !== c.name) body.name = name.trim();
+    if (c.kind === "mcp_stdio") {
+      const cmd = lines(command);
+      if (cmd.join("\n") !== (c.command ?? []).join("\n")) body.command = cmd;
+      const e = plainEnv(env);
+      if (!sameEnv(e, c.env ?? {})) body.env = e;
+    } else {
+      if (url.trim() !== (c.url ?? "")) body.url = url.trim();
+      if (c.auth === "header" && header.trim() !== (c.header_name ?? "")) body.header_name = header.trim();
+    }
+    if (Object.keys(body).length === 0) return onDone();
+    update.mutate(
+      { id: c.id, body },
+      {
+        onSuccess: () => {
+          toast.success(t("connectors.saved"));
+          onDone();
+        },
+        onError: (err) => setError(errorText(err)),
+      },
+    );
+  };
+
+  const saveNew = () => {
+    const body: NewConnector = stdio
+      ? {
+          name: name.trim(),
+          kind: "mcp_stdio",
+          command: lines(command),
+          auth: "none",
+          env: plainEnv(env),
+          variables: declared.length ? declared : undefined,
+          icon: initial?.icon,
+        }
+      : {
+          name: name.trim(),
+          url: url.trim(),
+          auth,
+          header_name: auth === "header" ? header : undefined,
+          icon: initial?.icon,
+        };
+    create.mutate(body, {
+      onSuccess: (c) => {
+        const se = secretEnv(secrets);
+        if (!firstAccount || Object.keys(se).length === 0) return onDone();
+        addAccount.mutate(
+          { id: c.id, label: label.trim() || "default", secret_env: se },
+          { onSuccess: onDone, onError: (err) => setError(errorText(err)) },
+        );
+      },
+      onError: (err) => setError(errorText(err)),
+    });
+  };
+
   return (
     <form
       noValidate
+      aria-label={edit ? t("connectors.editConnector", { name: edit.name }) : undefined}
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
-        const body: NewConnector = stdio
-          ? {
-              name: name.trim(),
-              kind: "mcp_stdio",
-              command: command
-                .split("\n")
-                .map((x) => x.trim())
-                .filter(Boolean),
-              auth: "none",
-            }
-          : {
-              name: name.trim(),
-              url: url.trim(),
-              auth,
-              header_name: auth === "header" ? header : undefined,
-              icon: initial?.icon,
-            };
-        create.mutate(body, { onSuccess: onDone, onError: (err) => setError(errorText(err)) });
+        if (!edit) return saveNew();
+        if (edit.auth === "oauth" && url.trim() !== (edit.url ?? "")) return setWarn(true);
+        saveEdit(edit);
       }}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="conn-name" label={t("connectors.name")}>
+        <Field id={`${f}-name`} label={t("connectors.name")}>
           <input
-            id="conn-name"
+            id={`${f}-name`}
             value={name}
             maxLength={80}
             onChange={(e) => setName(e.target.value)}
             className={inputCls}
           />
         </Field>
-        {!initial && (
+        {!initial && !edit && (
           <label className="flex items-center gap-2 self-end pb-2 text-sm text-ink">
             <input
               type="checkbox"
@@ -283,21 +726,40 @@ function CustomForm({ initial, onDone }: { initial?: NewConnector; onDone: () =>
         )}
       </div>
       {stdio ? (
-        <Field id="conn-command" label={t("connectors.command")} hint={t("connectors.commandHint")}>
-          <textarea
-            id="conn-command"
-            rows={3}
-            value={command}
-            spellCheck={false}
-            onChange={(e) => setCommand(e.target.value)}
-            className={cn(textareaCls, "font-mono text-sm")}
-          />
-        </Field>
+        <>
+          <Field id={`${f}-command`} label={t("connectors.command")} hint={t("connectors.commandHint")}>
+            <textarea
+              id={`${f}-command`}
+              rows={3}
+              value={command}
+              spellCheck={false}
+              onChange={(e) => setCommand(e.target.value)}
+              className={cn(textareaCls, "font-mono text-sm")}
+            />
+          </Field>
+          <PlainVars id={`${f}-env`} rows={env} onChange={setEnv} />
+          {firstAccount && (
+            <div className="space-y-3 border-t border-rule pt-3">
+              <h3 className="label-caps">{t("connectors.firstAccount")}</h3>
+              <p className="text-xs text-ink-faint">{t("connectors.firstAccountHint")}</p>
+              <Field id={`${f}-label`} label={t("connectors.label")} className="w-64">
+                <input
+                  id={`${f}-label`}
+                  value={label}
+                  maxLength={80}
+                  onChange={(e) => setLabel(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <SecretVars id={`${f}-secret`} rows={secrets} onChange={setSecrets} />
+            </div>
+          )}
+        </>
       ) : (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field id="conn-url" label={t("connectors.url")} hint={t("connectors.urlHint")} className="sm:col-span-2">
+          <Field id={`${f}-url`} label={t("connectors.url")} hint={t("connectors.urlHint")} className="sm:col-span-2">
             <input
-              id="conn-url"
+              id={`${f}-url`}
               value={url}
               spellCheck={false}
               inputMode="url"
@@ -305,8 +767,13 @@ function CustomForm({ initial, onDone }: { initial?: NewConnector; onDone: () =>
               className={cn(inputCls, "font-mono text-sm")}
             />
           </Field>
-          <Field id="conn-auth" label={t("connectors.auth")}>
-            <NativeSelect id="conn-auth" value={auth} onChange={(v) => setAuth(v as "none" | "oauth" | "header")}>
+          <Field id={`${f}-auth`} label={t("connectors.auth")}>
+            <NativeSelect
+              id={`${f}-auth`}
+              value={auth}
+              disabled={!!edit}
+              onChange={(v) => setAuth(v as "none" | "oauth" | "header")}
+            >
               {(["oauth", "header", "none"] as const).map((x) => (
                 <option key={x} value={x}>
                   {t(`connectors.auths.${x}`)}
@@ -315,9 +782,9 @@ function CustomForm({ initial, onDone }: { initial?: NewConnector; onDone: () =>
             </NativeSelect>
           </Field>
           {auth === "header" && (
-            <Field id="conn-header" label={t("connectors.headerName")}>
+            <Field id={`${f}-header`} label={t("connectors.headerName")}>
               <input
-                id="conn-header"
+                id={`${f}-header`}
                 value={header}
                 onChange={(e) => setHeader(e.target.value)}
                 className={cn(inputCls, "font-mono text-sm")}
@@ -335,10 +802,35 @@ function CustomForm({ initial, onDone }: { initial?: NewConnector; onDone: () =>
         <Btn kind="quiet" onClick={onDone}>
           {t("common.cancel")}
         </Btn>
-        <Btn type="submit" kind="primary" busy={create.isPending}>
-          {t("connectors.add")}
+        <Btn type="submit" kind="primary" busy={busy}>
+          {edit ? t("connectors.save") : t("connectors.add")}
         </Btn>
       </div>
+      {edit && (
+        <Dialog open={warn} onOpenChange={setWarn}>
+          <DialogContent className="border-rule-strong bg-surface-raised text-ink">
+            <DialogHeader>
+              <DialogTitle className="text-base">{t("connectors.urlWarnTitle")}</DialogTitle>
+              <DialogDescription className="text-sm text-ink-soft">{t("connectors.urlWarnBody")}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Btn kind="quiet" onClick={() => setWarn(false)}>
+                {t("common.cancel")}
+              </Btn>
+              <Btn
+                kind="primary"
+                busy={update.isPending}
+                onClick={() => {
+                  setWarn(false);
+                  saveEdit(edit);
+                }}
+              >
+                {t("connectors.urlWarnSave")}
+              </Btn>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </form>
   );
 }
@@ -394,7 +886,7 @@ export function ConnectorsPage() {
       >
         {form !== null && (
           <div className="mb-4 rounded-sm border border-rule bg-surface p-4">
-            <CustomForm
+            <ConnectorForm
               key={form === "custom" ? "custom" : form.name}
               initial={form === "custom" ? undefined : form}
               onDone={() => setForm(null)}
@@ -406,17 +898,22 @@ export function ConnectorsPage() {
             <li key={e.name} className="flex items-center gap-3 border-b border-rule py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-[var(--weight-medium)] text-ink">{e.name}</span>
-                <span className="figures block truncate text-ink-faint">{e.url}</span>
+                <span className="figures block truncate text-ink-faint">
+                  {e.kind === "mcp_stdio" ? (e.command ?? []).join(" ") : e.url}
+                </span>
               </span>
               <Btn
                 size="sm"
                 onClick={() =>
                   setForm({
                     name: e.name,
+                    kind: e.kind,
                     url: e.url,
-                    auth: e.auth as "oauth",
+                    command: e.command ?? undefined,
+                    auth: e.auth,
                     header_name: e.header_name,
                     icon: e.icon,
+                    variables: e.variables ?? undefined,
                   })
                 }
               >

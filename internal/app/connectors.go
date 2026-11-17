@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/alternayte/fettle/agentd/client"
 	"github.com/alternayte/fettle/internal/agent"
 	"github.com/alternayte/fettle/internal/computers"
 	"github.com/alternayte/fettle/internal/connectors"
@@ -54,15 +54,14 @@ func (c *toolCache) put(key string, t []connectors.ToolInfo) {
 	c.mu.Unlock()
 }
 
-var slugRE = regexp.MustCompile(`[^a-z0-9]+`)
-
-func slug(s string) string {
-	s = strings.Trim(slugRE.ReplaceAllString(strings.ToLower(s), "_"), "_")
-	if s == "" {
-		s = "x"
-	}
-	return s
+// clear drops every cached list, after an edit of a connector or an account.
+func (c *toolCache) clear() {
+	c.mu.Lock()
+	clear(c.m)
+	c.mu.Unlock()
 }
+
+func slug(s string) string { return connectors.Slug(s) }
 
 // setupConnectors connects bots to the accounts that their zone holds (REQ-CON-003).
 func (a *App) setupConnectors() {
@@ -70,6 +69,7 @@ func (a *App) setupConnectors() {
 	a.Connectors.CallbackURL = func() string { return a.URL() + APIPrefix + "/oauth/callback" }
 	a.Connectors.Stdio = a.stdioConnector
 	cache := &toolCache{m: map[string]cachedTools{}, ttl: time.Minute, nowf: time.Now}
+	a.Connectors.Changed = cache.clear
 	a.Agent.Dynamic = func(ctx context.Context, spaceID, botID uuid.UUID) ([]agent.Tool, error) {
 		b, err := a.Bots.Get(ctx, spaceID, botID)
 		if err != nil || b.ZoneID == nil {
@@ -103,8 +103,10 @@ func (a *App) setupConnectors() {
 		var out []agent.Tool
 		var errs []string
 		for _, p := range pairs {
+			// The update times and the settings change with an edit on any server of a
+			// cluster; Changed clears the cache of this server at once.
 			settings, _ := json.Marshal(p.c.Tools)
-			key := p.acc.ID().String() + "@" + string(settings)
+			key := fmt.Sprintf("%s@%d@%d@%s", p.acc.ID(), p.c.UpdatedAt().UnixNano(), p.acc.UpdatedAt().UnixNano(), settings)
 			infos, ok := cache.get(key)
 			if !ok {
 				infos, err = a.Connectors.Tools(ctx, p.c, p.acc, botID)
@@ -179,7 +181,7 @@ func (c *leasedConn) Close() error {
 }
 
 // stdioConnector runs a stdio MCP server in the computer of a bot's zone, in its home.
-func (a *App) stdioConnector(ctx context.Context, spaceID, botID uuid.UUID, command []string) (io.ReadWriteCloser, error) {
+func (a *App) stdioConnector(ctx context.Context, spaceID, botID uuid.UUID, command []string, env map[string]string) (io.ReadWriteCloser, error) {
 	b, err := a.Bots.Get(ctx, spaceID, botID)
 	if err != nil {
 		return nil, err
@@ -195,7 +197,7 @@ func (a *App) stdioConnector(ctx context.Context, spaceID, botID uuid.UUID, comm
 		l.Release()
 		return nil, err
 	}
-	conn, err := l.Client.MCPStdio(ctx, command, computers.BotHome(botID))
+	conn, err := l.Client.MCPStdio(ctx, client.MCPStdioRequest{Argv: command, Cwd: computers.BotHome(botID), Env: env})
 	if err != nil {
 		l.Release()
 		return nil, err

@@ -10,6 +10,20 @@
           "label": {
             "type": "string"
           },
+          "needs_sign_in": {
+            "description": "True when the connector URL changed and the account must sign in again.",
+            "type": "boolean"
+          },
+          "secret_env": {
+            "description": "Names of the secret variables that are set. The API never returns their values.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "zones": {
             "description": "Names of the zones that hold this account.",
             "items": {
@@ -24,7 +38,9 @@
         "required": [
           "id",
           "label",
-          "zones"
+          "zones",
+          "secret_env",
+          "needs_sign_in"
         ],
         "type": "object"
       },
@@ -49,6 +65,13 @@
             "maxLength": 80,
             "minLength": 1,
             "type": "string"
+          },
+          "secret_env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Write only. Secret variables of a stdio account. The API returns only their names.",
+            "type": "object"
           },
           "value": {
             "description": "Write only. The API never returns it.",
@@ -249,6 +272,10 @@
       "Authorize-connectorRequest": {
         "additionalProperties": false,
         "properties": {
+          "account_id": {
+            "description": "The account that signs in again. It keeps its grants.",
+            "type": "string"
+          },
           "label": {
             "maxLength": 80,
             "minLength": 1,
@@ -821,6 +848,13 @@
               "null"
             ]
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Plain variables of a stdio connector.",
+            "type": "object"
+          },
           "header_name": {
             "type": "string"
           },
@@ -849,6 +883,16 @@
           },
           "url": {
             "type": "string"
+          },
+          "variables": {
+            "description": "Variables that the stdio server reads, from its catalogue entry.",
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -859,6 +903,8 @@
           "auth",
           "icon",
           "tools",
+          "env",
+          "variables",
           "accounts"
         ],
         "type": "object"
@@ -884,6 +930,13 @@
               "null"
             ]
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Plain variables of a stdio connector. Put secrets on the account as secret_env.",
+            "type": "object"
+          },
           "header_name": {
             "maxLength": 100,
             "type": "string"
@@ -907,6 +960,17 @@
           "url": {
             "maxLength": 500,
             "type": "string"
+          },
+          "variables": {
+            "description": "Variables that the stdio server reads, as the catalogue entry names them.",
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1121,10 +1185,26 @@
             ],
             "type": "string"
           },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "header_name": {
             "type": "string"
           },
           "icon": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio"
+            ],
             "type": "string"
           },
           "name": {
@@ -1132,11 +1212,20 @@
           },
           "url": {
             "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
           "name",
-          "url",
+          "kind",
           "auth",
           "icon"
         ],
@@ -4832,6 +4921,73 @@
         ],
         "type": "object"
       },
+      "Update-connector-accountRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "secret_env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Write only. Sets each named secret variable; an empty value removes it.",
+            "type": "object"
+          },
+          "value": {
+            "description": "Write only. The new header key.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Update-connectorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "description": "Stdio connectors only.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Stdio connectors only. Replaces all plain variables.",
+            "type": "object"
+          },
+          "header_name": {
+            "description": "Connectors with a header key only.",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "icon": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Remote connectors only.",
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Update-meRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4899,6 +5055,32 @@
           "is_admin",
           "spaces",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "Variable": {
+        "additionalProperties": false,
+        "properties": {
+          "doc": {
+            "maxLength": 300,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "required",
+          "secret"
         ],
         "type": "object"
       },
@@ -5676,7 +5858,7 @@
             "description": "Error"
           }
         },
-        "summary": "Known remote MCP servers for the Connect screen",
+        "summary": "Known MCP servers for the Connect screen, with the variables of stdio servers",
         "tags": [
           "connectors"
         ]
@@ -8357,6 +8539,65 @@
         "tags": [
           "connectors"
         ]
+      },
+      "patch": {
+        "operationId": "update-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-connectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit a connector. Accounts, grants and tool settings stay. The kind cannot change. A new URL of an OAuth connector needs a new sign-in of each account.",
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
@@ -8414,7 +8655,76 @@
             "description": "Error"
           }
         },
-        "summary": "Add an account with a header key, or a stdio account",
+        "summary": "Add an account with a header key, or a stdio account with secret variables",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/accounts/{account}": {
+      "patch": {
+        "operationId": "update-connector-account",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-connector-accountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Rename an account, or replace its key or secret variables. The account keeps its grants.",
         "tags": [
           "connectors"
         ]
@@ -8475,7 +8785,7 @@
             "description": "Error"
           }
         },
-        "summary": "Start an OAuth sign-in for a new account; open the returned URL",
+        "summary": "Start an OAuth sign-in for a new account, or for an account that must sign in again; open the returned URL",
         "tags": [
           "connectors"
         ]

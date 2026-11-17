@@ -28,6 +28,28 @@ type Server struct {
 	PKCEUsed int // authorization codes redeemed with a valid S256 verifier
 	// User names the account that the next authorization signs in as.
 	User string
+	// Confidential makes registration issue a client secret, which the token endpoint
+	// then requires.
+	Confidential bool
+	secrets      map[string]string // client ID -> client secret
+}
+
+// SecretOf returns the client secret that registration issued to a client.
+func (s *Server) SecretOf(clientID string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.secrets[clientID]
+}
+
+// Secrets returns the client secrets that registration issued.
+func (s *Server) Secrets() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]string, 0, len(s.secrets))
+	for _, v := range s.secrets {
+		out = append(out, v)
+	}
+	return out
 }
 
 type grant struct {
@@ -41,7 +63,7 @@ type tokenInfo struct {
 
 // New returns the fake server.
 func New() *Server {
-	return &Server{clients: map[string][]string{}, codes: map[string]grant{}, tokens: map[string]tokenInfo{}, refresh: map[string]tokenInfo{}, User: "owner@acme.test"}
+	return &Server{clients: map[string][]string{}, codes: map[string]grant{}, tokens: map[string]tokenInfo{}, refresh: map[string]tokenInfo{}, secrets: map[string]string{}, User: "owner@acme.test"}
 }
 
 func random() string {
@@ -94,10 +116,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		id := "client-" + random()
+		reply := map[string]any{"client_id": id, "redirect_uris": in.RedirectURIs, "client_name": in.ClientName, "token_endpoint_auth_method": "none"}
 		s.mu.Lock()
 		s.clients[id] = in.RedirectURIs
+		if s.Confidential {
+			secret := "cs-" + random()
+			s.secrets[id] = secret
+			reply["client_secret"], reply["token_endpoint_auth_method"] = secret, "client_secret_post"
+		}
 		s.mu.Unlock()
-		writeJSON(w, 201, map[string]any{"client_id": id, "redirect_uris": in.RedirectURIs, "client_name": in.ClientName, "token_endpoint_auth_method": "none"})
+		writeJSON(w, 201, reply)
 	case "/authorize":
 		q := r.URL.Query()
 		s.mu.Lock()
@@ -127,6 +155,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f := r.PostForm
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if want := s.secrets[f.Get("client_id")]; want != "" && f.Get("client_secret") != want {
+			writeJSON(w, 401, map[string]string{"error": "invalid_client"})
+			return
+		}
 		var t tokenInfo
 		switch f.Get("grant_type") {
 		case "authorization_code":

@@ -233,28 +233,34 @@ func badRequest(format string, a ...any) error {
 
 // fail writes err as a JSON error. rel names the path in the message.
 func (s *Server) fail(w http.ResponseWriter, rel string, err error) {
+	status, msg := s.errorStatus(rel, err)
+	writeError(w, status, msg)
+}
+
+// errorStatus returns the HTTP status and the message for the caller of err.
+func (s *Server) errorStatus(rel string, err error) (int, string) {
 	var he *httpError
 	var mbe *http.MaxBytesError
 	switch {
 	case errors.As(err, &he):
-		writeError(w, he.status, he.msg)
+		return he.status, he.msg
 	case errors.As(err, &mbe):
-		writeError(w, http.StatusRequestEntityTooLarge, "request body is too large")
+		return http.StatusRequestEntityTooLarge, "request body is too large"
 	case errors.Is(err, errPathEscapes), isRootEscape(err):
-		writeError(w, http.StatusForbidden, rel+": path escapes the home folder")
+		return http.StatusForbidden, rel + ": path escapes the home folder"
 	case errors.Is(err, fs.ErrNotExist):
-		writeError(w, http.StatusNotFound, rel+": not found")
+		return http.StatusNotFound, rel + ": not found"
 	case errors.Is(err, syscall.ENOTEMPTY):
-		writeError(w, http.StatusConflict, rel+": folder is not empty")
+		return http.StatusConflict, rel + ": folder is not empty"
 	case errors.Is(err, syscall.ENOTDIR):
-		writeError(w, http.StatusBadRequest, rel+": a part of the path is not a folder")
+		return http.StatusBadRequest, rel + ": a part of the path is not a folder"
 	case errors.Is(err, syscall.EISDIR):
-		writeError(w, http.StatusBadRequest, rel+": path is a folder")
+		return http.StatusBadRequest, rel + ": path is a folder"
 	case errors.Is(err, fs.ErrPermission):
-		writeError(w, http.StatusForbidden, rel+": permission denied")
+		return http.StatusForbidden, rel + ": permission denied"
 	default:
 		s.logger.Error("request failed", "path", rel, "error", err.Error())
-		writeError(w, http.StatusInternalServerError, rel+": "+cleanMessage(err))
+		return http.StatusInternalServerError, rel + ": " + cleanMessage(err)
 	}
 }
 
