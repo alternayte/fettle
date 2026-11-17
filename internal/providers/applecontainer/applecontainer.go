@@ -192,7 +192,7 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 			return err
 		}
 		if !p.hasKernel() {
-			err := errors.New("Apple container installed no Linux kernel")
+			err := errors.New("the Apple container runtime installed no Linux kernel")
 			report(computers.Progress{Step: "kernel", State: "fail", Detail: err.Error()})
 			return err
 		}
