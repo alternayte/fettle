@@ -10,6 +10,7 @@ export const OWNER_TABS = [
   "models",
   "computers",
   "connectors",
+  "web",
   "vault",
   "approvals",
   "budgets",

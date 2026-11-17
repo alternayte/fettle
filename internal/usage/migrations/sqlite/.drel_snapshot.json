@@ -21,7 +21,7 @@
           "name": "kind",
           "type": "TEXT",
           "notNull": true,
-          "check": "kind IN ('model','computer')"
+          "check": "kind IN ('model','computer','search')"
         },
         {
           "name": "bot_id",
@@ -77,7 +77,7 @@
           "name": "unit",
           "type": "TEXT",
           "notNull": true,
-          "check": "unit IN ('tokens','seconds')"
+          "check": "unit IN ('tokens','seconds','calls')"
         },
         {
           "name": "size",

@@ -27,6 +27,8 @@ var appendixE = map[string]string{
 	"report_result": envelopes.ClassRead,
 	// suggest_connectors posts Connect cards in the interview (§15.4, D-152).
 	"suggest_connectors": envelopes.ClassRead,
+	// web_search and web_fetch run in the server and return web data (#6).
+	"web_search": envelopes.ClassRead, "web_fetch": envelopes.ClassRead,
 }
 
 // registry holds every built-in tool that this build has.

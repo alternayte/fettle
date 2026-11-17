@@ -79,6 +79,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerRoutines(api)
 	a.registerPush(api)
 	a.registerConnectors(api)
+	a.registerWeb(api)
 	a.registerSkills(api)
 	a.registerScreens(api)
 	a.registerTeach(api)

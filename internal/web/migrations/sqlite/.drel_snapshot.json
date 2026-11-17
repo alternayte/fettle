@@ -1,0 +1,63 @@
+{
+  "tables": [
+    {
+      "name": "web_search_providers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "space_id",
+          "type": "TEXT",
+          "notNull": true,
+          "ref": "spaces",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "kind",
+          "type": "TEXT",
+          "notNull": true,
+          "check": "kind IN ('tavily','exa','searxng','brave')"
+        },
+        {
+          "name": "base_url",
+          "type": "TEXT",
+          "notNull": true
+        },
+        {
+          "name": "secret_item_id",
+          "type": "TEXT",
+          "notNull": false,
+          "ref": "vault_items",
+          "refColumn": "id",
+          "onDelete": "SET NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_web_search_providers_space",
+          "columns": [
+            "space_id"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ]
+}

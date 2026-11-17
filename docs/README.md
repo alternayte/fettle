@@ -11,6 +11,7 @@
 - [Computers](computers.md): zones, sizes, providers, the computer image and screens.
 - [Models](models.md): model providers, presets, the provider test, roles, fallback and budgets.
 - [Connectors](connectors.md): MCP connectors, their accounts, grants and tool classes.
+- [Web search and web pages](web.md): web_search, web_fetch, search providers, prices and the address rules.
 - [Skills and routines](skills.md): skill files, evals, Skael sync, templates, schedules and webhooks.
 - [Server](server.md): server mode, accounts, passkeys, tokens and HTTPS.
 - [Operations](operations.md): health, logs, doctor, upgrades, backups and export of a space.

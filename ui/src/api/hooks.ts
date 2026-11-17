@@ -9,6 +9,7 @@ import type {
   SchemaTarget,
   SchemaVaultBody,
   SchemaRoutineBody,
+  SchemaSetWebSearchRequest,
   SchemaSkillView,
   SchemaZoneBody,
 } from "./schema";
@@ -72,6 +73,7 @@ export const keys = {
   instance: ["instance", "view"] as const,
   adminUsers: ["admin", "users"] as const,
   edition: ["admin", "edition"] as const,
+  webSearch: (s: string) => ["s", s, "web-search"] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -1322,6 +1324,45 @@ export function useRevokeInvite() {
     mutationFn: (invite: string) =>
       must(api.DELETE("/api/v1/spaces/{space}/invites/{invite}", { params: { path: { space, invite } } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.invites(space) }),
+  });
+}
+
+// ---------------------------------------------------------------- web search
+
+/** useWebSearch returns the search provider of the space, or null when web_search is off. */
+export function useWebSearch() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.webSearch(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/web-search", { params: { path: { space } } }))).provider ?? null,
+  });
+}
+
+export function useSetWebSearch() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: SchemaSetWebSearchRequest) =>
+      must(api.PUT("/api/v1/spaces/{space}/web-search", { params: { path: { space } }, body })),
+    onSuccess: (out) => qc.setQueryData(keys.webSearch(space), out.provider ?? null),
+  });
+}
+
+export function useDeleteWebSearch() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: () => must(api.DELETE("/api/v1/spaces/{space}/web-search", { params: { path: { space } } })),
+    onSuccess: () => qc.setQueryData(keys.webSearch(space), null),
+  });
+}
+
+export function useTestWebSearch() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (query: string) =>
+      must(api.POST("/api/v1/spaces/{space}/web-search/test", { params: { path: { space } }, body: { query } })),
   });
 }
 

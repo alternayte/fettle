@@ -23,17 +23,18 @@ export function UsagePage() {
   const zones = useZones();
   const zoneName = Object.fromEntries((zones.data ?? []).map((z) => [z.id, z.name]));
   const timed = TIMED.includes(by);
-  const cols = ["calls", "tokensIn", "tokensOut", ...(timed ? ["time"] : []), "cost"];
+  const cols = ["calls", "searches", "tokensIn", "tokensOut", ...(timed ? ["time"] : []), "cost"];
   const rows = usage.data ?? [];
   const total = rows.reduce(
     (a, r) => ({
       calls: a.calls + r.calls,
+      searches: a.searches + r.searches,
       tin: a.tin + r.tokens_in,
       tout: a.tout + r.tokens_out,
       sec: a.sec + r.seconds,
       cost: a.cost + r.cost_usd,
     }),
-    { calls: 0, tin: 0, tout: 0, sec: 0, cost: 0 },
+    { calls: 0, searches: 0, tin: 0, tout: 0, sec: 0, cost: 0 },
   );
 
   const keyCell = (key: string) => {
@@ -124,6 +125,7 @@ export function UsagePage() {
                     <tr key={r.key || "-"} className="border-b border-rule">
                       <td className="max-w-64 truncate py-1.5 pr-3 text-ink">{keyCell(r.key)}</td>
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{r.calls}</td>
+                      <td className="figures py-1.5 pl-3 text-right text-ink-soft">{r.searches}</td>
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_in)}</td>
                       <td className="figures py-1.5 pl-3 text-right text-ink-soft">{formatTokens(r.tokens_out)}</td>
                       {timed && (
@@ -141,6 +143,7 @@ export function UsagePage() {
                       {t("usage.total")}
                     </th>
                     <td className="figures py-1.5 pl-3 text-right text-ink">{total.calls}</td>
+                    <td className="figures py-1.5 pl-3 text-right text-ink">{total.searches}</td>
                     <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tin)}</td>
                     <td className="figures py-1.5 pl-3 text-right text-ink">{formatTokens(total.tout)}</td>
                     {timed && (

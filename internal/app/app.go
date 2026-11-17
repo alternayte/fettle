@@ -43,6 +43,7 @@ import (
 	"github.com/alternayte/fettle/internal/teach"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
+	"github.com/alternayte/fettle/internal/web"
 	"github.com/alternayte/fettle/internal/zones"
 )
 
@@ -66,6 +67,8 @@ type App struct {
 	Skael    *skills.Skael
 	Screens  *screens.Service
 	Teach    *teach.Service
+	// Web holds the search provider of each space and the web tools.
+	Web *web.Service
 	// Desktop is set when the desktop app runs this server in process (§15.1).
 	Desktop *Desktop
 	// Connectors holds the MCP connectors (§12).
@@ -172,6 +175,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupRoutines()
 	a.setupPush()
 	a.setupConnectors()
+	a.setupWeb()
 	a.setupSkills()
 	a.setupScreens()
 	a.setupTeach()

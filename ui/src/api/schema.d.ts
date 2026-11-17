@@ -1895,6 +1895,42 @@ export interface paths {
     patch: operations["update-vault-item"];
     trace?: never;
   };
+  "/api/v1/spaces/{space}/web-search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The web search provider of the space */
+    get: operations["get-web-search"];
+    /** Set the web search provider of the space. The key goes into the vault. */
+    put: operations["set-web-search"];
+    post?: never;
+    /** Remove the web search provider and its key. web_search is then off. */
+    delete: operations["delete-web-search"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/web-search/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run one search with the provider of the space. It counts as one search in usage. */
+    post: operations["test-web-search"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/zones": {
     parameters: {
       query?: never;
@@ -2433,6 +2469,11 @@ export interface components {
       revision: number;
       updated_by: string;
     };
+    Hit: {
+      snippet: string;
+      title: string;
+      url: string;
+    };
     Input: {
       description: string;
       example?: string;
@@ -2792,6 +2833,8 @@ export interface components {
       cost_usd: number;
       key: string;
       /** Format: int64 */
+      searches: number;
+      /** Format: int64 */
       seconds: number;
       /** Format: int64 */
       tokens_in: number;
@@ -2940,6 +2983,14 @@ export interface components {
     };
     "Set-telemetryRequest": {
       enabled: boolean;
+    };
+    "Set-web-searchRequest": {
+      /** @description The SearXNG URL. Other kinds ignore it. */
+      base_url?: string;
+      /** @description Write only. Empty keeps the stored key of the same kind. */
+      key?: string;
+      /** @enum {string} */
+      kind?: "tavily" | "exa" | "searxng" | "brave";
     };
     "Setting-historyResponse": {
       history: components["schemas"]["HistoryRow"][] | null;
@@ -3196,6 +3247,16 @@ export interface components {
     "Test-model-providerRequest": {
       model?: string;
     };
+    "Test-web-searchRequest": {
+      query?: string;
+    };
+    "Test-web-searchResponse": {
+      /** Format: double */
+      cost_usd: number;
+      /** Format: int64 */
+      ms: number;
+      results: components["schemas"]["Hit"][] | null;
+    };
     ToolInfo: {
       class: string;
       description: string;
@@ -3265,6 +3326,18 @@ export interface components {
       instructions: string;
       /** Format: int64 */
       rev: number;
+    };
+    WebSearchOutBody: {
+      /** @description Absent when the space has no search provider. */
+      provider?: components["schemas"]["WebSearchView"];
+    };
+    WebSearchView: {
+      base_url: string;
+      has_key: boolean;
+      key_last4: string;
+      /** @enum {string} */
+      kind: "tavily" | "exa" | "searxng" | "brave";
+      name: string;
     };
     ZoneBody: {
       allow_hosts?: string[] | null;
@@ -3359,6 +3432,7 @@ export type SchemaFileView = components["schemas"]["FileView"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
 export type SchemaGroupView = components["schemas"]["GroupView"];
 export type SchemaHistoryRow = components["schemas"]["HistoryRow"];
+export type SchemaHit = components["schemas"]["Hit"];
 export type SchemaInput = components["schemas"]["Input"];
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
@@ -3437,6 +3511,7 @@ export type SchemaSetMemberRoleRequest = components["schemas"]["Set-member-roleR
 export type SchemaSetModelRoleRequest = components["schemas"]["Set-model-roleRequest"];
 export type SchemaSetSettingRequest = components["schemas"]["Set-settingRequest"];
 export type SchemaSetTelemetryRequest = components["schemas"]["Set-telemetryRequest"];
+export type SchemaSetWebSearchRequest = components["schemas"]["Set-web-searchRequest"];
 export type SchemaSettingHistoryResponse = components["schemas"]["Setting-historyResponse"];
 export type SchemaSettingView = components["schemas"]["SettingView"];
 export type SchemaSetupState = components["schemas"]["SetupState"];
@@ -3465,6 +3540,8 @@ export type SchemaTemplateView = components["schemas"]["TemplateView"];
 export type SchemaTestConnectorRequest = components["schemas"]["Test-connectorRequest"];
 export type SchemaTestConnectorResponse = components["schemas"]["Test-connectorResponse"];
 export type SchemaTestModelProviderRequest = components["schemas"]["Test-model-providerRequest"];
+export type SchemaTestWebSearchRequest = components["schemas"]["Test-web-searchRequest"];
+export type SchemaTestWebSearchResponse = components["schemas"]["Test-web-searchResponse"];
 export type SchemaToolInfo = components["schemas"]["ToolInfo"];
 export type SchemaToolSetting = components["schemas"]["ToolSetting"];
 export type SchemaTryTeachRequest = components["schemas"]["Try-teachRequest"];
@@ -3475,6 +3552,8 @@ export type SchemaUserView = components["schemas"]["UserView"];
 export type SchemaVaultBody = components["schemas"]["VaultBody"];
 export type SchemaVaultItemView = components["schemas"]["VaultItemView"];
 export type SchemaVersionView = components["schemas"]["VersionView"];
+export type SchemaWebSearchOutBody = components["schemas"]["WebSearchOutBody"];
+export type SchemaWebSearchView = components["schemas"]["WebSearchView"];
 export type SchemaZoneBody = components["schemas"]["ZoneBody"];
 export type SchemaZoneView = components["schemas"]["ZoneView"];
 export type SchemaZonesOutBody = components["schemas"]["ZonesOutBody"];
@@ -8007,6 +8086,140 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["VaultItemView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "get-web-search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebSearchOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "set-web-search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Set-web-searchRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebSearchOutBody"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "delete-web-search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "test-web-search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Test-web-searchRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Test-web-searchResponse"];
         };
       };
       /** @description Error */
