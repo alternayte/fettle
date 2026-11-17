@@ -1508,6 +1508,26 @@
         ],
         "type": "object"
       },
+      "Hit": {
+        "additionalProperties": false,
+        "properties": {
+          "snippet": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "snippet"
+        ],
+        "type": "object"
+      },
       "Input": {
         "additionalProperties": false,
         "properties": {
@@ -2984,6 +3004,10 @@
           "key": {
             "type": "string"
           },
+          "searches": {
+            "format": "int64",
+            "type": "integer"
+          },
           "seconds": {
             "format": "int64",
             "type": "integer"
@@ -3003,7 +3027,8 @@
           "tokens_out",
           "seconds",
           "cost_usd",
-          "calls"
+          "calls",
+          "searches"
         ],
         "type": "object"
       },
@@ -3543,6 +3568,31 @@
         "required": [
           "enabled"
         ],
+        "type": "object"
+      },
+      "Set-web-searchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "description": "The SearXNG URL. Other kinds ignore it.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "key": {
+            "description": "Write only. Empty keeps the stored key of the same kind.",
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tavily",
+              "exa",
+              "searxng",
+              "brave"
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Setting-historyResponse": {
@@ -4474,6 +4524,44 @@
         },
         "type": "object"
       },
+      "Test-web-searchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "maxLength": 400,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Test-web-searchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_usd": {
+            "format": "double",
+            "type": "number"
+          },
+          "ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/Hit"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "results",
+          "cost_usd",
+          "ms"
+        ],
+        "type": "object"
+      },
       "ToolInfo": {
         "additionalProperties": false,
         "properties": {
@@ -4722,6 +4810,50 @@
           "author_id",
           "at",
           "current"
+        ],
+        "type": "object"
+      },
+      "WebSearchOutBody": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/WebSearchView",
+            "description": "Absent when the space has no search provider."
+          }
+        },
+        "type": "object"
+      },
+      "WebSearchView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "type": "string"
+          },
+          "has_key": {
+            "type": "boolean"
+          },
+          "key_last4": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tavily",
+              "exa",
+              "searxng",
+              "brave"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "base_url",
+          "has_key",
+          "key_last4"
         ],
         "type": "object"
       },
@@ -11798,6 +11930,187 @@
         "summary": "Change a vault item. An empty value keeps the stored value.",
         "tags": [
           "vault"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/web-search": {
+      "delete": {
+        "operationId": "delete-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove the web search provider and its key. web_search is then off.",
+        "tags": [
+          "web"
+        ]
+      },
+      "get": {
+        "operationId": "get-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSearchOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The web search provider of the space",
+        "tags": [
+          "web"
+        ]
+      },
+      "put": {
+        "operationId": "set-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-web-searchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSearchOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set the web search provider of the space. The key goes into the vault.",
+        "tags": [
+          "web"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/web-search/test": {
+      "post": {
+        "operationId": "test-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Test-web-searchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Test-web-searchResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run one search with the provider of the space. It counts as one search in usage.",
+        "tags": [
+          "web"
         ]
       }
     },

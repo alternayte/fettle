@@ -26,6 +26,7 @@ import (
 	teach "github.com/alternayte/fettle/internal/teach"
 	usage "github.com/alternayte/fettle/internal/usage"
 	vault "github.com/alternayte/fettle/internal/vault"
+	web "github.com/alternayte/fettle/internal/web"
 	zones "github.com/alternayte/fettle/internal/zones"
 )
 
@@ -73,6 +74,7 @@ type DB struct {
 	DataKeys            *vault.DataKeyRepository
 	InstanceSecrets     *vault.InstanceSecretRepository
 	VaultItems          *vault.VaultItemRepository
+	SearchProviders     *web.SearchProviderRepository
 	Zones               *zones.ZoneRepository
 	ZoneGrants          *zones.ZoneGrantRepository
 	Modules             Modules
@@ -127,6 +129,7 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 		DataKeys:            &vault.DataKeyRepository{Repository: drel.NewRepository(engine, vault.DataKeyMeta)},
 		InstanceSecrets:     &vault.InstanceSecretRepository{Repository: drel.NewRepository(engine, vault.InstanceSecretMeta)},
 		VaultItems:          &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
+		SearchProviders:     &web.SearchProviderRepository{Repository: drel.NewRepository(engine, web.SearchProviderMeta)},
 		Zones:               &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
 		ZoneGrants:          &zones.ZoneGrantRepository{Repository: drel.NewRepository(engine, zones.ZoneGrantMeta)},
 		Modules: Modules{
@@ -212,6 +215,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				InstanceSecrets: &vault.InstanceSecretRepository{Repository: drel.NewRepository(engine, vault.InstanceSecretMeta)},
 				VaultItems:      &vault.VaultItemRepository{Repository: drel.NewRepository(engine, vault.VaultItemMeta)},
 			},
+			Web: WebRepos{
+				SearchProviders: &web.SearchProviderRepository{Repository: drel.NewRepository(engine, web.SearchProviderMeta)},
+			},
 			Zones: ZonesRepos{
 				Zones:      &zones.ZoneRepository{Repository: drel.NewRepository(engine, zones.ZoneMeta)},
 				ZoneGrants: &zones.ZoneGrantRepository{Repository: drel.NewRepository(engine, zones.ZoneGrantMeta)},
@@ -265,6 +271,7 @@ type TxRepos struct {
 	DataKeys            *vault.TxDataKeyRepository
 	InstanceSecrets     *vault.TxInstanceSecretRepository
 	VaultItems          *vault.TxVaultItemRepository
+	SearchProviders     *web.TxSearchProviderRepository
 	Zones               *zones.TxZoneRepository
 	ZoneGrants          *zones.TxZoneGrantRepository
 	Modules             TxModules
@@ -317,6 +324,7 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 		DataKeys:            &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
 		InstanceSecrets:     &vault.TxInstanceSecretRepository{TxRepository: drel.NewTxRepository(tx, vault.InstanceSecretMeta)},
 		VaultItems:          &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
+		SearchProviders:     &web.TxSearchProviderRepository{TxRepository: drel.NewTxRepository(tx, web.SearchProviderMeta)},
 		Zones:               &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
 		ZoneGrants:          &zones.TxZoneGrantRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneGrantMeta)},
 		Modules: TxModules{
@@ -401,6 +409,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				DataKeys:        &vault.TxDataKeyRepository{TxRepository: drel.NewTxRepository(tx, vault.DataKeyMeta)},
 				InstanceSecrets: &vault.TxInstanceSecretRepository{TxRepository: drel.NewTxRepository(tx, vault.InstanceSecretMeta)},
 				VaultItems:      &vault.TxVaultItemRepository{TxRepository: drel.NewTxRepository(tx, vault.VaultItemMeta)},
+			},
+			Web: WebTxRepos{
+				SearchProviders: &web.TxSearchProviderRepository{TxRepository: drel.NewTxRepository(tx, web.SearchProviderMeta)},
 			},
 			Zones: ZonesTxRepos{
 				Zones:      &zones.TxZoneRepository{TxRepository: drel.NewTxRepository(tx, zones.ZoneMeta)},
@@ -654,6 +665,16 @@ type VaultTxRepos struct {
 	VaultItems      *vault.TxVaultItemRepository
 }
 
+// WebRepos holds the untracked repositories of the "web" module.
+type WebRepos struct {
+	SearchProviders *web.SearchProviderRepository
+}
+
+// WebTxRepos holds the tracked repositories of the "web" module.
+type WebTxRepos struct {
+	SearchProviders *web.TxSearchProviderRepository
+}
+
 // ZonesRepos holds the untracked repositories of the "zones" module.
 type ZonesRepos struct {
 	Zones      *zones.ZoneRepository
@@ -689,6 +710,7 @@ type Modules struct {
 	Teach      TeachRepos
 	Usage      UsageRepos
 	Vault      VaultRepos
+	Web        WebRepos
 	Zones      ZonesRepos
 }
 
@@ -715,6 +737,7 @@ type TxModules struct {
 	Teach      TeachTxRepos
 	Usage      UsageTxRepos
 	Vault      VaultTxRepos
+	Web        WebTxRepos
 	Zones      ZonesTxRepos
 }
 

@@ -42,7 +42,10 @@ type Tool struct {
 	Target func(args json.RawMessage) (site, recipient string)
 	// ClassOf returns the class of one call when it depends on the arguments (browser_act).
 	ClassOf func(ctx context.Context, env *ToolEnv, args json.RawMessage) string
-	Run     func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error)
+	// Available reports whether a bot has the tool in a run, such as web_search only when
+	// the space has a search provider. Nil means always.
+	Available func(ctx context.Context, spaceID, botID uuid.UUID) bool
+	Run       func(ctx context.Context, env *ToolEnv, args json.RawMessage) (ToolOutput, error)
 }
 
 // classOf returns the class of one call.

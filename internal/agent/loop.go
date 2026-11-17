@@ -318,8 +318,8 @@ func truncate(s string, n int) string {
 	return s[:n]
 }
 
-// context builds the model input for this run.
-func (x *exec) context(ctx context.Context, st *state, window int) (Context, error) {
+// context builds the model input for this run with the tools that the model gets.
+func (x *exec) context(ctx context.Context, st *state, window int, tools []Tool) (Context, error) {
 	a := x.a
 	sp, err := a.Spaces.Get(ctx, x.run.SpaceID)
 	if err != nil {
@@ -408,6 +408,14 @@ func (x *exec) context(ctx context.Context, st *state, window int) (Context, err
 		Helper: x.run.Kind == "subagent", Brief: x.env.Decision.Brief,
 		Notes: st.notes, Refs: x.refs(ctx),
 	}
+	for _, t := range tools {
+		switch t.Name {
+		case "web_search":
+			in.WebSearch = true
+		case "web_fetch":
+			in.WebFetch = true
+		}
+	}
 	for _, at := range x.attachments(ctx) {
 		where := "in your home at attachments/" + at.ID + "/" + at.Name
 		if x.bot.ZoneID == nil {
@@ -449,7 +457,13 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 	if window <= 0 {
 		window = 128000
 	}
-	c, err := x.context(ctx, st, window)
+	// A direct step is one conversational answer with no tools (§9.2).
+	direct := st.step == "direct"
+	var tools []Tool
+	if !direct {
+		tools = x.tools(ctx)
+	}
+	c, err := x.context(ctx, st, window, tools)
 	if err != nil {
 		return err
 	}
@@ -457,12 +471,6 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 		if done, err := x.compact(ctx, st, window); err != nil || done {
 			return err
 		}
-	}
-	// A direct step is one conversational answer with no tools (§9.2).
-	direct := st.step == "direct"
-	var tools []Tool
-	if !direct {
-		tools = x.tools(ctx)
 	}
 	req := models.Request{System: c.System, Messages: c.Messages, Tools: toolDefs(tools), MaxTokens: 4096}
 
@@ -610,6 +618,9 @@ func (x *exec) tools(ctx context.Context) []Tool {
 	for _, n := range x.a.Tools.Names() {
 		t, _ := x.a.Tools.Get(n)
 		if !x.allowed(t.Class) || (sub && t.NoSubagent) || (!sub && t.SubagentOnly) {
+			continue
+		}
+		if t.Available != nil && !t.Available(ctx, x.run.SpaceID, x.run.BotID) {
 			continue
 		}
 		out = append(out, t)

@@ -65,3 +65,6 @@ modules:
   - name: teach
     packages: [./internal/teach]
     migrations: ./internal/teach/migrations/sqlite
+  - name: web
+    packages: [./internal/web]
+    migrations: ./internal/web/migrations/sqlite

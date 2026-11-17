@@ -690,6 +690,7 @@
       "tokens": "Access tokens",
       "notifications": "Notifications",
       "connectors": "Connectors",
+      "web": "Web",
       "budgets": "Budgets",
       "members": "Members",
       "account": "Account"
@@ -754,7 +755,7 @@
     "loadFailed": "Fettle cannot load the cost",
     "empty": {
       "title": "No cost in this range",
-      "body": "Model calls and computer time show here."
+      "body": "Model calls, searches and computer time show here."
     },
     "none": "None",
     "total": "Total",
@@ -773,6 +774,7 @@
       "tokensIn": "Tokens in",
       "tokensOut": "Tokens out",
       "time": "Computer time",
+      "searches": "Searches",
       "cost": "Cost"
     }
   },
@@ -1634,6 +1636,63 @@
       "vaultSecret": "Give the hidden input with use_secret and the vault item",
       "chooseItem": "Choose an item",
       "addItem": "Add an item to the vault"
+    }
+  },
+  "web": {
+    "intro": "Bots read web pages with web_fetch. Bots search the web with web_search when this space has a search provider.",
+    "loadFailed": "Fettle cannot load the web settings",
+    "kinds": {
+      "tavily": "Tavily",
+      "exa": "Exa",
+      "searxng": "SearXNG",
+      "brave": "Brave Search"
+    },
+    "price": {
+      "tavily": "About $0.008 for each search.",
+      "exa": "Exa sends the cost of each search. Fettle records that cost.",
+      "searxng": "No cost. Your SearXNG server must allow the json format.",
+      "brave": "About $0.005 for each search."
+    },
+    "search": {
+      "title": "Search provider",
+      "on": "web_search uses {provider}.",
+      "keyEnds": "Key ends in {last4}",
+      "offTitle": "web_search is off",
+      "offBody": "No search provider is set. Bots use the browser to search the web.",
+      "remove": "Remove",
+      "removed": "web_search is off",
+      "removeFailed": "Fettle cannot remove the search provider"
+    },
+    "form": {
+      "provider": "Provider",
+      "baseURL": "SearXNG URL",
+      "baseURLHint": "The address of your SearXNG server.",
+      "key": "{provider} API key",
+      "keyOptional": "{provider} key (optional)",
+      "keyHint": "Fettle keeps the key in the vault. Nobody can read it back.",
+      "keyKeep": "Leave this empty to keep the key that ends in {last4}.",
+      "needURL": "Enter a SearXNG URL that starts with http:// or https://.",
+      "needKey": "Enter the API key of {provider}.",
+      "saved": "web_search uses {provider}"
+    },
+    "brave": {
+      "title": "Brave Search API terms",
+      "body": "The run journal keeps search results. The holder of the key accepts the Brave Search API terms.",
+      "link": "Read the Brave Search API terms"
+    },
+    "test": {
+      "title": "Test",
+      "query": "Search for",
+      "placeholder": "Acme desk prices",
+      "run": "Run a search",
+      "failed": "The search failed",
+      "summary": "{n} results in {ms} ms. Cost: {cost}.",
+      "none": "The provider found no results."
+    },
+    "fetch": {
+      "title": "Reading pages",
+      "noteTitle": "web_fetch needs no provider",
+      "body": "web_fetch reads public pages and PDFs from the server. It does not read private or local addresses. In an allowlist zone, it reads only the allowed hosts."
     }
   }
 }

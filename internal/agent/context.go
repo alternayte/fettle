@@ -102,6 +102,9 @@ type Input struct {
 	Notes []string
 	// Refs are the context references of the envelope, already resolved to text.
 	Refs []string
+	// WebSearch and WebFetch are set when the run has these tools.
+	WebSearch bool
+	WebFetch  bool
 }
 
 // Context is the assembled model input.
@@ -142,6 +145,11 @@ func Assemble(in Input) Context {
 	add(Item{Section: SecSystem, Name: "base_rules", Origin: OriginSystem, Role: "system", Text: fmt.Sprintf(baseRules, in.BotName, in.BotJob)})
 	if in.Helper {
 		add(Item{Section: SecSystem, Name: "helper_rules", Origin: OriginSystem, Role: "system", Text: "You are a helper. Do only the part in the envelope. You cannot ask the user, hand off or start helpers. When you are done, call report_result with your summary, your findings and their sources."})
+	}
+	if in.WebSearch && in.WebFetch {
+		add(Item{Section: SecSystem, Name: "web_rules", Origin: OriginSystem, Role: "system", Text: "Use web_search and web_fetch for facts; use the browser for sign-in, clicks and forms."})
+	} else if in.WebFetch {
+		add(Item{Section: SecSystem, Name: "web_rules", Origin: OriginSystem, Role: "system", Text: "Use web_fetch to read a page for facts; use the browser for sign-in, clicks and forms."})
 	}
 	if strings.TrimSpace(in.Instructions) != "" {
 		add(Item{Section: SecSystem, Name: "instructions", Origin: OriginUser, Role: "system", Text: "Your instructions from the user:\n" + in.Instructions})

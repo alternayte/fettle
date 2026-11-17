@@ -60,7 +60,7 @@ func ownerOnly(method, rest string) bool {
 	case "":
 		return !read
 	case "connectors", "zones", "computer-providers", "vault", "policy", "approval-mode", "settings", "usage", "audit",
-		"model-providers", "model-roles", "learning", "invites", "templates", "onboarding":
+		"model-providers", "model-roles", "web-search", "learning", "invites", "templates", "onboarding":
 		return true
 	case "memory":
 		return !read
