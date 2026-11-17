@@ -249,19 +249,6 @@ func (p *Provider) build(ctx context.Context, name string, size computers.Size) 
 	}
 }
 
-// allowHosts reads the hosts of an allowlist zone from the agentd network rules. ok is
-// false for an open zone.
-func allowHosts(env map[string]string) (hosts []string, ok bool) {
-	var n struct {
-		Mode       string   `json:"mode"`
-		AllowHosts []string `json:"allow_hosts"`
-	}
-	if err := json.Unmarshal([]byte(env["FETTLE_AGENTD_NETWORK"]), &n); err != nil || n.Mode != "allowlist" {
-		return nil, false
-	}
-	return append([]string{}, n.AllowHosts...), true
-}
-
 // Create starts a sandbox of the zone's size and starts agentd in it through envd. An
 // allowlist zone gets its hosts as the E2B egress allowlist; agentd applies the same rules in
 // the guest (§10.5). The port URLs need the traffic access token of the sandbox.
@@ -276,7 +263,7 @@ func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Mach
 	}
 	private := false
 	nw := &networkConfig{AllowPublicTraffic: &private}
-	if hosts, ok := allowHosts(s.Env); ok {
+	if hosts, ok := computers.EgressHosts(s.Env); ok {
 		// Allowed entries take precedence over denied ones; with no hosts nothing is allowed.
 		nw.AllowOut, nw.DenyOut = hosts, []string{"0.0.0.0/0"}
 	}

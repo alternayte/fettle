@@ -44,6 +44,10 @@ func (t *NetTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return t.cur.Load().RoundTrip(r)
 }
 
+// Current returns the transport that requests use now. A caller that clones it gets the
+// proxy and roots of this moment.
+func (t *NetTransport) Current() *http.Transport { return t.cur.Load() }
+
 // CloseIdleConnections closes the idle connections of the current transport.
 func (t *NetTransport) CloseIdleConnections() {
 	if c := t.cur.Load(); c != nil {

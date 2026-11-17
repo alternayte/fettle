@@ -146,12 +146,21 @@ func hostOverrides() map[string]string {
 
 var dialer = &net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}
 
-// baseTransport returns the transport of the server client, or nil when it is not an
-// *http.Transport and so its dial cannot change.
+// currentTransport is a transport that swaps its *http.Transport at run time, such as the
+// transport of the server client when the proxy or root settings change.
+type currentTransport interface {
+	Current() *http.Transport
+}
+
+// baseTransport returns the transport of the server client as it is now, or nil when it is
+// neither an *http.Transport nor a currentTransport, and so its dial cannot change.
 func baseTransport(base *http.Client) *http.Transport {
 	if base == nil || base.Transport == nil {
 		t, _ := http.DefaultTransport.(*http.Transport)
 		return t
+	}
+	if c, ok := base.Transport.(currentTransport); ok {
+		return c.Current()
 	}
 	t, _ := base.Transport.(*http.Transport)
 	return t

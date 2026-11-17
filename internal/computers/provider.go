@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
+	"slices"
 )
 
 // Size is a computer size (§10.2).
@@ -133,4 +136,25 @@ func DialOf(m Machine) func(ctx context.Context, network, addr string) (net.Conn
 		return d.DialAgentd
 	}
 	return nil
+}
+
+// EgressHosts returns the hosts that the edge of a remote provider must allow for a computer
+// with the agentd env env: the hosts of an allowlist zone, plus the host of the upstream
+// proxy when one is set, because the filter proxy in the computer reaches the sites through
+// it. ok is false for an open zone.
+func EgressHosts(env map[string]string) (hosts []string, ok bool) {
+	var n struct {
+		Mode       string   `json:"mode"`
+		AllowHosts []string `json:"allow_hosts"`
+	}
+	if err := json.Unmarshal([]byte(env["FETTLE_AGENTD_NETWORK"]), &n); err != nil || n.Mode != "allowlist" {
+		return nil, false
+	}
+	hosts = append([]string{}, n.AllowHosts...)
+	if raw := env["FETTLE_AGENTD_PROXY"]; raw != "" {
+		if u, err := url.Parse(raw); err == nil && u.Hostname() != "" && !slices.Contains(hosts, u.Hostname()) {
+			hosts = append(hosts, u.Hostname())
+		}
+	}
+	return hosts, true
 }

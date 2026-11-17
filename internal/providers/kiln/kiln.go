@@ -6,7 +6,6 @@ package kiln
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -176,7 +175,7 @@ func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Mach
 	}
 	m := &machine{p: p, id: sb.ID}
 	// agentd also applies the zone's rules with nftables inside the guest (§10.5).
-	if hosts, ok := allowHosts(s.Env); ok {
+	if hosts, ok := computers.EgressHosts(s.Env); ok {
 		_, err = p.c.SetEgress(ctx, sb.ID, hosts)
 	} else {
 		_, err = p.c.ObserveEgress(ctx, sb.ID)
@@ -186,19 +185,6 @@ func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Mach
 		return nil, fmt.Errorf("set the egress policy: %w", err)
 	}
 	return m, nil
-}
-
-// allowHosts reads the hosts of an allowlist zone from the agentd network rules. ok is
-// false for an open zone.
-func allowHosts(env map[string]string) (hosts []string, ok bool) {
-	var n struct {
-		Mode       string   `json:"mode"`
-		AllowHosts []string `json:"allow_hosts"`
-	}
-	if err := json.Unmarshal([]byte(env["FETTLE_AGENTD_NETWORK"]), &n); err != nil || n.Mode != "allowlist" {
-		return nil, false
-	}
-	return append([]string{}, n.AllowHosts...), true
 }
 
 // Attach finds an existing sandbox.

@@ -293,6 +293,26 @@ func TestE2BOpenZoneHasNoEgressLimit(t *testing.T) {
 	}
 }
 
+// Behind a proxy, an allowlist zone also allows the proxy host at E2B, because the filter
+// proxy in the computer reaches the allowed sites through it.
+func TestE2BAllowlistBehindProxyAllowsTheProxy(t *testing.T) {
+	fake, p := start(t)
+	if err := p.Prepare(t.Context(), nil); err != nil {
+		t.Fatal(err)
+	}
+	s, _, _ := spec(t, `{"mode":"allowlist","allow_hosts":["docs.acme.test"]}`)
+	s.Env["FETTLE_AGENTD_PROXY"] = "http://user@proxy.acme.test:3128"
+	m, err := p.Create(t.Context(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = m.Destroy(context.Background()) })
+	info, _ := fake.Sandbox(m.Ref())
+	if !slices.Equal(info.AllowOut, []string{"docs.acme.test", "proxy.acme.test"}) || !slices.Equal(info.DenyOut, []string{"0.0.0.0/0"}) {
+		t.Fatalf("egress behind a proxy: allow %v deny %v", info.AllowOut, info.DenyOut)
+	}
+}
+
 // A wrong key and a failed template build name the fault.
 func TestE2BFaults(t *testing.T) {
 	fake, p := start(t)
