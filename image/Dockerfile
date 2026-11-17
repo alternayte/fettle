@@ -27,11 +27,13 @@ RUN apt-get update \
  && apt-get purge -y gnupg && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
  && useradd --create-home --home-dir /home/fettle --shell /bin/bash --uid 1000 fettle \
+ && useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin fettle-net \
  && rm -f /usr/bin/sudo /usr/bin/su
 COPY --from=agentd /out/fettle-agentd /usr/local/bin/fettle-agentd
 # The computer is the sandbox of the browser: Chromium cannot use its own sandbox as a
 # non-root user in a container without extra privileges.
 ENV FETTLE_AGENTD_HOME=/home/fettle FETTLE_AGENTD_USER=fettle CHROME_BIN=/usr/bin/chromium FETTLE_BROWSER_NO_SANDBOX=1
 EXPOSE 7421
-# agentd starts as root only to apply the network rules and prepare folders, then drops to fettle.
+# agentd starts as root only to apply the network rules, install extra roots, start the filter
+# proxy as fettle-net and prepare folders, then drops to fettle.
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/fettle-agentd"]

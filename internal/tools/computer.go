@@ -165,6 +165,9 @@ func (c *Computer) Register(r *agent.Registry) {
 			if res.Truncated && res.OutputFile != "" {
 				status += ". The output was over 1 MiB; the rest is in " + display(home, res.OutputFile)
 			}
+			if res.Hint != "" {
+				status += ". " + res.Hint
+			}
 			return agent.ToolOutput{Text: status + "\n" + offload(ctx, l.Client, home, env, text)}, nil
 		},
 	})

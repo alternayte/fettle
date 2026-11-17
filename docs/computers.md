@@ -137,10 +137,96 @@ The image has no `sudo` and no `su`.
 
 | Build | Image |
 | --- | --- |
-| A release | `ghcr.io/alternayte/fettle-computer:<version>` |
+| A release, also a pre-release such as `1.0.0-rc.4` | `ghcr.io/alternayte/fettle-computer:<version>` |
 | A development build | `fettle-computer:dev`, from `just image` |
 
-`FETTLE_COMPUTER_IMAGE` sets another image.
+The release build sets the image with the `main.computerImage` ldflag.
+A build without this ldflag uses `fettle-computer:dev`.
+`fettle version --image` prints the image of a build.
+
+Fettle chooses the image in this order:
+
+1. `FETTLE_COMPUTER_IMAGE`.
+2. The setting **Computer image** in Settings, Computers, This server.
+3. The image of the build.
+
+**Reset to default** clears the setting.
+The next computer that starts uses a new image. A running computer keeps its image.
+Kiln and E2B template names contain a short hash of the image, so a new image builds new templates.
+
+The first start downloads the image. Setup shows "Downloading the computer image (N MB)" and the percent.
+When the download fails, the error names the image and points to Settings, Computers.
+For `fettle-computer:dev`, the error tells you to run `just image`.
+
+## Settings of this server
+
+Instance admins see the section **This server** in Settings, Computers.
+The settings apply to every space.
+An environment variable wins over each setting. Then the field is read-only and names the variable.
+
+| Setting | Field | Variable that locks it |
+| --- | --- | --- |
+| `computers.image` | Computer image | `FETTLE_COMPUTER_IMAGE` |
+| `computers.extra_ca` | Extra root certificates (PEM) | `FETTLE_EXTRA_CA_FILE` |
+| `computers.proxy` | Proxy URL, with the user name | `HTTPS_PROXY` |
+| `computers.proxy_password` | Proxy password | `HTTPS_PROXY` |
+| `computers.use_host_settings` | Use this computer's certificates and proxy (desktop app only) | none |
+
+The proxy password is an instance secret in the vault. The API never returns it. It shows only whether a password is set.
+Do not put the password in the proxy URL. Fettle refuses such a URL.
+The API is `GET /api/v1/admin/settings` and `PUT /api/v1/admin/settings/{key}`. An empty text resets a setting.
+
+## Certificates and proxy
+
+Some networks inspect HTTPS or need a proxy.
+Fettle uses the extra roots and the proxy for its own requests and gives them to each computer.
+For each value, the variable wins, then the setting, then the values of the host when the desktop option is on.
+A change applies at once to the server and to the next computer that starts.
+The `host` provider runs on the host itself and gets none of them.
+
+At boot, as root, agentd installs the extra roots:
+
+- It writes them to `/usr/local/share/ca-certificates` and runs `update-ca-certificates`.
+- It writes the Chromium policy `/etc/chromium/policies/managed/fettle.json` with `CACertificates`. Chromium on Linux does not read the system store.
+- Commands get `SSL_CERT_FILE`, `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE` and `UV_NATIVE_TLS=1`.
+
+### Filter proxy
+
+With a proxy, agentd starts a filter proxy on `127.0.0.1:3128` as the system user `fettle-net`.
+It accepts CONNECT and plain HTTP.
+In an allowlist zone, it checks each host against the list of the zone. `*.acme.test` matches `acme.test` and its subdomains, on port 80 or 443.
+It refuses other hosts with status 403 and the text "<host> is not on the allowlist of this zone."
+It sends allowed traffic to the upstream proxy, and signs in when the proxy has a user and a password.
+
+nftables lets only `fettle-net` reach the upstream proxy and DNS. All other processes reach only loopback.
+This applies in open zones too, so all traffic goes through the filter proxy and the upstream proxy.
+Commands get `HTTP_PROXY`, `HTTPS_PROXY`, the lower-case forms and `NO_PROXY=localhost,127.0.0.1`.
+Chromium gets `--proxy-server` with the filter proxy. Loopback stays direct.
+A proxy that listens only on the loopback address of the host is not reachable from a computer.
+
+### Errors
+
+The browser and `exec` put network errors in plain words:
+
+| Error | Message |
+| --- | --- |
+| A certificate error | This network inspects HTTPS. Add your company root certificate in Settings, Computers. |
+| `ERR_NAME_NOT_RESOLVED` | The computer could not look up <host>. |
+| Refused or reset in an allowlist zone, for a host that is not on the list | <host> is not on the allowlist of this zone. |
+| `ERR_PROXY_CONNECTION_FAILED`, `ERR_TUNNEL_CONNECTION_FAILED` | The proxy did not answer. |
+
+`exec` adds the certificate message when a command fails and its output shows a certificate error.
+
+### Check network
+
+**Check network** is in the menu of each zone in Settings, Computers.
+It starts the computer of the zone and fetches one HTTPS page with curl and with Chromium.
+It shows the DNS, connect and TLS steps of each fetch, and writes an audit row.
+An allowlist zone fetches its first listed site.
+`FETTLE_NETWORK_CHECK_URL` sets the page. The default is `https://example.com/`.
+
+`fettle doctor --network` runs Check network for each zone through the running server.
+Plain `fettle doctor` starts no computer.
 
 ## CLI
 
@@ -156,6 +242,7 @@ fettle computer stop personal
 - `computer add <docker|applecontainer|host|kiln|e2b>` turns on a provider and prepares it. For `host`, a card in the chat of the primary bot asks you to allow it. For `kiln` and `e2b`, the server needs their variables first.
 - `computer test [zone]` starts the computer of a zone and runs one command in it. The default zone is `personal`.
 - `computer stop <zone>` puts the computer of a zone to sleep. Its workspace stays.
+- `doctor --network` checks DNS, connect and TLS in the computer of each zone.
 
 ## Sleep and limits
 

@@ -1547,6 +1547,53 @@
         ],
         "type": "object"
       },
+      "InstanceSettingView": {
+        "additionalProperties": false,
+        "properties": {
+          "default": {
+            "description": "The value that applies when nothing is stored."
+          },
+          "doc": {
+            "type": "string"
+          },
+          "env": {
+            "description": "The environment variable that sets or would lock this value.",
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "locked": {
+            "description": "An environment variable sets this value, so the API cannot change it.",
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean"
+          },
+          "set": {
+            "description": "A secret has a value.",
+            "type": "boolean"
+          },
+          "value": {
+            "description": "The stored value; null for a secret."
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "default",
+          "is_default",
+          "secret",
+          "set",
+          "locked",
+          "env",
+          "doc"
+        ],
+        "type": "object"
+      },
       "InstanceView": {
         "additionalProperties": false,
         "properties": {
@@ -2002,6 +2049,24 @@
         ],
         "type": "object"
       },
+      "ListOutBody3": {
+        "additionalProperties": false,
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/InstanceSettingView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "type": "object"
+      },
       "LocalAuthInBody": {
         "additionalProperties": false,
         "properties": {
@@ -2269,6 +2334,120 @@
         ],
         "type": "object"
       },
+      "NetworkCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkProbe"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "proxy": {
+            "description": "The computer uses a proxy.",
+            "type": "boolean"
+          },
+          "roots": {
+            "description": "The computer has extra root certificates.",
+            "type": "boolean"
+          },
+          "start_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone",
+          "provider",
+          "url",
+          "pass",
+          "proxy",
+          "roots",
+          "start_ms",
+          "probes"
+        ],
+        "type": "object"
+      },
+      "NetworkProbe": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkStep"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tool": {
+            "enum": [
+              "curl",
+              "chromium"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "pass",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "NetworkStep": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "dns",
+              "connect",
+              "tls"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pass",
+              "fail",
+              "skip"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "type": "object"
+      },
       "OnboardingView": {
         "additionalProperties": false,
         "properties": {
@@ -2383,6 +2562,9 @@
           "error": {
             "type": "string"
           },
+          "image": {
+            "type": "string"
+          },
           "provider": {
             "type": "string"
           },
@@ -2459,6 +2641,10 @@
           },
           "step": {
             "type": "string"
+          },
+          "total_mb": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -3508,6 +3694,16 @@
         },
         "required": [
           "disabled"
+        ],
+        "type": "object"
+      },
+      "Set-instance-settingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {}
+        },
+        "required": [
+          "value"
         ],
         "type": "object"
       },
@@ -5063,6 +5259,88 @@
           }
         },
         "summary": "The edition of this build, its licence and the Enterprise features (instance admins)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings": {
+      "get": {
+        "operationId": "list-instance-settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOutBody3"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The settings of this server: computer image, certificates and proxy (instance admins)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/{key}": {
+      "put": {
+        "operationId": "set-instance-setting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-instance-settingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceSettingView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change a setting of this server. An empty text resets it; a secret is write-only (instance admins)",
         "tags": [
           "admin"
         ]
@@ -12264,6 +12542,57 @@
           }
         },
         "summary": "Change a zone. A change of the provider or the network replaces its computer.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}/computer/network-check": {
+      "post": {
+        "operationId": "check-zone-network",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkCheck"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start the zone's computer and fetch one HTTPS page with curl and Chromium; report DNS, connect and TLS apart",
         "tags": [
           "computers"
         ]

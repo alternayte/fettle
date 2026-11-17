@@ -58,6 +58,7 @@ export const keys = {
   usage: (s: string, by: string, days: number) => ["s", s, "usage", by, days] as const,
   audit: (s: string, action: string) => ["s", s, "audit", action] as const,
   telemetry: ["telemetry"] as const,
+  instanceSettings: ["instance-settings"] as const,
   zones: (s: string) => ["s", s, "zones"] as const,
   computerProviders: (s: string) => ["s", s, "computer-providers"] as const,
   policy: (s: string) => ["s", s, "policy"] as const,
@@ -679,6 +680,38 @@ export function useTestZoneComputer() {
     mutationFn: (zone: string) =>
       must(api.POST("/api/v1/spaces/{space}/zones/{zone}/computer/test", { params: { path: { space, zone } } })),
     onSettled: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useCheckZoneNetwork starts a zone's computer and checks DNS, connect and TLS with curl and Chromium. */
+export function useCheckZoneNetwork() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (zone: string) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/zones/{zone}/computer/network-check", { params: { path: { space, zone } } }),
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useInstanceSettings lists the settings of this server (instance admins). */
+export function useInstanceSettings(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.instanceSettings,
+    queryFn: async () => (await must(api.GET("/api/v1/admin/settings"))).settings ?? [],
+    enabled,
+  });
+}
+
+/** useSetInstanceSetting changes one setting of this server. An empty text resets it. */
+export function useSetInstanceSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: unknown }) =>
+      must(api.PUT("/api/v1/admin/settings/{key}", { params: { path: { key } }, body: { value } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.instanceSettings }),
   });
 }
 

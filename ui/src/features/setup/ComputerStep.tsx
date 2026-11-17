@@ -68,8 +68,14 @@ export function ComputerStep() {
               <Loader aria-label={t("setup.computer.working")} className="size-4 animate-spin text-ink-faint" />
             )}
             <span className="min-w-0 truncate text-ink">
-              {t(`setup.computer.steps.${p.step}`)}
-              {p.detail && <span className="text-ink-faint"> · {p.detail}</span>}
+              {p.step === "image" && p.state === "running" && p.total_mb ? (
+                t("setup.computer.downloading", { mb: String(p.total_mb) })
+              ) : (
+                <>
+                  {t(`setup.computer.steps.${p.step}`)}
+                  {p.detail && <span className="text-ink-faint"> · {p.detail}</span>}
+                </>
+              )}
             </span>
             <span className="figures text-ink-faint">{p.state === "running" && p.percent ? `${p.percent}%` : ""}</span>
             {p.state === "running" && !!p.percent && (

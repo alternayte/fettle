@@ -13,7 +13,8 @@ builds:
     binary: fettle
     env: [CGO_ENABLED=0]
     flags: [-trimpath]
-    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    # The release names its own computer image, so a pre-release pulls its image too.
+    ldflags: ["-s -w -X main.version={{ .Version }} -X main.computerImage=ghcr.io/alternayte/fettle-computer:{{ .Version }}"]
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
   - id: fettle-agentd

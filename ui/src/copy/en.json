@@ -501,7 +501,8 @@
         "docker": "Docker",
         "kvm": "Virtualization",
         "kiln": "Kiln"
-      }
+      },
+      "downloading": "Downloading the computer image ({mb} MB)"
     },
     "model": {
       "title": "Add a model key",
@@ -975,7 +976,50 @@
     "testing": "Fettle starts the computer and runs a test command.",
     "testPass": "The computer works. It was ready in {start} and ran the command in {exec}: {output}",
     "testFail": "The computer test failed: {error}",
-    "underSecond": "under 1 s"
+    "underSecond": "under 1 s",
+    "check": "Check network",
+    "checking": "Fettle starts the computer and fetches one HTTPS page with curl and with the browser.",
+    "checkPass": "The computer reaches {url}.",
+    "checkFail": "The computer does not reach {url}.",
+    "checkNoStart": "The computer did not start: {error}",
+    "checkProxy": "It uses a proxy.",
+    "checkRoots": "It has extra root certificates.",
+    "tools": {
+      "curl": "curl",
+      "chromium": "Browser"
+    },
+    "steps": {
+      "dns": "DNS",
+      "connect": "Connect",
+      "tls": "TLS"
+    },
+    "stepState": {
+      "pass": "passed",
+      "fail": "failed",
+      "skip": "not run"
+    },
+    "server": {
+      "title": "This server",
+      "intro": "These settings apply to every space on this server. Only instance admins see them.",
+      "loadFailed": "Fettle could not load the settings of this server",
+      "saved": "The setting is saved. The next computer uses it.",
+      "reset": "The setting is back to its default.",
+      "resetDefault": "Reset to default",
+      "locked": "The environment variable {env} sets this value. Change the variable to change it.",
+      "image": "Computer image",
+      "imageHint": "Leave it empty to use the image of this build: {image}.",
+      "useHost": "Use this computer's certificates and proxy",
+      "useHostHint": "Computers trust the root certificates that your admin added here, and use the system proxy.",
+      "extraCA": "Extra root certificates",
+      "extraCAHint": "PEM text. Add your company root certificate when your network inspects HTTPS.",
+      "proxy": "Proxy",
+      "proxyHint": "For example http://user@proxy.example.com:3128. Put the password in the field below.",
+      "proxyPassword": "Proxy password",
+      "secretSet": "A password is set. Fettle does not show it.",
+      "secretUnset": "No password is set.",
+      "clear": "Clear",
+      "cleared": "The password is cleared."
+    }
   },
   "approvals": {
     "mode": "Approval mode",

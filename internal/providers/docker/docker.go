@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	cerrdefs "github.com/containerd/errdefs"
@@ -30,6 +31,20 @@ type Provider struct {
 	Image string
 	// Platform selects the image platform, empty for the host default.
 	Platform string
+	mu       sync.Mutex
+}
+
+// SetImage changes the computer image for the next preparation and machine.
+func (p *Provider) SetImage(image string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Image = image
+}
+
+func (p *Provider) image() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.Image
 }
 
 // New connects to the Docker Engine from DOCKER_HOST or the default socket.
@@ -71,15 +86,20 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 		return err
 	}
 	report(computers.Progress{Step: "docker", State: "pass"})
-	if _, err := p.c.ImageInspect(ctx, p.Image); err == nil {
-		report(computers.Progress{Step: "image", State: "pass", Detail: p.Image})
+	img := p.image()
+	if _, err := p.c.ImageInspect(ctx, img); err == nil {
+		report(computers.Progress{Step: "image", State: "pass", Detail: img})
 		return nil
 	}
-	report(computers.Progress{Step: "image", State: "running", Detail: p.Image})
-	rc, err := p.c.ImagePull(ctx, p.Image, client.ImagePullOptions{})
-	if err != nil {
+	report(computers.Progress{Step: "image", State: "running", Detail: img})
+	fail := func(err error) error {
+		err = computers.ImageError(img, err)
 		report(computers.Progress{Step: "image", State: "fail", Detail: err.Error()})
-		return fmt.Errorf("pull %s: %w", p.Image, err)
+		return err
+	}
+	rc, err := p.c.ImagePull(ctx, img, client.ImagePullOptions{})
+	if err != nil {
+		return fail(err)
 	}
 	defer rc.Close()
 	dec := json.NewDecoder(rc)
@@ -98,11 +118,10 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return err
+			return fail(err)
 		}
 		if m.Error != "" {
-			report(computers.Progress{Step: "image", State: "fail", Detail: m.Error})
-			return errors.New(m.Error)
+			return fail(errors.New(m.Error))
 		}
 		if m.ProgressDetail.Total > 0 && strings.HasPrefix(m.Status, "Downloading") {
 			total[m.ID], current[m.ID] = m.ProgressDetail.Total, m.ProgressDetail.Current
@@ -111,10 +130,10 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 				t += total[k]
 				c += current[k]
 			}
-			report(computers.Progress{Step: "image", State: "running", Percent: int(c * 100 / max(t, 1)), Detail: fmt.Sprintf("%d of %d MB", c>>20, t>>20)})
+			report(computers.Progress{Step: "image", State: "running", Percent: int(c * 100 / max(t, 1)), Detail: computers.DownloadDetail(t), TotalMB: int(t >> 20)})
 		}
 	}
-	report(computers.Progress{Step: "image", State: "pass", Detail: p.Image})
+	report(computers.Progress{Step: "image", State: "pass", Detail: img})
 	return nil
 }
 
@@ -126,7 +145,7 @@ func containerName(zoneID string) string {
 func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Machine, error) {
 	img := s.Image
 	if img == "" {
-		img = p.Image
+		img = p.image()
 	}
 	size := computers.Sizes[s.Size]
 	if size.VCPU == 0 {

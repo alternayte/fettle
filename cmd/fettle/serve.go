@@ -22,7 +22,7 @@ import (
 
 func configFlags(fs *flag.FlagSet) *app.Config {
 	cfg := app.ConfigFromEnv()
-	cfg.Version = version
+	cfg.Version, cfg.ComputerImage = version, computerImage
 	fs.StringVar(&cfg.Data, "data", cfg.Data, "data folder")
 	fs.StringVar(&cfg.DB, "db", cfg.DB, "sqlite or a postgres:// URL")
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "listen address")
@@ -57,7 +57,16 @@ func init() {
 	register("up", "Start a local server in the background and print its URL", runUp)
 	register("down", "Stop the background local server", runDown)
 	register("migrate", "Apply database migrations and exit", runMigrate)
-	register("version", "Print the version", func(context.Context, []string) error {
+	register("version", "Print the version; --image prints the computer image of this build", func(_ context.Context, args []string) error {
+		fs := flag.NewFlagSet("version", flag.ContinueOnError)
+		image := fs.Bool("image", false, "print the computer image that this build names")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		if *image {
+			fmt.Println(app.BuiltinImage(computerImage))
+			return nil
+		}
 		fmt.Println("fettle", version)
 		return nil
 	})

@@ -1,6 +1,8 @@
 # The release pipeline (§17). A tag v* builds the binaries, the server and computer images
 # (amd64 and arm64), the E2B template definition and the checksums with goreleaser, the
-# desktop installers on each OS, and the signed update feed of the desktop app.
+# desktop installers on each OS, and the signed update feed of the desktop app. Before a
+# person publishes the draft, computer-check starts a computer from the Linux release binary,
+# and the macOS and Windows jobs check that the image their app names is public on ghcr.io.
 #
 # Secrets: MACOS_CERTIFICATE (base64 .p12), MACOS_CERTIFICATE_PASSWORD, MACOS_SIGN_IDENTITY,
 # APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD (notarization), WINDOWS_CERTIFICATE (base64
@@ -79,6 +81,13 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           FETTLE_UPDATE_PUBLIC_KEY: ${{ vars.FETTLE_UPDATE_PUBLIC_KEY }}
         run: desktop/macos/package.sh "${GITHUB_REF_NAME#v}" out
+      - name: Check the computer image of the app
+        run: |
+          mkdir -p "$RUNNER_TEMP/app"
+          tar -xzf "out/Fettle-${GITHUB_REF_NAME#v}-darwin-universal.tar.gz" -C "$RUNNER_TEMP/app"
+          img=$("$RUNNER_TEMP/app/Fettle.app/Contents/MacOS/fettle-desktop" --computer-image)
+          test "$img" = "ghcr.io/alternayte/fettle-computer:${GITHUB_REF_NAME#v}"
+          scripts/check-image.sh "$img"
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos
@@ -104,10 +113,17 @@ jobs:
           FETTLE_UPDATE_PUBLIC_KEY: ${{ vars.FETTLE_UPDATE_PUBLIC_KEY }}
         run: |
           v="${GITHUB_REF_NAME#v}"
-          go build -tags desktop -trimpath -ldflags "-s -w -H windowsgui -X main.version=$v -X main.updateKey=$FETTLE_UPDATE_PUBLIC_KEY" -o Fettle.exe ./cmd/fettle-desktop
+          go build -tags desktop -trimpath -ldflags "-s -w -H windowsgui -X main.version=$v -X main.computerImage=ghcr.io/alternayte/fettle-computer:$v -X main.updateKey=$FETTLE_UPDATE_PUBLIC_KEY" -o Fettle.exe ./cmd/fettle-desktop
           dotnet tool install --global wix --version 4.0.5
           wix build desktop/windows/fettle.wxs -d Version="$v" -d Exe=Fettle.exe -o "Fettle-$v-windows-amd64.msi"
           mkdir out && cp Fettle.exe "out/Fettle-$v-windows-amd64.exe" && mv "Fettle-$v-windows-amd64.msi" out/
+      - name: Check the computer image of the app
+        shell: bash
+        run: |
+          ./Fettle.exe --computer-image > image.txt
+          img=$(tr -d '\r' < image.txt)
+          test "$img" = "ghcr.io/alternayte/fettle-computer:${GITHUB_REF_NAME#v}"
+          scripts/check-image.sh "$img"
       - name: Sign
         if: env.HAS_CERT == 'true'
         shell: pwsh
@@ -148,7 +164,7 @@ jobs:
           FETTLE_UPDATE_PUBLIC_KEY: ${{ vars.FETTLE_UPDATE_PUBLIC_KEY }}
         run: |
           v="${GITHUB_REF_NAME#v}"
-          CGO_ENABLED=1 go build -tags desktop -trimpath -ldflags "-s -w -X main.version=$v -X main.updateKey=$FETTLE_UPDATE_PUBLIC_KEY" -o fettle-desktop ./cmd/fettle-desktop
+          CGO_ENABLED=1 go build -tags desktop -trimpath -ldflags "-s -w -X main.version=$v -X main.computerImage=ghcr.io/alternayte/fettle-computer:$v -X main.updateKey=$FETTLE_UPDATE_PUBLIC_KEY" -o fettle-desktop ./cmd/fettle-desktop
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.43.0
           curl -fsSLo appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$(uname -m).AppImage"
           chmod +x appimagetool && sudo mv appimagetool /usr/local/bin/
@@ -160,8 +176,33 @@ jobs:
           name: desktop-linux-${{ matrix.arch }}
           path: out/*
 
+  # Starts one computer from the Linux release binary with the docker provider, without a
+  # registry login, so a missing or private image fails the release before it is published.
+  computer-check:
+    needs: goreleaser
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the Linux release binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" --pattern fettle_linux_amd64.tar.gz --dir dist
+          tar -xzf dist/fettle_linux_amd64.tar.gz -C dist fettle
+      - name: Start a computer and run a command in it
+        env:
+          FETTLE_DEFAULT_PROVIDER: docker
+        run: |
+          docker logout ghcr.io || true
+          export FETTLE_DATA="$RUNNER_TEMP/fettle"
+          test "$(dist/fettle version --image)" = "ghcr.io/alternayte/fettle-computer:${GITHUB_REF_NAME#v}"
+          dist/fettle up
+          trap 'dist/fettle down' EXIT
+          dist/fettle computer add docker
+          dist/fettle computer test
+
   publish-desktop:
-    needs: [desktop-macos, desktop-windows, desktop-linux]
+    needs: [desktop-macos, desktop-windows, desktop-linux, computer-check]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

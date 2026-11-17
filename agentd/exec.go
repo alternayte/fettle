@@ -147,6 +147,9 @@ func (s *Server) commandEnv(extra map[string]string) []string {
 		env[k] = v
 	}
 	env["HOME"] = s.home
+	for k, v := range s.network.Env {
+		env[k] = v
+	}
 	if _, ok := env["PATH"]; !ok {
 		env["PATH"] = "/usr/local/bin:/usr/bin:/bin"
 	}
@@ -177,6 +180,43 @@ type execSink struct {
 	fileRel  string
 	spilled  bool
 	pending  map[string][]byte
+	// tail keeps the end of the last chunk, so a pattern split over two chunks still matches.
+	tail    []byte
+	certErr bool
+}
+
+// tlsErrorMarks are output fragments of curl, OpenSSL, Python, Node, uv and Go that show a
+// certificate the computer does not trust.
+var tlsErrorMarks = []string{
+	"ssl certificate problem",
+	"certificate verify failed",
+	"unable to get local issuer certificate",
+	"self-signed certificate in certificate chain",
+	"self signed certificate in certificate chain",
+	"unable_to_get_issuer_cert_locally",
+	"self_signed_cert_in_chain",
+	"unable_to_verify_leaf_signature",
+	"invalid peer certificate",
+	"certificate signed by unknown authority",
+	"unknownissuer",
+}
+
+// noteTLS looks for a certificate error in a chunk of output.
+func (o *execSink) noteTLS(p []byte) {
+	if o.certErr {
+		return
+	}
+	buf := strings.ToLower(string(append(append([]byte(nil), o.tail...), p...)))
+	for _, m := range tlsErrorMarks {
+		if strings.Contains(buf, m) {
+			o.certErr = true
+			return
+		}
+	}
+	if len(buf) > 64 {
+		buf = buf[len(buf)-64:]
+	}
+	o.tail = []byte(buf)
 }
 
 type streamWriter struct {
@@ -197,6 +237,7 @@ func (o *execSink) write(stream string, p []byte) {
 	if o.closed || len(p) == 0 {
 		return
 	}
+	o.noteTLS(p)
 	o.record(p)
 	if o.streamed >= execOutputCap {
 		return
@@ -310,6 +351,9 @@ func (o *execSink) finish(res client.ExecResult) {
 	}
 	res.Truncated = o.spilled
 	res.OutputFile = o.fileRel
+	if o.certErr && res.ExitCode != 0 {
+		res.Hint = msgInspectsHTTPS
+	}
 	o.line(client.ExecLine{ExecResult: &res})
 	o.flush()
 }

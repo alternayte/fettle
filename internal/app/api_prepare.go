@@ -89,7 +89,7 @@ func (a *App) registerPrepare(api huma.API) {
 		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
 			return nil, huma.Error422UnprocessableEntity("Use the URL of the Kiln host, such as https://kiln.acme.test.")
 		}
-		k := kiln.New(in.Body.URL, in.Body.Token, ComputerImage(a.Cfg.Version), a.Cfg.Version)
+		k := kiln.New(in.Body.URL, in.Body.Token, a.computerImage(ctx), a.Cfg.Version)
 		k.HTTP = a.HTTP
 		out := &struct {
 			Body struct {
@@ -132,7 +132,7 @@ func (a *App) registerPrepare(api huma.API) {
 		_, out.Body.Configured = a.Computers.Providers["e2b"]
 		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
-		if err := a.newE2B(in.Body.Key).Ping(cctx); err != nil {
+		if err := a.newE2B(ctx, in.Body.Key).Ping(cctx); err != nil {
 			out.Body.Error = strings.ReplaceAll(err.Error(), in.Body.Key, "[secret:E2B API key]")
 		} else {
 			out.Body.Pass = true

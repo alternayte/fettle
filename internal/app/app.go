@@ -98,6 +98,11 @@ type App struct {
 	stopped  bool
 	// Telemetry reports the counts it would send (REQ-CORE-012).
 	Telemetry *Telemetry
+	// host caches the certificates and proxy of the desktop host.
+	host hostCache
+	// netMu guards netKey, the network that the HTTP client uses now.
+	netMu  sync.Mutex
+	netKey string
 }
 
 // New opens storage, applies migrations and builds every service. It does not start jobs or HTTP.
@@ -153,6 +158,9 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Log = NewLogger(cfg.LogLevel, os.Stderr, a.Vault.Redactor)
 	slog.SetDefault(a.Log)
 	a.Settings = settings.New(e, a.Audit)
+	if err := a.applyNetwork(ctx); err != nil {
+		a.Log.Warn("network settings", "error", err)
+	}
 	a.Users = auth.NewUserStore(e)
 	a.Spaces = spaces.New(e, a.Audit)
 	a.Bots = bots.New(e, a.Audit)

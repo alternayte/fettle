@@ -3,12 +3,15 @@
 package agentd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -29,6 +32,9 @@ func prepareMachine(ctx context.Context, cfg Config, logger *slog.Logger) (Netwo
 	if os.Geteuid() != 0 {
 		if cfg.Network.Mode == NetworkAllowlist {
 			logger.Warn("network rules not applied: agentd does not run as root")
+		}
+		if len(cfg.CA) > 0 || cfg.Proxy != "" {
+			logger.Warn("extra roots and proxy not applied: agentd does not run as root")
 		}
 		return state, nil
 	}
@@ -51,7 +57,32 @@ func prepareMachine(ctx context.Context, cfg Config, logger *slog.Logger) (Netwo
 	if err := addHosts(os.Getenv("FETTLE_AGENTD_HOSTS")); err != nil {
 		return state, err
 	}
-	if cfg.Network.Mode == NetworkAllowlist {
+	state.Env = map[string]string{}
+	if len(cfg.CA) > 0 {
+		if err := installRoots("/", cfg.CA, runCommand(ctx)); err != nil {
+			return state, fmt.Errorf("install the extra root certificates: %w", err)
+		}
+		for k, v := range rootsEnv() {
+			state.Env[k] = v
+		}
+		logger.Info("extra root certificates installed")
+	}
+	if cfg.Proxy != "" {
+		ruleset, err := startFilter(ctx, cfg, logger)
+		if err != nil {
+			return state, err
+		}
+		if err := applyRuleset(ctx, ruleset); err != nil {
+			return state, err
+		}
+		state.Applied = true
+		state.RulesHash = rulesetHash(ruleset)
+		state.Proxy = "http://" + FilterAddr
+		for k, v := range proxyEnv(state.Proxy) {
+			state.Env[k] = v
+		}
+		logger.Info("network rules applied", "hash", state.RulesHash, "proxy", true, "hosts", len(cfg.Network.AllowHosts))
+	} else if cfg.Network.Mode == NetworkAllowlist {
 		ruleset, err := buildRuleset(ctx, cfg.Network, systemLookup, logger)
 		if err != nil {
 			return state, err
@@ -76,6 +107,102 @@ func prepareMachine(ctx context.Context, cfg Config, logger *slog.Logger) (Netwo
 	}
 	logger.Info("dropped root", "user", cfg.User, "uid", uid, "gid", gid)
 	return state, nil
+}
+
+// runCommand runs a boot command and returns its output in the error.
+func runCommand(ctx context.Context) func(name string, args ...string) error {
+	return func(name string, args ...string) error {
+		out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("%s: %w: %s", name, err, strings.TrimSpace(string(out)))
+		}
+		return nil
+	}
+}
+
+// startFilter starts the filter proxy as the fettle-net user and returns the nftables
+// ruleset that lets only that user reach the upstream proxy. The configuration, with the
+// proxy password, goes to the process on standard input.
+func startFilter(ctx context.Context, cfg Config, logger *slog.Logger) (string, error) {
+	u, err := user.Lookup(FilterUser)
+	if err != nil {
+		return "", fmt.Errorf("user %q: %w", FilterUser, err)
+	}
+	uid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		return "", fmt.Errorf("user %q: uid %q: %w", FilterUser, u.Uid, err)
+	}
+	gid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		return "", fmt.Errorf("user %q: gid %q: %w", FilterUser, u.Gid, err)
+	}
+	up, err := url.Parse(cfg.Proxy)
+	if err != nil {
+		return "", err
+	}
+	port := up.Port()
+	if port == "" {
+		port = "80"
+		if up.Scheme == "https" {
+			port = "443"
+		}
+	}
+	pn, err := strconv.Atoi(port)
+	if err != nil || pn <= 0 || pn > 65535 {
+		return "", fmt.Errorf("the proxy port %q is not valid", port)
+	}
+	var addrs []netip.Addr
+	if a, err := netip.ParseAddr(up.Hostname()); err == nil {
+		addrs = []netip.Addr{a}
+	} else if addrs, err = systemLookup(ctx, up.Hostname()); err != nil {
+		return "", fmt.Errorf("the proxy host %s does not resolve: %w", up.Hostname(), err)
+	}
+	var targets []netip.AddrPort
+	for _, a := range addrs {
+		targets = append(targets, netip.AddrPortFrom(a, uint16(pn)))
+	}
+	ruleset, err := buildProxyRuleset(uid, targets)
+	if err != nil {
+		return "", err
+	}
+	conf, err := json.Marshal(FilterConfig{Listen: FilterAddr, Upstream: cfg.Proxy, Password: cfg.ProxyPassword, Network: cfg.Network})
+	if err != nil {
+		return "", err
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	cmd := exec.Command(exe, "filter-proxy")
+	cmd.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin"}
+	cmd.Stdin = bytes.NewReader(conf)
+	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid), Groups: []uint32{}}, Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("start the filter proxy: %w", err)
+	}
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); {
+		select {
+		case err := <-exited:
+			return "", fmt.Errorf("the filter proxy stopped: %w", err)
+		default:
+		}
+		if c, err := net.DialTimeout("tcp", FilterAddr, 200*time.Millisecond); err == nil {
+			_ = c.Close()
+			logger.Info("filter proxy ready", "addr", FilterAddr, "user", FilterUser)
+			go func() {
+				if err := <-exited; err != nil {
+					logger.Error("filter proxy stopped", "error", err.Error())
+				}
+			}()
+			return ruleset, nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	_ = cmd.Process.Kill()
+	return "", errors.New("the filter proxy did not start in 10 seconds")
 }
 
 func applyRuleset(ctx context.Context, ruleset string) error {
@@ -162,4 +289,15 @@ func addHosts(spec string) error {
 		return err
 	}
 	return f.Close()
+}
+
+// proxyEnv is the environment that sends the tools of commands through the filter proxy.
+func proxyEnv(filter string) map[string]string {
+	env := map[string]string{"NODE_USE_ENV_PROXY": "1"}
+	for _, k := range []string{"HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"} {
+		env[k] = filter
+	}
+	env["NO_PROXY"] = "localhost,127.0.0.1"
+	env["no_proxy"] = env["NO_PROXY"]
+	return env
 }

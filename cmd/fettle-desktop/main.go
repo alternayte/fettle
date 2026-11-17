@@ -36,8 +36,9 @@ import (
 
 // Set by the release build.
 var (
-	version   = "dev"
-	updateKey = "" // base64 Ed25519 public key of the release feed
+	version       = "dev"
+	updateKey     = "" // base64 Ed25519 public key of the release feed
+	computerImage = "" // the computer image of this release
 )
 
 type shell struct {
@@ -71,6 +72,11 @@ var smoke func(s *shell)
 var smokeEarly func(s *shell)
 
 func main() {
+	// The release check reads the image that this build names, without a window.
+	if len(os.Args) == 2 && os.Args[1] == "--computer-image" {
+		fmt.Println(app.BuiltinImage(computerImage))
+		return
+	}
 	data := os.Getenv("FETTLE_DATA")
 	if data == "" {
 		data = app.DefaultDataDir(app.ModeLocal)
@@ -131,7 +137,10 @@ func (s *shell) start() error {
 		return nil
 	}
 	cfg := app.ConfigFromEnv()
-	cfg.Mode, cfg.Data, cfg.Version = app.ModeLocal, s.data, version
+	cfg.Mode, cfg.Data, cfg.Version, cfg.ComputerImage = app.ModeLocal, s.data, version, computerImage
+	// The desktop user cannot set environment variables, so the app reads the certificates
+	// and the proxy of this computer (§15.1).
+	cfg.HostSettings = true
 	cfg.Addr = freeAddr(cfg.Addr)
 	a, err := app.New(context.Background(), &cfg)
 	if err != nil {

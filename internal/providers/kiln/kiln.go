@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coder/websocket"
@@ -33,6 +34,7 @@ type Provider struct {
 	Image string
 	// Version names the templates, so a new release builds new ones.
 	Version string
+	imu     sync.Mutex
 	// HTTP carries the stream upgrade; nil uses the default client.
 	HTTP *http.Client
 }
@@ -68,7 +70,20 @@ func (p *Provider) template(size computers.Size) string {
 	if v == "" {
 		v = "dev"
 	}
-	return "fettle-" + v + "-" + string(size)
+	return "fettle-" + v + "-" + computers.ImageHash(p.image()) + "-" + string(size)
+}
+
+// SetImage changes the computer image. The next preparation builds templates from it.
+func (p *Provider) SetImage(image string) {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	p.Image = image
+}
+
+func (p *Provider) image() string {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	return p.Image
 }
 
 // Prepare builds one template per size from the computer image when it is missing, and
@@ -93,7 +108,7 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 		case kiln.NotFound(err):
 			spec := computers.Sizes[size]
 			req := kiln.TemplateRequest{
-				Name: name, Image: p.Image, VCPUs: spec.VCPU, MemoryMB: spec.MemMiB, DiskMB: spec.DiskGiB * 1024,
+				Name: name, Image: p.image(), VCPUs: spec.VCPU, MemoryMB: spec.MemMiB, DiskMB: spec.DiskGiB * 1024,
 				// Each sandbox gets the egress policy of its zone at create (open: observe mode,
 				// allowlist: the zone's hosts); the template itself allows none.
 				EgressAllow: []string{},
@@ -104,7 +119,7 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 			report(computers.Progress{Step: step, State: "running", Detail: "building " + name})
 			if err := p.c.CreateTemplate(ctx, req); err != nil && !kiln.Conflict(err) {
 				report(computers.Progress{Step: step, State: "fail", Detail: err.Error()})
-				return fmt.Errorf("build template %s: %w", name, err)
+				return fmt.Errorf("build template %s from the image %s: %w. %s", name, p.image(), err, computers.ImageHint)
 			}
 		case err != nil:
 			report(computers.Progress{Step: step, State: "fail", Detail: err.Error()})
@@ -125,7 +140,7 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 			}
 			if t.State == "failed" || t.Error != "" {
 				report(computers.Progress{Step: step, State: "fail", Detail: t.Error})
-				return fmt.Errorf("template %s failed: %s", name, t.Error)
+				return fmt.Errorf("template %s from the image %s failed: %s. %s", name, p.image(), t.Error, computers.ImageHint)
 			}
 			select {
 			case <-ctx.Done():
@@ -146,7 +161,7 @@ func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Mach
 		size = computers.SizeBrowser
 	}
 	tmpl := p.template(size)
-	if s.Image != "" && s.Image != p.Image {
+	if s.Image != "" && s.Image != p.image() {
 		tmpl = s.Image // a provider template named by the caller
 	}
 	sb, err := p.c.CreateSandbox(ctx, kiln.SandboxRequest{

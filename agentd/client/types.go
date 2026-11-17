@@ -37,6 +37,9 @@ type ExecResult struct {
 	Truncated  bool   `json:"truncated"`
 	OutputFile string `json:"output_file"`
 	DurationMS int64  `json:"duration_ms"`
+	// Hint is a next step for a failure that agentd recognizes in the output, such as a TLS
+	// certificate error on a network that inspects HTTPS.
+	Hint string `json:"hint,omitempty"`
 }
 
 // ExecLine is one NDJSON line of an exec stream: a chunk when Stream is set,

@@ -2,7 +2,10 @@ package computers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 )
 
@@ -46,6 +49,42 @@ type Progress struct {
 	State   string `json:"state"` // running, pass, fail
 	Detail  string `json:"detail,omitempty"`
 	Percent int    `json:"percent,omitempty"`
+	// TotalMB is the size of a download in MB, when the provider knows it.
+	TotalMB int `json:"total_mb,omitempty"`
+}
+
+// DevImage is the computer image of a build without a release image: `just image` builds it
+// in the local Docker.
+const DevImage = "fettle-computer:dev"
+
+// ImageHint is the next step after a failed image download.
+const ImageHint = "Check the internet connection, or set another image in Settings, Computers"
+
+// LocalBuildHint is the next step when the local build of the image is missing.
+const LocalBuildHint = "Run `just image`"
+
+// ImageError is the error of an image that Fettle could not get. It names the image and the
+// next step; a local build gets the command that builds it.
+func ImageError(image string, err error) error {
+	if image == DevImage {
+		return fmt.Errorf("the image %s is a local build and is not here: %w. %s", image, err, LocalBuildHint)
+	}
+	return fmt.Errorf("could not get the computer image %s: %w. %s", image, err, ImageHint)
+}
+
+// ImageHash is a short hash of an image reference. Template names of remote providers hold
+// it, so a new image builds new templates.
+func ImageHash(image string) string {
+	sum := sha256.Sum256([]byte(image))
+	return hex.EncodeToString(sum[:4])
+}
+
+// DownloadDetail is the detail of the image step while it downloads.
+func DownloadDetail(totalBytes int64) string {
+	if totalBytes <= 0 {
+		return "Downloading the computer image"
+	}
+	return fmt.Sprintf("Downloading the computer image (%d MB)", totalBytes>>20)
 }
 
 // Stats are the resource figures of a machine.

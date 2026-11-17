@@ -59,6 +59,20 @@ The master key of the vault is in the keychain of the system.
 When no keychain works, Fettle writes `master.key` with mode 0600 in the data folder.
 Keep a copy of the master key. A backup does not hold it.
 
+## Certificates and proxy
+
+A work network can inspect HTTPS or need a proxy.
+The option **Use this computer's certificates and proxy** is in Settings, Computers, This server. It is on by default.
+With it, Fettle and its computers use the root certificates and the proxy of this computer.
+
+- On macOS, Fettle reads the self-signed CA certificates in the System keychain. It leaves out the Apple roots and the certificates with a deny trust setting. It reads the proxy with `scutil --proxy`.
+- On Windows, Fettle reads the ROOT stores of the registry: local machine, Group Policy, enterprise and current user. It reads the proxy of Internet Options, else the WinHTTP proxy.
+- On Linux, the option does nothing.
+
+Fettle reads these values again every 5 minutes.
+The settings **Extra root certificates** and **Proxy** win over the values of this computer.
+Fettle does not read PAC or WPAD files. Set the proxy in the settings for such a network.
+
 ## Updates
 
 The app checks the release feed at start and then each day.
