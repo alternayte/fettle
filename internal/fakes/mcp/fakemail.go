@@ -5,6 +5,8 @@ package mcp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -36,6 +38,9 @@ type Mail struct {
 	URL string
 	// ShowHost adds the host name to list_inbox, so a test sees where the server runs.
 	ShowHost bool
+	// ShowAccount adds the caller to list_inbox, so a test sees which account a stdio
+	// process serves.
+	ShowAccount bool
 	// SendDelay holds send_email after it records the call, so a test can stop Fettle
 	// while the send is in flight.
 	SendDelay time.Duration
@@ -65,22 +70,27 @@ func (m *Mail) Server(account func(ctx context.Context) string) *mcp.Server {
 		r, _ := json.Marshal(req)
 		return json.RawMessage(fmt.Sprintf(`{"type":"object","properties":{%s},"required":%s}`, props, r))
 	}
-	add := func(t *mcp.Tool, out func(args map[string]any) string) {
+	add := func(t *mcp.Tool, text func(args map[string]any) string) {
 		s.AddTool(t, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args map[string]any
 			_ = json.Unmarshal(req.Params.Arguments, &args)
-			m.record(Call{Tool: t.Name, Args: args, Account: account(ctx)})
-			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: out(args)}}}, nil
+			acc := account(ctx)
+			m.record(Call{Tool: t.Name, Args: args, Account: acc})
+			body := text(args)
+			if m.ShowAccount && t.Name == "list_inbox" {
+				body += "\nSigned in as " + acc + "."
+			}
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: body}}}, nil
 		})
 	}
 	add(&mcp.Tool{Name: "list_inbox", Description: "List the newest emails of the inbox.", InputSchema: obj(`"limit":{"type":"integer"}`), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(map[string]any) string {
-			out := "1. From ana@acme.test: The Q3 numbers are ready.\n2. From ben@acme.test: Lunch on Friday?\n3. From noreply@shop.test: Your order shipped."
+			text := "1. From ana@acme.test: The Q3 numbers are ready.\n2. From ben@acme.test: Lunch on Friday?\n3. From noreply@shop.test: Your order shipped."
 			if m.ShowHost {
 				h, _ := os.Hostname()
-				out += "\nServed by host " + h + "."
+				text += "\nServed by host " + h + "."
 			}
-			return out
+			return text
 		})
 	add(&mcp.Tool{Name: "send_email", Description: "Send an email.", InputSchema: obj(`"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}`, "to", "subject", "body")},
 		func(a map[string]any) string {
@@ -127,7 +137,19 @@ func (m *Mail) Handler() http.Handler {
 	})
 }
 
-// ServeStdio serves fakemail on stdin and stdout until the client closes.
+// ServeStdio serves fakemail on stdin and stdout until the client closes. With the
+// variable FAKEMAIL_TOKEN, the caller is the user of that token, as UserOfToken names it.
 func (m *Mail) ServeStdio(ctx context.Context) error {
-	return m.Server(func(context.Context) string { return "stdio" }).Run(ctx, &mcp.StdioTransport{})
+	account := "stdio"
+	if tok := os.Getenv("FAKEMAIL_TOKEN"); tok != "" {
+		account = UserOfToken(tok)
+	}
+	return m.Server(func(context.Context) string { return account }).Run(ctx, &mcp.StdioTransport{})
+}
+
+// UserOfToken names the fake user of a token without the token itself, so tool output
+// shows which account called without a secret in it.
+func UserOfToken(tok string) string {
+	sum := sha256.Sum256([]byte(tok))
+	return "user-" + hex.EncodeToString(sum[:4])
 }

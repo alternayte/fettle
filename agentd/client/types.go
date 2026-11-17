@@ -29,6 +29,22 @@ type ExecRequest struct {
 	TimeoutMS int64             `json:"timeout_ms,omitempty"`
 }
 
+// MCPStdioRequest is the first websocket message of GET /v1/mcp/stdio. It carries the
+// command, the folder relative to the home folder and the variables, so no value is in
+// the URL, which logs and proxies keep.
+type MCPStdioRequest struct {
+	Argv []string          `json:"argv"`
+	Cwd  string            `json:"cwd,omitempty"`
+	Env  map[string]string `json:"env,omitempty"`
+}
+
+// MCPStdioReply answers MCPStdioRequest. An empty Error means the server started and the
+// next messages are its stdin and stdout.
+type MCPStdioReply struct {
+	Status int    `json:"status,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
 // ExecResult is the final line of an exec stream. OutputFile is relative to
 // the home folder and holds the full output when Truncated is true.
 type ExecResult struct {

@@ -5,6 +5,8 @@ import (
 
 	"github.com/alternayte/drel"
 	"github.com/google/uuid"
+
+	catalog "github.com/alternayte/fettle/connectors"
 )
 
 // OAuthClient is the dynamic registration of Fettle at a connector's authorization server.
@@ -14,10 +16,13 @@ type OAuthClient struct {
 	TokenURL     string `json:"token_endpoint"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret_sealed,omitempty"` // sealed, base64
-	Resource     string `json:"resource,omitempty"`
-	Scopes       string `json:"scopes,omitempty"`
-	Registered   bool   `json:"registered"`
-	RedirectURI  string `json:"redirect_uri"`
+	// PlainSecret is a client secret from before secrets were sealed. A migration moves it
+	// here, and SealClientSecrets seals it into ClientSecret at start.
+	PlainSecret string `json:"client_secret_plain,omitempty"`
+	Resource    string `json:"resource,omitempty"`
+	Scopes      string `json:"scopes,omitempty"`
+	Registered  bool   `json:"registered"`
+	RedirectURI string `json:"redirect_uri"`
 }
 
 // ToolSetting is an owner's change to one connector tool (§12.1).
@@ -39,6 +44,10 @@ type Connector struct {
 	OAuth                 OAuthClient            `db:"oauth"`
 	Tools                 map[string]ToolSetting `db:"tools"`
 	Icon                  string                 `db:"icon"`
+	// Env holds the plain variables of a stdio connector. Account secrets win over them.
+	Env map[string]string `db:"env"`
+	// Variables are the variables that the stdio server reads, from its catalogue entry.
+	Variables []catalog.Variable `db:"variables"`
 }
 
 // ConnectorAccount is one login at a connector. Zones get accounts as grants.
@@ -47,10 +56,14 @@ type ConnectorAccount struct {
 	ConnectorID           uuid.UUID `db:"connector_id,references=connectors,on_delete=cascade"`
 	SpaceID               uuid.UUID `db:"space_id"`
 	Label                 string    `db:"label"`
-	// TokenCiphertext is the sealed credential: OAuth tokens as JSON, or the header value.
+	// TokenCiphertext is the sealed credential: OAuth tokens as JSON, the header value, or
+	// the secret variables of a stdio account as JSON. It is empty when an OAuth account
+	// must sign in again.
 	TokenCiphertext string     `db:"token_ciphertext"`
 	Scopes          string     `db:"scopes"`
 	ExpiresAt       *time.Time `db:"expires_at"`
+	// SecretEnvNames are the names of the sealed secret variables, which the API shows.
+	SecretEnvNames []string `db:"secret_env_names"`
 }
 
 // OAuthState is one pending OAuth authorization (PKCE verifier and where it goes).
@@ -59,7 +72,9 @@ type OAuthState struct {
 	State                 string    `db:"state,unique"`
 	ConnectorID           uuid.UUID `db:"connector_id,references=connectors,on_delete=cascade"`
 	Label                 string    `db:"label"`
-	Verifier              string    `db:"verifier"` // sealed, base64
-	UserID                uuid.UUID `db:"user_id"`
-	ExpiresAt             time.Time `db:"expires_at"`
+	// AccountID is the account that signs in again, or nil for a new account.
+	AccountID *uuid.UUID `db:"account_id"`
+	Verifier  string     `db:"verifier"` // sealed, base64
+	UserID    uuid.UUID  `db:"user_id"`
+	ExpiresAt time.Time  `db:"expires_at"`
 }

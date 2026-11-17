@@ -15,6 +15,7 @@ var OAuthStates = struct {
 	State       drel.StringColumn
 	ConnectorID drel.ComparableColumn[uuid.UUID]
 	Label       drel.StringColumn
+	AccountID   drel.ComparableColumn[*uuid.UUID]
 	Verifier    drel.StringColumn
 	UserID      drel.ComparableColumn[uuid.UUID]
 	ExpiresAt   drel.TimeColumn
@@ -25,6 +26,7 @@ var OAuthStates = struct {
 	State:       drel.NewStringCol("state"),
 	ConnectorID: drel.NewComparableCol[uuid.UUID]("connector_id"),
 	Label:       drel.NewStringCol("label"),
+	AccountID:   drel.NewComparableCol[*uuid.UUID]("account_id"),
 	Verifier:    drel.NewStringCol("verifier"),
 	UserID:      drel.NewComparableCol[uuid.UUID]("user_id"),
 	ExpiresAt:   drel.NewTimeCol("expires_at"),
@@ -35,7 +37,7 @@ var OAuthStates = struct {
 func scanOauthstate(row drel.Row) (*OAuthState, error) {
 	p := &OAuthState{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.State, &p.ConnectorID, &p.Label, &p.Verifier, &p.UserID, &p.ExpiresAt, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.State, &p.ConnectorID, &p.Label, &p.AccountID, &p.Verifier, &p.UserID, &p.ExpiresAt, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -46,13 +48,14 @@ type oauthstateSnapshot struct {
 	State       string
 	ConnectorID uuid.UUID
 	Label       string
+	AccountID   *uuid.UUID
 	Verifier    string
 	UserID      uuid.UUID
 	ExpiresAt   time.Time
 }
 
 func snapshotOauthstate(p *OAuthState) any {
-	return oauthstateSnapshot{State: p.State, ConnectorID: p.ConnectorID, Label: p.Label, Verifier: p.Verifier, UserID: p.UserID, ExpiresAt: p.ExpiresAt}
+	return oauthstateSnapshot{State: p.State, ConnectorID: p.ConnectorID, Label: p.Label, AccountID: p.AccountID, Verifier: p.Verifier, UserID: p.UserID, ExpiresAt: p.ExpiresAt}
 }
 
 func diffOauthstate(p *OAuthState, snap any) []drel.FieldChange {
@@ -66,6 +69,9 @@ func diffOauthstate(p *OAuthState, snap any) []drel.FieldChange {
 	}
 	if p.Label != s.Label {
 		changes = append(changes, drel.FieldChange{Column: "label", Value: p.Label})
+	}
+	if p.AccountID != s.AccountID {
+		changes = append(changes, drel.FieldChange{Column: "account_id", Value: p.AccountID})
 	}
 	if p.Verifier != s.Verifier {
 		changes = append(changes, drel.FieldChange{Column: "verifier", Value: p.Verifier})
@@ -94,21 +100,23 @@ func oauthstateColumnValue(p *OAuthState, idx int) any {
 	case 3:
 		return p.Label
 	case 4:
-		return p.Verifier
+		return p.AccountID
 	case 5:
-		return p.UserID
+		return p.Verifier
 	case 6:
-		return p.ExpiresAt
+		return p.UserID
 	case 7:
-		return p.CreatedAt()
+		return p.ExpiresAt
 	case 8:
+		return p.CreatedAt()
+	case 9:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func oauthstateInsertColumns(p *OAuthState) ([]string, []any) {
-	return []string{"state", "connector_id", "label", "verifier", "user_id", "expires_at"}, []any{p.State, p.ConnectorID, p.Label, p.Verifier, p.UserID, p.ExpiresAt}
+	return []string{"state", "connector_id", "label", "account_id", "verifier", "user_id", "expires_at"}, []any{p.State, p.ConnectorID, p.Label, p.AccountID, p.Verifier, p.UserID, p.ExpiresAt}
 }
 
 func oauthstateScanReturning(p *OAuthState, row drel.Row) error {
@@ -132,7 +140,7 @@ func oauthstateScanGenerated(p *OAuthState, row drel.Row) error {
 
 var OAuthStateMeta = drel.ModelMeta[OAuthState]{
 	Table:         "oauth_states",
-	Columns:       []string{"id", "state", "connector_id", "label", "verifier", "user_id", "expires_at", "created_at", "updated_at"},
+	Columns:       []string{"id", "state", "connector_id", "label", "account_id", "verifier", "user_id", "expires_at", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanOauthstate,
 	Snapshot:      snapshotOauthstate,

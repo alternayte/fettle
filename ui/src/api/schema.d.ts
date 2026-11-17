@@ -165,7 +165,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Known remote MCP servers for the Connect screen */
+    /** Known MCP servers for the Connect screen, with the variables of stdio servers */
     get: operations["connector-catalog"];
     put?: never;
     post?: never;
@@ -895,7 +895,8 @@ export interface paths {
     delete: operations["delete-connector"];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Edit a connector. Accounts, grants and tool settings stay. The kind cannot change. A new URL of an OAuth connector needs a new sign-in of each account. */
+    patch: operations["update-connector"];
     trace?: never;
   };
   "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
@@ -907,12 +908,29 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Add an account with a header key, or a stdio account */
+    /** Add an account with a header key, or a stdio account with secret variables */
     post: operations["add-connector-account"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/connectors/{connector}/accounts/{account}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Rename an account, or replace its key or secret variables. The account keeps its grants. */
+    patch: operations["update-connector-account"];
     trace?: never;
   };
   "/api/v1/spaces/{space}/connectors/{connector}/authorize": {
@@ -924,7 +942,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Start an OAuth sign-in for a new account; open the returned URL */
+    /** Start an OAuth sign-in for a new account, or for an account that must sign in again; open the returned URL */
     post: operations["authorize-connector"];
     delete?: never;
     options?: never;
@@ -2005,6 +2023,10 @@ export interface components {
     AccountView: {
       id: string;
       label: string;
+      /** @description True when the connector URL changed and the account must sign in again. */
+      needs_sign_in: boolean;
+      /** @description Names of the secret variables that are set. The API never returns their values. */
+      secret_env: string[] | null;
       /** @description Names of the zones that hold this account. */
       zones: string[] | null;
     };
@@ -2013,6 +2035,10 @@ export interface components {
     };
     "Add-connector-accountRequest": {
       label: string;
+      /** @description Write only. Secret variables of a stdio account. The API returns only their names. */
+      secret_env?: {
+        [key: string]: string;
+      };
       /** @description Write only. The API never returns it. */
       value?: string;
     };
@@ -2081,6 +2107,8 @@ export interface components {
       target: string;
     };
     "Authorize-connectorRequest": {
+      /** @description The account that signs in again. It keeps its grants. */
+      account_id?: string;
       label: string;
     };
     "Authorize-connectorResponse": {
@@ -2233,6 +2261,10 @@ export interface components {
       /** @enum {string} */
       auth: "none" | "oauth" | "header";
       command: string[] | null;
+      /** @description Plain variables of a stdio connector. */
+      env: {
+        [key: string]: string;
+      };
       header_name?: string;
       icon: string;
       id: string;
@@ -2243,17 +2275,25 @@ export interface components {
         [key: string]: components["schemas"]["ToolSetting"];
       };
       url?: string;
+      /** @description Variables that the stdio server reads, from its catalogue entry. */
+      variables: components["schemas"]["Variable"][] | null;
     };
     "Create-connectorRequest": {
       /** @enum {string} */
       auth?: "none" | "oauth" | "header";
       command?: string[] | null;
+      /** @description Plain variables of a stdio connector. Put secrets on the account as secret_env. */
+      env?: {
+        [key: string]: string;
+      };
       header_name?: string;
       icon?: string;
       /** @enum {string} */
       kind?: "mcp_remote" | "mcp_stdio";
       name: string;
       url?: string;
+      /** @description Variables that the stdio server reads, as the catalogue entry names them. */
+      variables?: components["schemas"]["Variable"][] | null;
     };
     "Create-from-templateRequest": {
       /** Format: uuid */
@@ -2309,10 +2349,14 @@ export interface components {
     Entry: {
       /** @enum {string} */
       auth: "oauth" | "header" | "none";
+      command?: string[] | null;
       header_name?: string;
       icon: string;
+      /** @enum {string} */
+      kind: "mcp_remote" | "mcp_stdio";
       name: string;
-      url: string;
+      url?: string;
+      variables?: components["schemas"]["Variable"][] | null;
     };
     ErrorDetail: {
       /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -3218,6 +3262,29 @@ export interface components {
       chat_id: string;
       run_id?: string;
     };
+    "Update-connector-accountRequest": {
+      label?: string;
+      /** @description Write only. Sets each named secret variable; an empty value removes it. */
+      secret_env?: {
+        [key: string]: string;
+      };
+      /** @description Write only. The new header key. */
+      value?: string;
+    };
+    "Update-connectorRequest": {
+      /** @description Stdio connectors only. */
+      command?: string[] | null;
+      /** @description Stdio connectors only. Replaces all plain variables. */
+      env?: {
+        [key: string]: string;
+      };
+      /** @description Connectors with a header key only. */
+      header_name?: string;
+      icon?: string;
+      name?: string;
+      /** @description Remote connectors only. */
+      url?: string;
+    };
     "Update-meRequest": {
       name: string;
     };
@@ -3234,6 +3301,12 @@ export interface components {
       /** Format: int64 */
       spaces: number;
       status: string;
+    };
+    Variable: {
+      doc?: string;
+      name: string;
+      required: boolean;
+      secret: boolean;
     };
     VaultBody: {
       /** @enum {string} */
@@ -3469,9 +3542,12 @@ export type SchemaToolInfo = components["schemas"]["ToolInfo"];
 export type SchemaToolSetting = components["schemas"]["ToolSetting"];
 export type SchemaTryTeachRequest = components["schemas"]["Try-teachRequest"];
 export type SchemaTryTeachResponse = components["schemas"]["Try-teachResponse"];
+export type SchemaUpdateConnectorAccountRequest = components["schemas"]["Update-connector-accountRequest"];
+export type SchemaUpdateConnectorRequest = components["schemas"]["Update-connectorRequest"];
 export type SchemaUpdateMeRequest = components["schemas"]["Update-meRequest"];
 export type SchemaUsageViewResponse = components["schemas"]["Usage-viewResponse"];
 export type SchemaUserView = components["schemas"]["UserView"];
+export type SchemaVariable = components["schemas"]["Variable"];
 export type SchemaVaultBody = components["schemas"]["VaultBody"];
 export type SchemaVaultItemView = components["schemas"]["VaultItemView"];
 export type SchemaVersionView = components["schemas"]["VersionView"];
@@ -5589,6 +5665,43 @@ export interface operations {
       };
     };
   };
+  "update-connector": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Update-connectorRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConnectorView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
   "add-connector-account": {
     parameters: {
       query?: never;
@@ -5603,6 +5716,44 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Add-connector-accountRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountView"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "update-connector-account": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        connector: string;
+        account: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Update-connector-accountRequest"];
       };
     };
     responses: {

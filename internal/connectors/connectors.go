@@ -24,6 +24,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"golang.org/x/oauth2"
 
+	catalog "github.com/alternayte/fettle/connectors"
 	"github.com/alternayte/fettle/internal/audit"
 	"github.com/alternayte/fettle/internal/envelopes"
 	"github.com/alternayte/fettle/internal/vault"
@@ -36,6 +37,10 @@ var (
 	ErrBadInput    = errors.New("a connector needs a name and a URL or a command")
 	ErrState       = errors.New("this sign-in link is not valid or has expired; start the connection again")
 	ErrNoDiscovery = errors.New("the server does not say where to sign in; use a header key instead")
+	ErrInvalid     = errors.New("the connector input is not valid")
+	ErrNameTaken   = errors.New("another connector in this space has this name")
+	ErrMissingVar  = errors.New("a required variable is not set")
+	ErrSignIn      = errors.New("this account must sign in again; select Sign in again")
 )
 
 // Service manages connectors and calls their tools.
@@ -46,14 +51,17 @@ type Service struct {
 	http  *http.Client
 	// CallbackURL is the OAuth redirect URI of this server.
 	CallbackURL func() string
-	// Stdio opens a stdio MCP server inside the zone computer of a bot (agentd /v1/mcp/stdio).
-	Stdio func(ctx context.Context, spaceID, botID uuid.UUID, command []string) (io.ReadWriteCloser, error)
-	now   func() time.Time
+	// Stdio opens a stdio MCP server inside the zone computer of a bot (agentd /v1/mcp/stdio)
+	// with the merged variables of the connector and the account.
+	Stdio func(ctx context.Context, spaceID, botID uuid.UUID, command []string, env map[string]string) (io.ReadWriteCloser, error)
+	// Changed runs after an edit of a connector or an account, so cached tool lists go.
+	Changed func()
+	now     func() time.Time
 }
 
 // New returns the connectors service.
 func New(e *drel.Engine, a *audit.Log, v *vault.Vault, client *http.Client) *Service {
-	return &Service{e: e, audit: a, vault: v, http: client, now: func() time.Time { return time.Now().UTC() }}
+	return &Service{e: e, audit: a, vault: v, http: client, Changed: func() {}, now: func() time.Time { return time.Now().UTC() }}
 }
 
 // Classify returns the class of a connector tool (§12.1): readOnlyHint is read,
@@ -88,6 +96,31 @@ type Input struct {
 	Auth       string // none, oauth or header
 	HeaderName string
 	Icon       string
+	// Env holds the plain variables of a stdio connector.
+	Env map[string]string
+	// Variables are the variables that a stdio server reads, from its catalogue entry.
+	Variables []catalog.Variable
+}
+
+var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// checkEnv refuses variable names that a process cannot use.
+func checkEnv(env map[string]string) error {
+	for k := range env {
+		if !envName.MatchString(k) {
+			return fmt.Errorf("%w: %q is not a variable name; use letters, digits and _", ErrInvalid, k)
+		}
+	}
+	return nil
+}
+
+// checkURL refuses a URL that is not http or https.
+func checkURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return fmt.Errorf("%w: the URL must start with https://", ErrBadInput)
+	}
+	return nil
 }
 
 // Create adds a connector. An OAuth connector registers Fettle as a client first.
@@ -105,20 +138,46 @@ func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UU
 	case in.Kind == "mcp_stdio" && len(in.Command) == 0:
 		return nil, ErrBadInput
 	case in.Kind != "mcp_stdio":
-		u, err := url.Parse(in.URL)
-		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-			return nil, fmt.Errorf("%w: the URL must start with https://", ErrBadInput)
+		if err := checkURL(in.URL); err != nil {
+			return nil, err
 		}
+		if len(in.Env) > 0 || len(in.Variables) > 0 {
+			return nil, fmt.Errorf("%w: only a stdio connector has variables; a remote connector uses a header", ErrInvalid)
+		}
+	}
+	if err := checkEnv(in.Env); err != nil {
+		return nil, err
+	}
+	for _, v := range in.Variables {
+		if !envName.MatchString(v.Name) {
+			return nil, fmt.Errorf("%w: %q is not a variable name", ErrInvalid, v.Name)
+		}
+	}
+	if taken, err := s.nameTaken(ctx, s.e, spaceID, uuid.Nil, in.Name); err != nil || taken {
+		if err == nil {
+			err = ErrNameTaken
+		}
+		return nil, err
 	}
 	if in.Auth == "header" && in.HeaderName == "" {
 		in.HeaderName = "Authorization"
 	}
-	c := &Connector{SpaceID: spaceID, Name: in.Name, Kind: in.Kind, URL: in.URL, Command: in.Command, Auth: in.Auth, HeaderName: in.HeaderName, Icon: in.Icon, Tools: map[string]ToolSetting{}}
+	c := &Connector{SpaceID: spaceID, Name: in.Name, Kind: in.Kind, URL: in.URL, Command: in.Command, Auth: in.Auth, HeaderName: in.HeaderName, Icon: in.Icon,
+		Tools: map[string]ToolSetting{}, Env: in.Env, Variables: in.Variables}
 	if c.Command == nil {
 		c.Command = []string{}
 	}
+	if c.Env == nil {
+		c.Env = map[string]string{}
+	}
+	if c.Variables == nil {
+		c.Variables = []catalog.Variable{}
+	}
+	// Seal before the row is tracked: the first seal of a space creates its data key in a
+	// nested transaction, which writes tracked rows as they are at that moment.
+	c.SetID(uuid.Must(uuid.NewV7()))
 	if in.Auth == "oauth" {
-		oc, err := s.register(ctx, in.URL)
+		oc, err := s.registerSealed(ctx, c, in.URL)
 		if err != nil {
 			return nil, err
 		}
@@ -129,6 +188,57 @@ func (s *Service) Create(ctx context.Context, actor audit.Actor, spaceID uuid.UU
 		return s.audit.Record(ctx, actor, &spaceID, "connector.create", "connector:"+c.ID().String(), map[string]string{"name": c.Name, "kind": c.Kind, "auth": c.Auth})
 	})
 	return c, err
+}
+
+// querier is the engine or a transaction.
+type querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) drel.Row
+}
+
+// nameTaken reports whether another connector of the space has name.
+func (s *Service) nameTaken(ctx context.Context, q querier, spaceID, except uuid.UUID, name string) (bool, error) {
+	var n int
+	err := q.QueryRow(ctx, "SELECT COUNT(*) FROM connectors WHERE space_id = $1 AND name = $2 AND id <> $3", spaceID, name, except).Scan(&n)
+	return n > 0, err
+}
+
+func oauthAAD(connectorID uuid.UUID) string { return "connector-oauth:" + connectorID.String() }
+
+// registerSealed registers Fettle at the sign-in server of mcpURL and seals the client
+// secret with the space data key.
+func (s *Service) registerSealed(ctx context.Context, c *Connector, mcpURL string) (*OAuthClient, error) {
+	oc, err := s.register(ctx, mcpURL)
+	if err != nil {
+		return nil, err
+	}
+	if oc.ClientSecret != "" {
+		sealed, err := s.vault.Seal(ctx, c.SpaceID, []byte(oc.ClientSecret), oauthAAD(c.ID()))
+		if err != nil {
+			return nil, err
+		}
+		oc.ClientSecret = base64.StdEncoding.EncodeToString(sealed)
+	}
+	return oc, nil
+}
+
+// clientSecret opens the sealed OAuth client secret of a connector.
+func (s *Service) clientSecret(ctx context.Context, c *Connector) (string, error) {
+	if c.OAuth.PlainSecret != "" {
+		return c.OAuth.PlainSecret, nil
+	}
+	if c.OAuth.ClientSecret == "" {
+		return "", nil
+	}
+	sealed, err := base64.StdEncoding.DecodeString(c.OAuth.ClientSecret)
+	if err != nil {
+		return "", err
+	}
+	plain, err := s.vault.Open(ctx, c.SpaceID, sealed, oauthAAD(c.ID()))
+	if err != nil {
+		return "", err
+	}
+	s.vault.Redactor.Register(c.SpaceID, c.Name+" client secret", string(plain))
+	return string(plain), nil
 }
 
 // getJSON reads a JSON document.
@@ -217,8 +327,9 @@ func (s *Service) register(ctx context.Context, mcpURL string) (*OAuthClient, er
 	return &OAuthClient{Issuer: issuer, AuthorizeURL: as.Authorize, TokenURL: as.Token, ClientID: reg.ClientID, Resource: prm.Resource, Scopes: strings.Join(prm.Scopes, " "), Registered: true, RedirectURI: redirect, ClientSecret: reg.ClientSecret}, nil
 }
 
-func (c *Connector) oauthConfig() *oauth2.Config {
-	o := &oauth2.Config{ClientID: c.OAuth.ClientID, ClientSecret: c.OAuth.ClientSecret, RedirectURL: c.OAuth.RedirectURI,
+// oauthConfig returns the OAuth client of a connector with its opened client secret.
+func (c *Connector) oauthConfig(secret string) *oauth2.Config {
+	o := &oauth2.Config{ClientID: c.OAuth.ClientID, ClientSecret: secret, RedirectURL: c.OAuth.RedirectURI,
 		Endpoint: oauth2.Endpoint{AuthURL: c.OAuth.AuthorizeURL, TokenURL: c.OAuth.TokenURL, AuthStyle: oauth2.AuthStyleInParams}}
 	if c.OAuth.Scopes != "" {
 		o.Scopes = strings.Fields(c.OAuth.Scopes)
@@ -283,6 +394,7 @@ func (s *Service) SetTool(ctx context.Context, actor audit.Actor, spaceID, id uu
 	if set.Class != "" && !slices.Contains(envelopes.AllClasses, set.Class) {
 		return fmt.Errorf("%w: unknown class %s", ErrBadInput, set.Class)
 	}
+	defer s.Changed()
 	return s.e.WithTx(ctx, func(ctx context.Context) error {
 		c, err := drel.Repo(drel.MustFromContext(ctx), ConnectorMeta).Where(Connectors.ID.Eq(id)).Where(Connectors.SpaceID.Eq(spaceID)).FirstOrNil(ctx)
 		if err != nil {
@@ -314,8 +426,9 @@ type token struct {
 	Expiry  time.Time `json:"expiry"`
 }
 
-// AddKeyAccount adds an account whose credential is a header value (or none for stdio).
-func (s *Service) AddKeyAccount(ctx context.Context, actor audit.Actor, spaceID, connectorID uuid.UUID, label, value string) (*ConnectorAccount, error) {
+// AddKeyAccount adds an account whose credential is a header value, or a stdio account
+// with its secret variables.
+func (s *Service) AddKeyAccount(ctx context.Context, actor audit.Actor, spaceID, connectorID uuid.UUID, label, value string, secretEnv map[string]string) (*ConnectorAccount, error) {
 	c, err := s.Get(ctx, spaceID, connectorID)
 	if err != nil {
 		return nil, err
@@ -323,15 +436,47 @@ func (s *Service) AddKeyAccount(ctx context.Context, actor audit.Actor, spaceID,
 	if c.Auth == "oauth" {
 		return nil, fmt.Errorf("%w: this connector signs in with OAuth", ErrBadInput)
 	}
-	return s.saveAccount(ctx, actor, c, label, []byte(value), nil)
+	if c.Kind != "mcp_stdio" {
+		if len(secretEnv) > 0 {
+			return nil, fmt.Errorf("%w: only a stdio connector has secret variables", ErrInvalid)
+		}
+		return s.saveAccount(ctx, actor, c, label, []byte(value), nil, nil)
+	}
+	if value != "" {
+		return nil, fmt.Errorf("%w: a stdio account has secret variables, not a key", ErrInvalid)
+	}
+	env := map[string]string{}
+	for k, v := range secretEnv {
+		if v != "" {
+			env[k] = v
+		}
+	}
+	if err := checkEnv(env); err != nil {
+		return nil, err
+	}
+	raw, _ := json.Marshal(env)
+	return s.saveAccount(ctx, actor, c, label, raw, nil, envNames(env))
 }
 
-func (s *Service) saveAccount(ctx context.Context, actor audit.Actor, c *Connector, label string, secret []byte, expires *time.Time) (*ConnectorAccount, error) {
+// envNames returns the sorted names of env.
+func envNames(env map[string]string) []string {
+	names := make([]string, 0, len(env))
+	for k := range env {
+		names = append(names, k)
+	}
+	slices.Sort(names)
+	return names
+}
+
+func (s *Service) saveAccount(ctx context.Context, actor audit.Actor, c *Connector, label string, secret []byte, expires *time.Time, names []string) (*ConnectorAccount, error) {
 	label = strings.TrimSpace(label)
 	if label == "" {
 		label = "default"
 	}
-	a := &ConnectorAccount{ConnectorID: c.ID(), SpaceID: c.SpaceID, Label: label, ExpiresAt: expires}
+	if names == nil {
+		names = []string{}
+	}
+	a := &ConnectorAccount{ConnectorID: c.ID(), SpaceID: c.SpaceID, Label: label, ExpiresAt: expires, SecretEnvNames: names}
 	// Seal before the row is tracked: the first seal of a space creates its data key in a
 	// nested transaction, which writes tracked rows as they are at that moment.
 	a.SetID(uuid.Must(uuid.NewV7()))
@@ -342,19 +487,30 @@ func (s *Service) saveAccount(ctx context.Context, actor audit.Actor, c *Connect
 	a.TokenCiphertext = base64.StdEncoding.EncodeToString(sealed)
 	err = s.e.WithTx(ctx, func(ctx context.Context) error {
 		drel.Repo(drel.MustFromContext(ctx), ConnectorAccountMeta).Add(a)
-		return s.audit.Record(ctx, actor, &c.SpaceID, "connector.account_add", "connector:"+c.ID().String(), map[string]string{"label": label})
+		return s.audit.Record(ctx, actor, &c.SpaceID, "connector.account_add", "connector:"+c.ID().String(), map[string]string{"label": label, "secret_env": strings.Join(names, ",")})
 	})
 	return a, err
 }
 
-// StartAuthorize returns the URL where a person signs in to add an OAuth account.
-func (s *Service) StartAuthorize(ctx context.Context, actor audit.Actor, spaceID, connectorID, userID uuid.UUID, label string) (string, error) {
+// StartAuthorize returns the URL where a person signs in to add an OAuth account. With
+// accountID, the person signs in again to that account and it keeps its grants.
+func (s *Service) StartAuthorize(ctx context.Context, actor audit.Actor, spaceID, connectorID, userID uuid.UUID, label string, accountID *uuid.UUID) (string, error) {
 	c, err := s.Get(ctx, spaceID, connectorID)
 	if err != nil {
 		return "", err
 	}
 	if c.Auth != "oauth" || !c.OAuth.Registered {
 		return "", fmt.Errorf("%w: this connector does not sign in with OAuth", ErrBadInput)
+	}
+	if accountID != nil {
+		acc, err := s.Account(ctx, spaceID, *accountID)
+		if err != nil {
+			return "", err
+		}
+		if acc.ConnectorID != c.ID() {
+			return "", ErrNoAccount
+		}
+		label = acc.Label
 	}
 	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
@@ -367,7 +523,7 @@ func (s *Service) StartAuthorize(ctx context.Context, actor audit.Actor, spaceID
 		return "", err
 	}
 	err = s.e.WithTx(ctx, func(ctx context.Context) error {
-		drel.Repo(drel.MustFromContext(ctx), OAuthStateMeta).Add(&OAuthState{State: state, ConnectorID: c.ID(), Label: label, Verifier: base64.StdEncoding.EncodeToString(sealed), UserID: userID, ExpiresAt: s.now().Add(15 * time.Minute)})
+		drel.Repo(drel.MustFromContext(ctx), OAuthStateMeta).Add(&OAuthState{State: state, ConnectorID: c.ID(), Label: label, AccountID: accountID, Verifier: base64.StdEncoding.EncodeToString(sealed), UserID: userID, ExpiresAt: s.now().Add(15 * time.Minute)})
 		return nil
 	})
 	if err != nil {
@@ -377,7 +533,7 @@ func (s *Service) StartAuthorize(ctx context.Context, actor audit.Actor, spaceID
 	if c.OAuth.Resource != "" {
 		opts = append(opts, oauth2.SetAuthURLParam("resource", c.OAuth.Resource))
 	}
-	return c.oauthConfig().AuthCodeURL(state, opts...), nil
+	return c.oauthConfig("").AuthCodeURL(state, opts...), nil
 }
 
 // Callback finishes an OAuth sign-in: it checks the state, trades the code with the PKCE
@@ -413,7 +569,11 @@ func (s *Service) Callback(ctx context.Context, state, code string) (*ConnectorA
 	if c.OAuth.Resource != "" {
 		opts = append(opts, oauth2.SetAuthURLParam("resource", c.OAuth.Resource))
 	}
-	tok, err := c.oauthConfig().Exchange(octx, code, opts...)
+	secret, err := s.clientSecret(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	tok, err := c.oauthConfig(secret).Exchange(octx, code, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("the sign-in server refused the code: %w", err)
 	}
@@ -427,7 +587,38 @@ func (s *Service) Callback(ctx context.Context, state, code string) (*ConnectorA
 	if tok.RefreshToken != "" {
 		s.vault.Redactor.Register(c.SpaceID, c.Name+" refresh token", tok.RefreshToken)
 	}
-	return s.saveAccount(ctx, audit.Actor{Kind: "user", ID: st.UserID.String()}, c, st.Label, raw, exp)
+	actor := audit.Actor{Kind: "user", ID: st.UserID.String()}
+	if st.AccountID == nil {
+		return s.saveAccount(ctx, actor, c, st.Label, raw, exp, nil)
+	}
+	// A new sign-in of an account whose tokens a URL change cleared: the account keeps its
+	// ID, so its grants stay.
+	a, err := s.Account(ctx, c.SpaceID, *st.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	sealedTok, err := s.vault.Seal(ctx, c.SpaceID, raw, aad(a.ID()))
+	if err != nil {
+		return nil, err
+	}
+	err = s.e.WithTx(ctx, func(ctx context.Context) error {
+		ta, err := drel.Repo(drel.MustFromContext(ctx), ConnectorAccountMeta).Where(ConnectorAccounts.ID.Eq(a.ID())).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if ta == nil {
+			return ErrNoAccount
+		}
+		ta.TokenCiphertext = base64.StdEncoding.EncodeToString(sealedTok)
+		ta.ExpiresAt = exp
+		a = ta
+		return s.audit.Record(ctx, actor, &c.SpaceID, "connector.account_update", "connector:"+c.ID().String(), map[string]string{"account": a.ID().String(), "signed_in": "true"})
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.Changed()
+	return a, nil
 }
 
 // credential returns the header to send for an account, refreshing an OAuth token when it
@@ -435,6 +626,9 @@ func (s *Service) Callback(ctx context.Context, state, code string) (*ConnectorA
 func (s *Service) credential(ctx context.Context, c *Connector, a *ConnectorAccount) (name, value string, err error) {
 	if c.Auth == "none" {
 		return "", "", nil
+	}
+	if a.TokenCiphertext == "" {
+		return "", "", ErrSignIn
 	}
 	sealed, err := base64.StdEncoding.DecodeString(a.TokenCiphertext)
 	if err != nil {
@@ -454,7 +648,11 @@ func (s *Service) credential(ctx context.Context, c *Connector, a *ConnectorAcco
 	}
 	if !t.Expiry.IsZero() && s.now().Add(time.Minute).After(t.Expiry) && t.Refresh != "" {
 		octx := context.WithValue(ctx, oauth2.HTTPClient, s.http)
-		nt, err := c.oauthConfig().TokenSource(octx, &oauth2.Token{RefreshToken: t.Refresh, Expiry: time.Unix(1, 0)}).Token()
+		secret, err := s.clientSecret(ctx, c)
+		if err != nil {
+			return "", "", err
+		}
+		nt, err := c.oauthConfig(secret).TokenSource(octx, &oauth2.Token{RefreshToken: t.Refresh, Expiry: time.Unix(1, 0)}).Token()
 		if err != nil {
 			return "", "", fmt.Errorf("the connector sign-in expired; connect the account again: %w", err)
 		}
@@ -495,7 +693,11 @@ func (s *Service) session(ctx context.Context, c *Connector, a *ConnectorAccount
 		if s.Stdio == nil {
 			return nil, errors.New("stdio connectors need a computer")
 		}
-		conn, err := s.Stdio(ctx, c.SpaceID, botID, c.Command)
+		env, err := s.StdioEnv(ctx, c, a)
+		if err != nil {
+			return nil, err
+		}
+		conn, err := s.Stdio(ctx, c.SpaceID, botID, c.Command, env)
 		if err != nil {
 			return nil, err
 		}
@@ -531,12 +733,18 @@ func (s *Service) Tools(ctx context.Context, c *Connector, a *ConnectorAccount, 
 		return nil, err
 	}
 	defer func() { _ = cs.Close() }()
-	res, err := cs.ListTools(ctx, &mcp.ListToolsParams{})
-	if err != nil {
+	var listed []*mcp.Tool
+	for t, err := range cs.Tools(ctx, &mcp.ListToolsParams{}) {
+		if err != nil {
+			return nil, err
+		}
+		listed = append(listed, t)
+	}
+	if err := s.dropGone(ctx, c, listed); err != nil {
 		return nil, err
 	}
-	out := make([]ToolInfo, 0, len(res.Tools))
-	for _, t := range res.Tools {
+	out := make([]ToolInfo, 0, len(listed))
+	for _, t := range listed {
 		set := c.Tools[t.Name]
 		schema, _ := json.Marshal(t.InputSchema)
 		ti := ToolInfo{Name: t.Name, Description: t.Description, Class: Classify(t, set), Disabled: set.Disabled, Schema: schema}

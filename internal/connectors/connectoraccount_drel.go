@@ -4,6 +4,7 @@ package connectors
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/alternayte/drel"
@@ -18,6 +19,7 @@ var ConnectorAccounts = struct {
 	TokenCiphertext drel.StringColumn
 	Scopes          drel.StringColumn
 	ExpiresAt       drel.ComparableColumn[*time.Time]
+	SecretEnvNames  drel.ComparableColumn[[]string]
 	CreatedAt       drel.TimeColumn
 	UpdatedAt       drel.TimeColumn
 }{
@@ -28,6 +30,7 @@ var ConnectorAccounts = struct {
 	TokenCiphertext: drel.NewStringCol("token_ciphertext"),
 	Scopes:          drel.NewStringCol("scopes"),
 	ExpiresAt:       drel.NewComparableCol[*time.Time]("expires_at"),
+	SecretEnvNames:  drel.NewComparableCol[[]string]("secret_env_names"),
 	CreatedAt:       drel.NewTimeCol("created_at"),
 	UpdatedAt:       drel.NewTimeCol("updated_at"),
 }
@@ -35,7 +38,7 @@ var ConnectorAccounts = struct {
 func scanConnectoraccount(row drel.Row) (*ConnectorAccount, error) {
 	p := &ConnectorAccount{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.ConnectorID, &p.SpaceID, &p.Label, &p.TokenCiphertext, &p.Scopes, &p.ExpiresAt, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.ConnectorID, &p.SpaceID, &p.Label, &p.TokenCiphertext, &p.Scopes, &p.ExpiresAt, drel.JSON[[]string]{V: &p.SecretEnvNames}, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -49,10 +52,11 @@ type connectoraccountSnapshot struct {
 	TokenCiphertext string
 	Scopes          string
 	ExpiresAt       *time.Time
+	SecretEnvNames  []string
 }
 
 func snapshotConnectoraccount(p *ConnectorAccount) any {
-	return connectoraccountSnapshot{ConnectorID: p.ConnectorID, SpaceID: p.SpaceID, Label: p.Label, TokenCiphertext: p.TokenCiphertext, Scopes: p.Scopes, ExpiresAt: p.ExpiresAt}
+	return connectoraccountSnapshot{ConnectorID: p.ConnectorID, SpaceID: p.SpaceID, Label: p.Label, TokenCiphertext: p.TokenCiphertext, Scopes: p.Scopes, ExpiresAt: p.ExpiresAt, SecretEnvNames: p.SecretEnvNames}
 }
 
 func diffConnectoraccount(p *ConnectorAccount, snap any) []drel.FieldChange {
@@ -75,6 +79,9 @@ func diffConnectoraccount(p *ConnectorAccount, snap any) []drel.FieldChange {
 	}
 	if p.ExpiresAt != s.ExpiresAt {
 		changes = append(changes, drel.FieldChange{Column: "expires_at", Value: p.ExpiresAt})
+	}
+	if !slices.Equal(p.SecretEnvNames, s.SecretEnvNames) {
+		changes = append(changes, drel.FieldChange{Column: "secret_env_names", Value: drel.JSON[[]string]{V: &p.SecretEnvNames}})
 	}
 	return changes
 }
@@ -100,15 +107,17 @@ func connectoraccountColumnValue(p *ConnectorAccount, idx int) any {
 	case 6:
 		return p.ExpiresAt
 	case 7:
-		return p.CreatedAt()
+		return drel.JSON[[]string]{V: &p.SecretEnvNames}
 	case 8:
+		return p.CreatedAt()
+	case 9:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func connectoraccountInsertColumns(p *ConnectorAccount) ([]string, []any) {
-	return []string{"connector_id", "space_id", "label", "token_ciphertext", "scopes", "expires_at"}, []any{p.ConnectorID, p.SpaceID, p.Label, p.TokenCiphertext, p.Scopes, p.ExpiresAt}
+	return []string{"connector_id", "space_id", "label", "token_ciphertext", "scopes", "expires_at", "secret_env_names"}, []any{p.ConnectorID, p.SpaceID, p.Label, p.TokenCiphertext, p.Scopes, p.ExpiresAt, drel.JSON[[]string]{V: &p.SecretEnvNames}}
 }
 
 func connectoraccountScanReturning(p *ConnectorAccount, row drel.Row) error {
@@ -132,7 +141,7 @@ func connectoraccountScanGenerated(p *ConnectorAccount, row drel.Row) error {
 
 var ConnectorAccountMeta = drel.ModelMeta[ConnectorAccount]{
 	Table:         "connector_accounts",
-	Columns:       []string{"id", "connector_id", "space_id", "label", "token_ciphertext", "scopes", "expires_at", "created_at", "updated_at"},
+	Columns:       []string{"id", "connector_id", "space_id", "label", "token_ciphertext", "scopes", "expires_at", "secret_env_names", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanConnectoraccount,
 	Snapshot:      snapshotConnectoraccount,

@@ -4,6 +4,7 @@ package agentd_test
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -18,6 +19,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -37,6 +39,12 @@ type testAgentd struct {
 }
 
 func startAgentd(t *testing.T, token string) *testAgentd {
+	t.Helper()
+	return startAgentdWith(t, token, nil)
+}
+
+// startAgentdWith starts agentd behind wrap, which sees each request first.
+func startAgentdWith(t *testing.T, token string, wrap func(http.Handler) http.Handler) *testAgentd {
 	t.Helper()
 	home, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -62,7 +70,11 @@ func startAgentd(t *testing.T, token string) *testAgentd {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewUnstartedServer(srv.Handler())
+	h := srv.Handler()
+	if wrap != nil {
+		h = wrap(h)
+	}
+	ts := httptest.NewUnstartedServer(h)
 	ts.TLS = &tls.Config{Certificates: []tls.Certificate{pair}, MinVersion: tls.VersionTLS13}
 	ts.StartTLS()
 	t.Cleanup(func() {
@@ -262,7 +274,7 @@ func TestSCN_CMP_012_AgentdEndpointsTokenAndPinnedTLS(t *testing.T) {
 	})
 
 	t.Run("mcp stdio", func(t *testing.T) {
-		conn, err := c.MCPStdio(ctx, []string{"cat"}, "")
+		conn, err := c.MCPStdio(ctx, client.MCPStdioRequest{Argv: []string{"cat"}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -713,4 +725,43 @@ func TestSCN_CMP_012_AgentdEndpointsTokenAndPinnedTLS(t *testing.T) {
 			t.Fatal("manifest outside home: want error")
 		}
 	})
+}
+
+func TestSCN_CON_007_StdioVariablesReachTheProcessNotTheURL(t *testing.T) {
+	var mu sync.Mutex
+	var urls []string
+	a := startAgentdWith(t, "token-acme-stdio", func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mu.Lock()
+			urls = append(urls, r.URL.String())
+			mu.Unlock()
+			h.ServeHTTP(w, r)
+		})
+	})
+	ctx := context.Background()
+	const token = "acme-jira-token-5521"
+	conn, err := a.c.MCPStdio(ctx, client.MCPStdioRequest{
+		Argv: []string{"sh", "-c", `printf '%s|%s\n' "$JIRA_URL" "$JIRA_PERSONAL_TOKEN"; cat`},
+		Env:  map[string]string{"JIRA_URL": "https://jira.acme.test", "JIRA_PERSONAL_TOKEN": token},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	line, err := bufio.NewReader(conn).ReadString('\n')
+	_ = conn.Close()
+	if err != nil || line != "https://jira.acme.test|"+token+"\n" {
+		t.Fatalf("the process saw %q %v", line, err)
+	}
+	mu.Lock()
+	seen := strings.Join(urls, "\n")
+	mu.Unlock()
+	if !strings.Contains(seen, "/v1/mcp/stdio") || strings.Contains(seen, token) || strings.Contains(seen, "jira.acme.test") || strings.Contains(seen, "printf") {
+		t.Fatalf("a variable or the command is in the request URL: %s", seen)
+	}
+
+	// A program that does not start fails with a message, not a broken stream.
+	_, err = a.c.MCPStdio(ctx, client.MCPStdioRequest{Argv: []string{"acme-no-such-program"}})
+	if err == nil || !strings.Contains(err.Error(), "did not start") {
+		t.Fatalf("missing program: %v", err)
+	}
 }

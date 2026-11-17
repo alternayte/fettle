@@ -172,6 +172,10 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupRoutines()
 	a.setupPush()
 	a.setupConnectors()
+	if err := a.Connectors.SealClientSecrets(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("seal connector client secrets: %w", err)
+	}
 	a.setupSkills()
 	a.setupScreens()
 	a.setupTeach()
