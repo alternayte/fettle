@@ -497,6 +497,7 @@
       "steps": {
         "runtime": "Container runtime",
         "service": "Container service",
+        "kernel": "Linux kernel",
         "image": "Computer image",
         "docker": "Docker",
         "kvm": "Virtualization",

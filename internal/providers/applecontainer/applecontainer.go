@@ -115,6 +115,12 @@ func (p *Provider) cli(ctx context.Context, args ...string) ([]byte, error) {
 	return out, nil
 }
 
+// hasKernel reports whether the app root of the runtime holds a kernel.
+func (p *Provider) hasKernel() bool {
+	entries, err := os.ReadDir(filepath.Join(p.app(), "kernels"))
+	return err == nil && len(entries) > 0
+}
+
 // ErrNotInstalled is a runtime that Fettle has not installed yet. Prepare installs it.
 var ErrNotInstalled = errors.New("the Apple container runtime is not installed yet; Fettle installs it when it prepares")
 
@@ -175,6 +181,23 @@ func (p *Provider) Prepare(ctx context.Context, progress func(computers.Progress
 		}
 	}
 	report(computers.Progress{Step: "service", State: "pass"})
+	// The service installs the default kernel when it starts, but a failed download or a
+	// service that an earlier start left without one leaves no kernel, and then every
+	// computer fails to start. Prepare installs it then.
+	if !p.hasKernel() {
+		report(computers.Progress{Step: "kernel", State: "running"})
+		if out, err := p.cli(ctx, "system", "kernel", "set", "--recommended"); err != nil {
+			err = fmt.Errorf("install the Linux kernel of Apple container: %w: %s", err, strings.TrimSpace(string(out)))
+			report(computers.Progress{Step: "kernel", State: "fail", Detail: err.Error()})
+			return err
+		}
+		if !p.hasKernel() {
+			err := errors.New("Apple container installed no Linux kernel")
+			report(computers.Progress{Step: "kernel", State: "fail", Detail: err.Error()})
+			return err
+		}
+		report(computers.Progress{Step: "kernel", State: "pass"})
+	}
 	img := p.image()
 	if _, err := p.cli(ctx, "image", "inspect", img); err == nil {
 		report(computers.Progress{Step: "image", State: "pass", Detail: img})
