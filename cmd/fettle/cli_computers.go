@@ -120,14 +120,14 @@ func runComputerAdd(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("computer add", flag.ContinueOnError)
 	o := clientFlags(fs)
 	kilnURL := fs.String("url", "", "kiln: the URL of the Kiln host")
-	kilnToken := fs.String("token", "", "kiln: the API token of the Kiln host (default: FETTLE_KILN_TOKEN)")
+	kilnToken := fs.String("kiln-token", "", "kiln: the API token of the Kiln host (default: FETTLE_KILN_TOKEN)")
 	e2bKey := fs.String("key", "", "e2b: an E2B API key to test before the server uses it")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host|kiln|e2b> [--url URL --token TOKEN] [--key KEY]")
+		fmt.Fprintln(os.Stderr, "Usage: fettle computer add <docker|applecontainer|host|kiln|e2b> [--url URL --kiln-token TOKEN] [--key KEY]")
 		return errUsage
 	}
 	kind := strings.ToLower(pos[0])
@@ -172,7 +172,7 @@ func runComputerAdd(ctx context.Context, args []string) error {
 			tok = os.Getenv("FETTLE_KILN_TOKEN")
 		}
 		if tok == "" {
-			return errors.New("give the Kiln API token with --token or FETTLE_KILN_TOKEN")
+			return errors.New("give the Kiln API token with --kiln-token or FETTLE_KILN_TOKEN")
 		}
 		var res struct {
 			Pass       bool   `json:"pass"`

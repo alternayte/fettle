@@ -52,7 +52,12 @@ func TestSCN_BOT_008_OnlyOpenDueWorkWakesTheBot(t *testing.T) {
 		e.App.Agent.SetClock(func() time.Time { return due.Add(time.Minute) })
 		_ = e.App.WakeOpenWork(ctx)
 		_ = e.App.WakeOpenWork(ctx)
+		// The maintenance job also wakes open work with this clock. When it claims the item
+		// first, its envelope can land after the calls above return, so wait for it.
 		n, key := count()
+		for end := time.Now().Add(10 * time.Second); n == 0 && time.Now().Before(end); n, key = count() {
+			time.Sleep(50 * time.Millisecond)
+		}
 		if n != 1 || key != "open_work:"+open.ID().String() {
 			t.Fatalf("%d wakes (%s), want one for the open item", n, key)
 		}
