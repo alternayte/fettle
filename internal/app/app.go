@@ -114,6 +114,13 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 		return nil, fmt.Errorf("create data folder: %w", err)
 	}
 	a := &App{Cfg: cfg}
+	// Load the key before the database opens: LoadMasterKey reads an existing fettle.db as
+	// data sealed with a keychain key, so a first start with no keychain must not create it first.
+	master, src, err := vault.LoadMasterKey(cfg.MasterKey, cfg.Data, cfg.Mode == ModeServer)
+	if err != nil {
+		return nil, err
+	}
+	a.MasterKeySource = src
 	db, err := OpenDatabase(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -136,12 +143,6 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 		db.Close()
 		return nil, err
 	}
-	master, src, err := vault.LoadMasterKey(cfg.MasterKey, cfg.Data, cfg.Mode == ModeServer)
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-	a.MasterKeySource = src
 	if a.Objects, err = OpenObjects(ctx, cfg); err != nil {
 		db.Close()
 		return nil, err
