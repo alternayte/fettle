@@ -81,7 +81,7 @@ The Kiln host does not see the requests to `fettle-agentd`.
 
 To use a Kiln host:
 
-1. Test the host and the token: `fettle computer add kiln --url https://kiln.acme.test --token <token>`.
+1. Test the host and the token: `fettle computer add kiln --url https://kiln.acme.test --kiln-token <token>`.
 2. Set `FETTLE_KILN_URL` and `FETTLE_KILN_TOKEN` for the server, and restart it.
 3. Build the computer templates: `fettle computer add kiln`.
 4. Select `kiln` as the provider of a zone.
