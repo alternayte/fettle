@@ -9,6 +9,7 @@ import type {
   SchemaTarget,
   SchemaVaultBody,
   SchemaRoutineBody,
+  SchemaSetWebSearchRequest,
   SchemaSkillView,
   SchemaZoneBody,
 } from "./schema";
@@ -57,6 +58,7 @@ export const keys = {
   usage: (s: string, by: string, days: number) => ["s", s, "usage", by, days] as const,
   audit: (s: string, action: string) => ["s", s, "audit", action] as const,
   telemetry: ["telemetry"] as const,
+  instanceSettings: ["instance-settings"] as const,
   zones: (s: string) => ["s", s, "zones"] as const,
   computerProviders: (s: string) => ["s", s, "computer-providers"] as const,
   policy: (s: string) => ["s", s, "policy"] as const,
@@ -72,6 +74,7 @@ export const keys = {
   instance: ["instance", "view"] as const,
   adminUsers: ["admin", "users"] as const,
   edition: ["admin", "edition"] as const,
+  webSearch: (s: string) => ["s", s, "web-search"] as const,
 };
 
 // ---------------------------------------------------------------- me and space
@@ -680,6 +683,38 @@ export function useTestZoneComputer() {
   });
 }
 
+/** useCheckZoneNetwork starts a zone's computer and checks DNS, connect and TLS with curl and Chromium. */
+export function useCheckZoneNetwork() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (zone: string) =>
+      must(
+        api.POST("/api/v1/spaces/{space}/zones/{zone}/computer/network-check", { params: { path: { space, zone } } }),
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.zones(space) }),
+  });
+}
+
+/** useInstanceSettings lists the settings of this server (instance admins). */
+export function useInstanceSettings(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.instanceSettings,
+    queryFn: async () => (await must(api.GET("/api/v1/admin/settings"))).settings ?? [],
+    enabled,
+  });
+}
+
+/** useSetInstanceSetting changes one setting of this server. An empty text resets it. */
+export function useSetInstanceSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: unknown }) =>
+      must(api.PUT("/api/v1/admin/settings/{key}", { params: { path: { key } }, body: { value } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.instanceSettings }),
+  });
+}
+
 /** useSleepZoneComputer puts a zone's computer to sleep; its files stay. */
 export function useSleepZoneComputer() {
   const qc = useQueryClient();
@@ -1141,6 +1176,8 @@ export function useCatalog() {
   });
 }
 
+export type ConnectorVariable = { name: string; required: boolean; secret: boolean; doc?: string };
+
 export type NewConnector = {
   name: string;
   url?: string;
@@ -1149,7 +1186,49 @@ export type NewConnector = {
   auth?: "none" | "oauth" | "header";
   header_name?: string;
   icon?: string;
+  env?: Record<string, string>;
+  variables?: ConnectorVariable[];
 };
+
+export type ConnectorEdit = {
+  name?: string;
+  url?: string;
+  command?: string[];
+  env?: Record<string, string>;
+  header_name?: string;
+};
+
+export function useUpdateConnector() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: ConnectorEdit }) =>
+      must(
+        api.PATCH("/api/v1/spaces/{space}/connectors/{connector}", {
+          params: { path: { space, connector: id } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
+
+export type AccountEdit = { label?: string; value?: string; secret_env?: Record<string, string> };
+
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: ({ id, account, body }: { id: string; account: string; body: AccountEdit }) =>
+      must(
+        api.PATCH("/api/v1/spaces/{space}/connectors/{connector}/accounts/{account}", {
+          params: { path: { space, connector: id, account } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
+  });
+}
 
 export function useCreateConnector() {
   const qc = useQueryClient();
@@ -1175,11 +1254,21 @@ export function useAddAccount() {
   const qc = useQueryClient();
   const space = useSpaceId();
   return useMutation({
-    mutationFn: ({ id, label, value }: { id: string; label: string; value?: string }) =>
+    mutationFn: ({
+      id,
+      label,
+      value,
+      secret_env,
+    }: {
+      id: string;
+      label: string;
+      value?: string;
+      secret_env?: Record<string, string>;
+    }) =>
       must(
         api.POST("/api/v1/spaces/{space}/connectors/{connector}/accounts", {
           params: { path: { space, connector: id } },
-          body: { label, value },
+          body: { label, value, secret_env },
         }),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.connectors(space) }),
@@ -1189,11 +1278,11 @@ export function useAddAccount() {
 export function useAuthorize() {
   const space = useSpaceId();
   return useMutation({
-    mutationFn: ({ id, label }: { id: string; label: string }) =>
+    mutationFn: ({ id, label, account }: { id: string; label: string; account?: string }) =>
       must(
         api.POST("/api/v1/spaces/{space}/connectors/{connector}/authorize", {
           params: { path: { space, connector: id } },
-          body: { label },
+          body: { label, account_id: account },
         }),
       ),
   });
@@ -1322,6 +1411,45 @@ export function useRevokeInvite() {
     mutationFn: (invite: string) =>
       must(api.DELETE("/api/v1/spaces/{space}/invites/{invite}", { params: { path: { space, invite } } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.invites(space) }),
+  });
+}
+
+// ---------------------------------------------------------------- web search
+
+/** useWebSearch returns the search provider of the space, or null when web_search is off. */
+export function useWebSearch() {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: keys.webSearch(space),
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/web-search", { params: { path: { space } } }))).provider ?? null,
+  });
+}
+
+export function useSetWebSearch() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (body: SchemaSetWebSearchRequest) =>
+      must(api.PUT("/api/v1/spaces/{space}/web-search", { params: { path: { space } }, body })),
+    onSuccess: (out) => qc.setQueryData(keys.webSearch(space), out.provider ?? null),
+  });
+}
+
+export function useDeleteWebSearch() {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: () => must(api.DELETE("/api/v1/spaces/{space}/web-search", { params: { path: { space } } })),
+    onSuccess: () => qc.setQueryData(keys.webSearch(space), null),
+  });
+}
+
+export function useTestWebSearch() {
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (query: string) =>
+      must(api.POST("/api/v1/spaces/{space}/web-search/test", { params: { path: { space } }, body: { query } })),
   });
 }
 

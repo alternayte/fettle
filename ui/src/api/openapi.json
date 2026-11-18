@@ -10,6 +10,20 @@
           "label": {
             "type": "string"
           },
+          "needs_sign_in": {
+            "description": "True when the connector URL changed and the account must sign in again.",
+            "type": "boolean"
+          },
+          "secret_env": {
+            "description": "Names of the secret variables that are set. The API never returns their values.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "zones": {
             "description": "Names of the zones that hold this account.",
             "items": {
@@ -24,7 +38,9 @@
         "required": [
           "id",
           "label",
-          "zones"
+          "zones",
+          "secret_env",
+          "needs_sign_in"
         ],
         "type": "object"
       },
@@ -49,6 +65,13 @@
             "maxLength": 80,
             "minLength": 1,
             "type": "string"
+          },
+          "secret_env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Write only. Secret variables of a stdio account. The API returns only their names.",
+            "type": "object"
           },
           "value": {
             "description": "Write only. The API never returns it.",
@@ -249,6 +272,10 @@
       "Authorize-connectorRequest": {
         "additionalProperties": false,
         "properties": {
+          "account_id": {
+            "description": "The account that signs in again. It keeps its grants.",
+            "type": "string"
+          },
           "label": {
             "maxLength": 80,
             "minLength": 1,
@@ -821,6 +848,13 @@
               "null"
             ]
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Plain variables of a stdio connector.",
+            "type": "object"
+          },
           "header_name": {
             "type": "string"
           },
@@ -849,6 +883,16 @@
           },
           "url": {
             "type": "string"
+          },
+          "variables": {
+            "description": "Variables that the stdio server reads, from its catalogue entry.",
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -859,6 +903,8 @@
           "auth",
           "icon",
           "tools",
+          "env",
+          "variables",
           "accounts"
         ],
         "type": "object"
@@ -884,6 +930,13 @@
               "null"
             ]
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Plain variables of a stdio connector. Put secrets on the account as secret_env.",
+            "type": "object"
+          },
           "header_name": {
             "maxLength": 100,
             "type": "string"
@@ -907,6 +960,17 @@
           "url": {
             "maxLength": 500,
             "type": "string"
+          },
+          "variables": {
+            "description": "Variables that the stdio server reads, as the catalogue entry names them.",
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -1121,10 +1185,26 @@
             ],
             "type": "string"
           },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "header_name": {
             "type": "string"
           },
           "icon": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mcp_remote",
+              "mcp_stdio"
+            ],
             "type": "string"
           },
           "name": {
@@ -1132,11 +1212,20 @@
           },
           "url": {
             "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/Variable"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
           "name",
-          "url",
+          "kind",
           "auth",
           "icon"
         ],
@@ -1508,6 +1597,26 @@
         ],
         "type": "object"
       },
+      "Hit": {
+        "additionalProperties": false,
+        "properties": {
+          "snippet": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "snippet"
+        ],
+        "type": "object"
+      },
       "Input": {
         "additionalProperties": false,
         "properties": {
@@ -1524,6 +1633,53 @@
         "required": [
           "name",
           "description"
+        ],
+        "type": "object"
+      },
+      "InstanceSettingView": {
+        "additionalProperties": false,
+        "properties": {
+          "default": {
+            "description": "The value that applies when nothing is stored."
+          },
+          "doc": {
+            "type": "string"
+          },
+          "env": {
+            "description": "The environment variable that sets or would lock this value.",
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "locked": {
+            "description": "An environment variable sets this value, so the API cannot change it.",
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean"
+          },
+          "set": {
+            "description": "A secret has a value.",
+            "type": "boolean"
+          },
+          "value": {
+            "description": "The stored value; null for a secret."
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "default",
+          "is_default",
+          "secret",
+          "set",
+          "locked",
+          "env",
+          "doc"
         ],
         "type": "object"
       },
@@ -1982,6 +2138,24 @@
         ],
         "type": "object"
       },
+      "ListOutBody3": {
+        "additionalProperties": false,
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/InstanceSettingView"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "type": "object"
+      },
       "LocalAuthInBody": {
         "additionalProperties": false,
         "properties": {
@@ -2249,6 +2423,120 @@
         ],
         "type": "object"
       },
+      "NetworkCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkProbe"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "proxy": {
+            "description": "The computer uses a proxy.",
+            "type": "boolean"
+          },
+          "roots": {
+            "description": "The computer has extra root certificates.",
+            "type": "boolean"
+          },
+          "start_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone",
+          "provider",
+          "url",
+          "pass",
+          "proxy",
+          "roots",
+          "start_ms",
+          "probes"
+        ],
+        "type": "object"
+      },
+      "NetworkProbe": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "pass": {
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkStep"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tool": {
+            "enum": [
+              "curl",
+              "chromium"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "pass",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "NetworkStep": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "dns",
+              "connect",
+              "tls"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pass",
+              "fail",
+              "skip"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "type": "object"
+      },
       "OnboardingView": {
         "additionalProperties": false,
         "properties": {
@@ -2363,6 +2651,9 @@
           "error": {
             "type": "string"
           },
+          "image": {
+            "type": "string"
+          },
           "provider": {
             "type": "string"
           },
@@ -2439,6 +2730,10 @@
           },
           "step": {
             "type": "string"
+          },
+          "total_mb": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -2984,6 +3279,10 @@
           "key": {
             "type": "string"
           },
+          "searches": {
+            "format": "int64",
+            "type": "integer"
+          },
           "seconds": {
             "format": "int64",
             "type": "integer"
@@ -3003,7 +3302,8 @@
           "tokens_out",
           "seconds",
           "cost_usd",
-          "calls"
+          "calls",
+          "searches"
         ],
         "type": "object"
       },
@@ -3486,6 +3786,16 @@
         ],
         "type": "object"
       },
+      "Set-instance-settingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {}
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
       "Set-member-roleRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3543,6 +3853,31 @@
         "required": [
           "enabled"
         ],
+        "type": "object"
+      },
+      "Set-web-searchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "description": "The SearXNG URL. Other kinds ignore it.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "key": {
+            "description": "Write only. Empty keeps the stored key of the same kind.",
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tavily",
+              "exa",
+              "searxng",
+              "brave"
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Setting-historyResponse": {
@@ -4474,6 +4809,44 @@
         },
         "type": "object"
       },
+      "Test-web-searchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "maxLength": 400,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Test-web-searchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_usd": {
+            "format": "double",
+            "type": "number"
+          },
+          "ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/Hit"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "results",
+          "cost_usd",
+          "ms"
+        ],
+        "type": "object"
+      },
       "ToolInfo": {
         "additionalProperties": false,
         "properties": {
@@ -4548,6 +4921,73 @@
         ],
         "type": "object"
       },
+      "Update-connector-accountRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "secret_env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Write only. Sets each named secret variable; an empty value removes it.",
+            "type": "object"
+          },
+          "value": {
+            "description": "Write only. The new header key.",
+            "maxLength": 4000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Update-connectorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "description": "Stdio connectors only.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Stdio connectors only. Replaces all plain variables.",
+            "type": "object"
+          },
+          "header_name": {
+            "description": "Connectors with a header key only.",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "icon": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "url": {
+            "description": "Remote connectors only.",
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Update-meRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4615,6 +5055,32 @@
           "is_admin",
           "spaces",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "Variable": {
+        "additionalProperties": false,
+        "properties": {
+          "doc": {
+            "maxLength": 300,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "secret": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "required",
+          "secret"
         ],
         "type": "object"
       },
@@ -4722,6 +5188,50 @@
           "author_id",
           "at",
           "current"
+        ],
+        "type": "object"
+      },
+      "WebSearchOutBody": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/WebSearchView",
+            "description": "Absent when the space has no search provider."
+          }
+        },
+        "type": "object"
+      },
+      "WebSearchView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "type": "string"
+          },
+          "has_key": {
+            "type": "boolean"
+          },
+          "key_last4": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tavily",
+              "exa",
+              "searxng",
+              "brave"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "base_url",
+          "has_key",
+          "key_last4"
         ],
         "type": "object"
       },
@@ -4931,6 +5441,88 @@
           }
         },
         "summary": "The edition of this build, its licence and the Enterprise features (instance admins)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings": {
+      "get": {
+        "operationId": "list-instance-settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOutBody3"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The settings of this server: computer image, certificates and proxy (instance admins)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/{key}": {
+      "put": {
+        "operationId": "set-instance-setting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-instance-settingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceSettingView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change a setting of this server. An empty text resets it; a secret is write-only (instance admins)",
         "tags": [
           "admin"
         ]
@@ -5266,7 +5858,7 @@
             "description": "Error"
           }
         },
-        "summary": "Known remote MCP servers for the Connect screen",
+        "summary": "Known MCP servers for the Connect screen, with the variables of stdio servers",
         "tags": [
           "connectors"
         ]
@@ -7947,6 +8539,65 @@
         "tags": [
           "connectors"
         ]
+      },
+      "patch": {
+        "operationId": "update-connector",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-connectorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit a connector. Accounts, grants and tool settings stay. The kind cannot change. A new URL of an OAuth connector needs a new sign-in of each account.",
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/v1/spaces/{space}/connectors/{connector}/accounts": {
@@ -8004,7 +8655,76 @@
             "description": "Error"
           }
         },
-        "summary": "Add an account with a header key, or a stdio account",
+        "summary": "Add an account with a header key, or a stdio account with secret variables",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/connectors/{connector}/accounts/{account}": {
+      "patch": {
+        "operationId": "update-connector-account",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connector",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-connector-accountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Rename an account, or replace its key or secret variables. The account keeps its grants.",
         "tags": [
           "connectors"
         ]
@@ -8065,7 +8785,7 @@
             "description": "Error"
           }
         },
-        "summary": "Start an OAuth sign-in for a new account; open the returned URL",
+        "summary": "Start an OAuth sign-in for a new account, or for an account that must sign in again; open the returned URL",
         "tags": [
           "connectors"
         ]
@@ -11801,6 +12521,187 @@
         ]
       }
     },
+    "/api/v1/spaces/{space}/web-search": {
+      "delete": {
+        "operationId": "delete-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove the web search provider and its key. web_search is then off.",
+        "tags": [
+          "web"
+        ]
+      },
+      "get": {
+        "operationId": "get-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSearchOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The web search provider of the space",
+        "tags": [
+          "web"
+        ]
+      },
+      "put": {
+        "operationId": "set-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Set-web-searchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSearchOutBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set the web search provider of the space. The key goes into the vault.",
+        "tags": [
+          "web"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/web-search/test": {
+      "post": {
+        "operationId": "test-web-search",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Test-web-searchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Test-web-searchResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run one search with the provider of the space. It counts as one search in usage.",
+        "tags": [
+          "web"
+        ]
+      }
+    },
     "/api/v1/spaces/{space}/zones": {
       "get": {
         "operationId": "list-zones",
@@ -11951,6 +12852,57 @@
           }
         },
         "summary": "Change a zone. A change of the provider or the network replaces its computer.",
+        "tags": [
+          "computers"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/zones/{zone}/computer/network-check": {
+      "post": {
+        "operationId": "check-zone-network",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "zone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkCheck"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start the zone's computer and fetch one HTTPS page with curl and Chromium; report DNS, connect and TLS apart",
         "tags": [
           "computers"
         ]

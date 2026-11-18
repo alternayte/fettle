@@ -5,6 +5,34 @@
     { "name": "Sentry", "url": "https://mcp.sentry.dev/mcp", "auth": "oauth", "icon": "bug" },
     { "name": "GitHub", "url": "https://api.githubcopilot.com/mcp/", "auth": "header", "header_name": "Authorization", "icon": "git-branch" },
     { "name": "Stripe", "url": "https://mcp.stripe.com", "auth": "header", "header_name": "Authorization", "icon": "credit-card" },
-    { "name": "Cloudflare docs", "url": "https://docs.mcp.cloudflare.com/mcp", "auth": "none", "icon": "book-open" }
+    { "name": "Cloudflare docs", "url": "https://docs.mcp.cloudflare.com/mcp", "auth": "none", "icon": "book-open" },
+    {
+      "name": "Atlassian Cloud",
+      "kind": "mcp_stdio",
+      "command": ["uvx", "mcp-atlassian@0.24.6"],
+      "auth": "none",
+      "icon": "kanban",
+      "variables": [
+        { "name": "JIRA_URL", "required": true, "secret": false, "doc": "The Jira site, such as https://acme.atlassian.net." },
+        { "name": "JIRA_USERNAME", "required": true, "secret": true, "doc": "The email address of the Atlassian user of this account." },
+        { "name": "JIRA_API_TOKEN", "required": true, "secret": true, "doc": "An API token of the Atlassian user." },
+        { "name": "CONFLUENCE_URL", "required": false, "secret": false, "doc": "The Confluence site, such as https://acme.atlassian.net/wiki." },
+        { "name": "CONFLUENCE_USERNAME", "required": false, "secret": true, "doc": "The email address of the Atlassian user of this account." },
+        { "name": "CONFLUENCE_API_TOKEN", "required": false, "secret": true, "doc": "An API token of the Atlassian user." }
+      ]
+    },
+    {
+      "name": "Atlassian Server/Data Center",
+      "kind": "mcp_stdio",
+      "command": ["uvx", "mcp-atlassian@0.24.6"],
+      "auth": "none",
+      "icon": "kanban",
+      "variables": [
+        { "name": "JIRA_URL", "required": true, "secret": false, "doc": "The Jira server, such as https://jira.acme.test." },
+        { "name": "JIRA_PERSONAL_TOKEN", "required": true, "secret": true, "doc": "A personal access token of the Jira user." },
+        { "name": "CONFLUENCE_URL", "required": false, "secret": false, "doc": "The Confluence server, such as https://wiki.acme.test." },
+        { "name": "CONFLUENCE_PERSONAL_TOKEN", "required": false, "secret": true, "doc": "A personal access token of the Confluence user." }
+      ]
+    }
   ]
 }

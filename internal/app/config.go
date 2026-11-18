@@ -36,6 +36,12 @@ type Config struct {
 	OTLP        string
 	// Version is set by the build.
 	Version string
+	// ComputerImage is the computer image of a release build (the main.computerImage
+	// ldflag); empty means a local build.
+	ComputerImage string
+	// HostSettings lets the server use the certificates and proxy of the host: the desktop
+	// app sets it.
+	HostSettings bool
 	// RescueAfterSeconds overrides the River rescue timeout (tests use 2 s).
 	RescueAfterSeconds int
 }

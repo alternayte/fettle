@@ -431,3 +431,45 @@ func (v *Vault) InstanceSecret(ctx context.Context, name string, create func() (
 	v.mu.Unlock()
 	return unwrapKey(master, row.Wrapped, instanceAAD(name))
 }
+
+// SetInstanceSecret stores or replaces a secret of the instance, wrapped by the master key.
+func (v *Vault) SetInstanceSecret(ctx context.Context, name string, value []byte) error {
+	v.mu.Lock()
+	master := v.master
+	v.mu.Unlock()
+	w, err := wrapKey(master, value, instanceAAD(name))
+	if err != nil {
+		return err
+	}
+	return v.e.WithTx(ctx, func(ctx context.Context) error {
+		repo := drel.Repo(drel.MustFromContext(ctx), InstanceSecretMeta)
+		row, err := repo.Where(InstanceSecrets.Name.Eq(name)).FirstOrNil(ctx)
+		if err != nil {
+			return err
+		}
+		if row == nil {
+			repo.Add(&InstanceSecret{Name: name, Wrapped: w})
+		} else {
+			row.Wrapped = w
+		}
+		return nil
+	})
+}
+
+// LookupInstanceSecret returns a secret of the instance, or nil when it is not set.
+func (v *Vault) LookupInstanceSecret(ctx context.Context, name string) ([]byte, error) {
+	row, err := drel.NewRepository(v.e, InstanceSecretMeta).Where(InstanceSecrets.Name.Eq(name)).FirstOrNil(ctx)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	v.mu.Lock()
+	master := v.master
+	v.mu.Unlock()
+	return unwrapKey(master, row.Wrapped, instanceAAD(name))
+}
+
+// DeleteInstanceSecret removes a secret of the instance. A missing secret is not an error.
+func (v *Vault) DeleteInstanceSecret(ctx context.Context, name string) error {
+	_, err := v.e.Exec(ctx, "DELETE FROM instance_secrets WHERE name = $1", name)
+	return err
+}

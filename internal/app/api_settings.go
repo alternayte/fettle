@@ -72,6 +72,10 @@ func (a *App) registerSettings(api huma.API) {
 		if err != nil {
 			return nil, err
 		}
+		if d, ok := settings.Lookup(in.Key); ok && d.Scope != "space" {
+			// A space owner does not change the server; an instance admin uses /admin/settings.
+			return nil, huma.Error422UnprocessableEntity(in.Key + " is a setting of the server, not of a space.")
+		}
 		if in.Key == "approval.mode" {
 			return nil, huma.Error422UnprocessableEntity("The approval mode changes only through its card. Use PUT /spaces/{space}/approval-mode.")
 		}

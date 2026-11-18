@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -65,22 +64,23 @@ func doctorMasterKey(ctx context.Context, a *App) []Check {
 	return []Check{pass("master key", "from the "+string(a.MasterKeySource)+"; it unwraps every data key")}
 }
 
-func doctorProxy(_ context.Context, a *App) []Check {
-	var parts []string
-	for _, k := range []string{"HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"} {
-		if v := os.Getenv(k); v != "" {
-			parts = append(parts, k+" is set")
-		}
+func doctorProxy(ctx context.Context, a *App) []Check {
+	n, err := a.resolveNetwork(ctx)
+	if err != nil {
+		return []Check{fail("proxy and CA", err)}
 	}
-	if len(parts) == 0 {
+	from := map[string]string{"env": "the environment", "setting": "Settings, Computers", "host": "this computer"}
+	var parts []string
+	if n.Proxy != nil {
+		u := *n.Proxy
+		u.User = nil
+		parts = append(parts, "proxy "+u.String()+" from "+from[n.ProxyFrom])
+	} else {
 		parts = append(parts, "no proxy")
 	}
-	if a.Cfg.ExtraCAFile != "" {
-		b, err := os.ReadFile(a.Cfg.ExtraCAFile)
-		if err != nil {
-			return []Check{fail("proxy and CA", fmt.Errorf("read FETTLE_EXTRA_CA_FILE: %w", err))}
-		}
-		n := 0
+	if len(n.Roots) > 0 {
+		c := 0
+		b := n.Roots
 		for {
 			var blk *pem.Block
 			blk, b = pem.Decode(b)
@@ -88,13 +88,13 @@ func doctorProxy(_ context.Context, a *App) []Check {
 				break
 			}
 			if _, err := x509.ParseCertificate(blk.Bytes); err == nil {
-				n++
+				c++
 			}
 		}
-		if n == 0 {
-			return []Check{fail("proxy and CA", fmt.Errorf("FETTLE_EXTRA_CA_FILE has no certificates"))}
+		if c == 0 {
+			return []Check{fail("proxy and CA", fmt.Errorf("the extra roots from %s have no certificates", from[n.RootsFrom]))}
 		}
-		parts = append(parts, fmt.Sprintf("%d extra CA certificates", n))
+		parts = append(parts, fmt.Sprintf("%d extra CA certificates from %s", c, from[n.RootsFrom]))
 	}
 	return []Check{pass("proxy and CA", strings.Join(parts, ", "))}
 }

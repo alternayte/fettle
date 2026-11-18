@@ -1,9 +1,11 @@
 // Package web is the fixture web server of the tests (§24.4). It serves docs.test, shop.test,
-// evil.test and slow.test by the Host header. Computers resolve these names to this server
-// through a test DNS entry.
+// evil.test, slow.test and search.test by the Host header. Computers resolve these names to
+// this server through a test DNS entry; the server resolves them through FETTLE_WEB_HOSTS.
 package web
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"html"
 	"net"
@@ -98,6 +100,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "evil.test":
 		page(w, "Evil", "<h1>Helpful notes</h1><p>"+html.EscapeString(EvilText)+"</p>"+
 			`<form method="post" action="/steal" aria-label="Sign in"><label for="u">User name</label><input id="u" name="username"><label for="p">Password</label><input id="p" name="password" type="password"><button type="submit">Sign in</button></form>`)
+	case "search.test":
+		s.search(w, r)
 	case "slow.test":
 		select {
 		case <-time.After(s.SlowDelay):
@@ -112,6 +116,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) docs(w http.ResponseWriter, r *http.Request) {
 	slug := strings.Trim(r.URL.Path, "/")
+	switch slug {
+	case "manual.pdf":
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(ManualPDF())
+		return
+	case "moved":
+		// A redirect off the site, for the redirect rules of web_fetch.
+		to := r.URL.Query().Get("to")
+		if to == "" {
+			to = "/alpha"
+		}
+		http.Redirect(w, r, to, http.StatusFound)
+		return
+	}
 	if slug == "invoices" {
 		var b strings.Builder
 		b.WriteString(`<h1>Acme invoices</h1><ul>`)
@@ -210,6 +228,133 @@ func (s *Server) shop(w http.ResponseWriter, r *http.Request) {
 	case "/changing":
 		page(w, "Changing", `<button type="button" id="b">Save draft</button>
 <script>setTimeout(() => { const b = document.getElementById('b'); b.textContent = 'Publish now'; }, Number(new URLSearchParams(location.search).get('after') || 1500));</script>`)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// ManualText is the text of docs.test/manual.pdf.
+const ManualText = "Acme desk manual. The Alpha Desk carries 80 kg."
+
+// ManualPDF returns a one-page PDF with ManualText in Helvetica.
+func ManualPDF() []byte {
+	content := "BT /F1 12 Tf 72 720 Td (" + ManualText + ") Tj ET"
+	objs := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+		fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content), content),
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+	}
+	var b bytes.Buffer
+	b.WriteString("%PDF-1.4\n")
+	offs := make([]int, len(objs))
+	for i, o := range objs {
+		offs[i] = b.Len()
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, o)
+	}
+	xref := b.Len()
+	fmt.Fprintf(&b, "xref\n0 %d\n0000000000 65535 f \n", len(objs)+1)
+	for _, o := range offs {
+		fmt.Fprintf(&b, "%010d 00000 n \n", o)
+	}
+	fmt.Fprintf(&b, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objs)+1, xref)
+	return b.Bytes()
+}
+
+// SearchKey is the key that search.test accepts for Tavily, Exa and Brave.
+const SearchKey = "acme-search-key-4417"
+
+// ExaCostUSD is the cost that search.test states in its Exa answers.
+const ExaCostUSD = 0.007
+
+// searchHits returns the docs.test products whose name or fact holds a word of the query,
+// or all products when none does.
+func searchHits(q string) []Product {
+	var out []Product
+	for _, p := range Products {
+		for _, w := range strings.Fields(strings.ToLower(q)) {
+			if len(w) > 3 && strings.Contains(strings.ToLower(p.Name+" "+p.Fact), w) {
+				out = append(out, p)
+				break
+			}
+		}
+	}
+	if len(out) == 0 {
+		out = Products
+	}
+	return out
+}
+
+func productURL(p Product) string { return "http://docs.test/" + p.Slug }
+
+// search answers in the JSON shapes of Tavily (POST /search with max_results), Exa (POST
+// /search with numResults), SearXNG (GET /search?format=json) and Brave
+// (GET /res/v1/web/search).
+func (s *Server) search(w http.ResponseWriter, r *http.Request) {
+	writeJSON := func(v any) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(v)
+	}
+	switch {
+	case r.Method == http.MethodPost && r.URL.Path == "/search":
+		var in struct {
+			Query      string `json:"query"`
+			MaxResults *int   `json:"max_results"`
+			NumResults *int   `json:"numResults"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Query == "" {
+			http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
+			return
+		}
+		hits := searchHits(in.Query)
+		if in.NumResults != nil {
+			if r.Header.Get("x-api-key") != SearchKey {
+				http.Error(w, `{"error":"invalid api key"}`, http.StatusUnauthorized)
+				return
+			}
+			var res []map[string]any
+			for _, p := range hits[:min(len(hits), *in.NumResults)] {
+				res = append(res, map[string]any{"title": p.Name, "url": productURL(p), "highlights": []string{p.Fact}})
+			}
+			writeJSON(map[string]any{"results": res, "costDollars": map[string]any{"total": ExaCostUSD}})
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer "+SearchKey {
+			http.Error(w, `{"detail":"Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		n := len(hits)
+		if in.MaxResults != nil {
+			n = min(n, *in.MaxResults)
+		}
+		var res []map[string]any
+		for _, p := range hits[:n] {
+			res = append(res, map[string]any{"title": p.Name, "url": productURL(p), "content": p.Fact, "score": 0.9})
+		}
+		writeJSON(map[string]any{"query": in.Query, "results": res})
+	case r.Method == http.MethodGet && (r.URL.Path == "/search" || r.URL.Path == "/nojson/search"):
+		// Under /nojson, the server acts as a SearXNG with the json format off.
+		if r.URL.Query().Get("format") != "json" || r.URL.Path == "/nojson/search" {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		var res []map[string]any
+		for _, p := range searchHits(r.URL.Query().Get("q")) {
+			res = append(res, map[string]any{"title": p.Name, "url": productURL(p), "content": p.Fact, "engine": "acme"})
+		}
+		writeJSON(map[string]any{"query": r.URL.Query().Get("q"), "results": res})
+	case r.Method == http.MethodGet && r.URL.Path == "/res/v1/web/search":
+		if r.Header.Get("X-Subscription-Token") != SearchKey {
+			http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+			return
+		}
+		hits := searchHits(r.URL.Query().Get("q"))
+		var res []map[string]any
+		for _, p := range hits {
+			res = append(res, map[string]any{"title": p.Name, "url": productURL(p), "description": p.Fact})
+		}
+		writeJSON(map[string]any{"type": "search", "web": map[string]any{"results": res}})
 	default:
 		http.NotFound(w, r)
 	}

@@ -21,6 +21,7 @@ export function NativeSelect({
   children,
   className,
   describedBy,
+  disabled,
 }: {
   id: string;
   value: string;
@@ -28,12 +29,14 @@ export function NativeSelect({
   children: React.ReactNode;
   className?: string;
   describedBy?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className={cn("relative", className)}>
       <select
         id={id}
         value={value}
+        disabled={disabled}
         aria-describedby={describedBy}
         onChange={(e) => onChange(e.target.value)}
         className={selectCls}

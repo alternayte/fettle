@@ -20,7 +20,7 @@ for arch in arm64 amd64; do
   carch=$arch; [ "$arch" = amd64 ] && carch=x86_64
   (cd "$repo" && CGO_ENABLED=1 GOOS=darwin GOARCH=$arch \
     CGO_CFLAGS="-mmacosx-version-min=13.0 -arch $carch" CGO_LDFLAGS="-mmacosx-version-min=13.0 -arch $carch" \
-    go build -tags desktop -trimpath -ldflags "-s -w -X main.version=$version -X main.updateKey=${FETTLE_UPDATE_PUBLIC_KEY:-}" -o "$work/fettle-desktop-$arch" ./cmd/fettle-desktop)
+    go build -tags desktop -trimpath -ldflags "-s -w -X main.version=$version -X main.computerImage=ghcr.io/alternayte/fettle-computer:$version -X main.updateKey=${FETTLE_UPDATE_PUBLIC_KEY:-}" -o "$work/fettle-desktop-$arch" ./cmd/fettle-desktop)
 done
 
 app="$work/Fettle.app"

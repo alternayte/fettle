@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,8 +33,12 @@ type inProcess struct {
 	closers map[string][]func()
 }
 
+// imageGone makes every image missing, so a test can fail a build and then retry the same
+// template.
+var imageGone atomic.Bool
+
 func (p *inProcess) Image(_ context.Context, ref string) error {
-	if strings.Contains(ref, "missing") {
+	if strings.Contains(ref, "missing") || imageGone.Load() {
 		return errors.New("manifest unknown: " + ref)
 	}
 	return nil
@@ -160,9 +165,16 @@ func TestE2BBridgeCarriesPinnedTLS(t *testing.T) {
 			t.Fatalf("template %s builds from %q", name, img)
 		}
 	}
-	if p.Template(computers.SizeSmall) != "fettle-v1-2-3-small" {
-		t.Fatalf("template name %q", p.Template(computers.SizeSmall))
+	if want := "fettle-v1-2-3-" + computers.ImageHash(p.Image) + "-small"; p.Template(computers.SizeSmall) != want {
+		t.Fatalf("template name %q, want %q", p.Template(computers.SizeSmall), want)
 	}
+	// Another image gets other templates, so the next preparation builds them.
+	before := p.Template(computers.SizeSmall)
+	p.SetImage(p.Image + "-next")
+	if p.Template(computers.SizeSmall) == before {
+		t.Fatal("a new image keeps the old template name")
+	}
+	p.SetImage(strings.TrimSuffix(p.Image, "-next"))
 
 	s, token, cert := spec(t, `{"mode":"allowlist","allow_hosts":["docs.acme.test","*.acme.test"]}`)
 	m, err := p.Create(ctx, s)
@@ -281,6 +293,26 @@ func TestE2BOpenZoneHasNoEgressLimit(t *testing.T) {
 	}
 }
 
+// Behind a proxy, an allowlist zone also allows the proxy host at E2B, because the filter
+// proxy in the computer reaches the allowed sites through it.
+func TestE2BAllowlistBehindProxyAllowsTheProxy(t *testing.T) {
+	fake, p := start(t)
+	if err := p.Prepare(t.Context(), nil); err != nil {
+		t.Fatal(err)
+	}
+	s, _, _ := spec(t, `{"mode":"allowlist","allow_hosts":["docs.acme.test"]}`)
+	s.Env["FETTLE_AGENTD_PROXY"] = "http://user@proxy.acme.test:3128"
+	m, err := p.Create(t.Context(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = m.Destroy(context.Background()) })
+	info, _ := fake.Sandbox(m.Ref())
+	if !slices.Equal(info.AllowOut, []string{"docs.acme.test", "proxy.acme.test"}) || !slices.Equal(info.DenyOut, []string{"0.0.0.0/0"}) {
+		t.Fatalf("egress behind a proxy: allow %v deny %v", info.AllowOut, info.DenyOut)
+	}
+}
+
 // A wrong key and a failed template build name the fault.
 func TestE2BFaults(t *testing.T) {
 	fake, p := start(t)
@@ -292,17 +324,20 @@ func TestE2BFaults(t *testing.T) {
 	if _, err := p.Attach(t.Context(), "inone"); !errors.Is(err, computers.ErrGone) {
 		t.Fatalf("a lost sandbox: %v", err)
 	}
-	p.Image = "ghcr.io/alternayte/missing:1"
+	imageGone.Store(true)
 	var steps []computers.Progress
 	err := p.Prepare(t.Context(), func(pr computers.Progress) { steps = append(steps, pr) })
+	imageGone.Store(false)
 	if err == nil || !strings.Contains(err.Error(), "manifest unknown") {
 		t.Fatalf("a missing image: %v", err)
 	}
 	if last := steps[len(steps)-1]; last.State != "fail" || last.Step != "template small" {
 		t.Fatalf("last step %+v", last)
 	}
+	if !strings.Contains(err.Error(), p.Image) || !strings.Contains(err.Error(), "Settings, Computers") {
+		t.Fatalf("the error does not name the image and the setting: %v", err)
+	}
 	// A later preparation builds the template again.
-	p.Image = "ghcr.io/alternayte/fettle-computer:1.2.3"
 	if err := p.Prepare(t.Context(), nil); err != nil {
 		t.Fatalf("prepare after a failed build: %v", err)
 	}

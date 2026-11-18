@@ -1,4 +1,5 @@
-// Package usage records model tokens, cost and computer seconds, and reports cost views (§8.4).
+// Package usage records model tokens, cost, computer seconds and search calls, and reports
+// cost views (§8.4).
 package usage
 
 import (
@@ -49,7 +50,9 @@ type Row struct {
 	TokensOut int64   `json:"tokens_out"`
 	Seconds   int64   `json:"seconds"`
 	CostUSD   float64 `json:"cost_usd"`
-	Calls     int64   `json:"calls"`
+	// Calls counts model calls and search calls; Searches counts the search calls alone.
+	Calls    int64 `json:"calls"`
+	Searches int64 `json:"searches"`
 }
 
 // View groups the usage of a space by one dimension since a time.
@@ -73,7 +76,8 @@ func (s *Service) View(ctx context.Context, spaceID uuid.UUID, dim string, since
 		}
 	}
 	q := `SELECT ` + expr + ` AS k, COALESCE(SUM(tokens_in),0), COALESCE(SUM(tokens_out),0),
-		COALESCE(SUM(CASE WHEN unit = 'seconds' THEN quantity ELSE 0 END),0), COALESCE(SUM(cost_usd),0), COALESCE(SUM(CASE WHEN kind = 'model' THEN 1 ELSE 0 END),0)
+		COALESCE(SUM(CASE WHEN unit = 'seconds' THEN quantity ELSE 0 END),0), COALESCE(SUM(cost_usd),0), COALESCE(SUM(CASE WHEN kind IN ('model','search') THEN 1 ELSE 0 END),0),
+		COALESCE(SUM(CASE WHEN kind = 'search' THEN quantity ELSE 0 END),0)
 		FROM usage_events WHERE space_id = $1 AND at >= $2 GROUP BY k ORDER BY k`
 	rows, err := s.e.Query(ctx, q, spaceID, since)
 	if err != nil {
@@ -83,7 +87,7 @@ func (s *Service) View(ctx context.Context, spaceID uuid.UUID, dim string, since
 	var out []Row
 	for rows.Next() {
 		var r Row
-		if err := rows.Scan(&r.Key, &r.TokensIn, &r.TokensOut, &r.Seconds, &r.CostUSD, &r.Calls); err != nil {
+		if err := rows.Scan(&r.Key, &r.TokensIn, &r.TokensOut, &r.Seconds, &r.CostUSD, &r.Calls, &r.Searches); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

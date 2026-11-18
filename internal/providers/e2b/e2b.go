@@ -63,6 +63,7 @@ type Provider struct {
 	Image string
 	// Version names the templates, so a new release builds new ones.
 	Version string
+	imu     sync.Mutex
 	// HTTP carries the API, envd and port traffic; nil uses the default client.
 	HTTP *http.Client
 	// PollEvery is the interval of the template build checks; zero is 2 seconds.
@@ -112,7 +113,20 @@ func (p *Provider) Template(size computers.Size) string {
 	if v == "" {
 		v = "dev"
 	}
-	return "fettle-" + v + "-" + string(size)
+	return "fettle-" + v + "-" + computers.ImageHash(p.image()) + "-" + string(size)
+}
+
+// SetImage changes the computer image. The next preparation builds templates from it.
+func (p *Provider) SetImage(image string) {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	p.Image = image
+}
+
+func (p *Provider) image() string {
+	p.imu.Lock()
+	defer p.imu.Unlock()
+	return p.Image
 }
 
 func (p *Provider) poll() time.Duration {
@@ -177,7 +191,7 @@ func (p *Provider) prepareTemplate(ctx context.Context, size computers.Size, rep
 			continue
 		}
 		// Missing, or the last build failed: build it now.
-		report("running", "building "+name+" from "+p.Image)
+		report("running", "building "+name+" from "+p.image())
 		return p.build(ctx, name, size)
 	}
 }
@@ -208,7 +222,7 @@ func (p *Provider) build(ctx context.Context, name string, size computers.Size) 
 	if err := p.call(ctx, http.MethodPost, "/v3/templates", templateBuildRequest{Name: name, CPUCount: spec.VCPU, MemoryMB: spec.MemMiB}, &res); err != nil {
 		return fmt.Errorf("build template %s: %w", name, err)
 	}
-	if err := p.call(ctx, http.MethodPost, "/v2/templates/"+esc(res.TemplateID)+"/builds/"+esc(res.BuildID), templateBuildStart{FromImage: p.Image}, nil); err != nil {
+	if err := p.call(ctx, http.MethodPost, "/v2/templates/"+esc(res.TemplateID)+"/builds/"+esc(res.BuildID), templateBuildStart{FromImage: p.image()}, nil); err != nil {
 		return fmt.Errorf("start the build of template %s: %w", name, err)
 	}
 	for {
@@ -227,25 +241,12 @@ func (p *Provider) build(ctx context.Context, name string, size computers.Size) 
 					msg += " (step " + info.Reason.Step + ")"
 				}
 			}
-			return fmt.Errorf("template %s: %s", name, msg)
+			return fmt.Errorf("template %s from the image %s: %s. %s", name, p.image(), msg, computers.ImageHint)
 		}
 		if err := wait(ctx, p.poll()); err != nil {
 			return err
 		}
 	}
-}
-
-// allowHosts reads the hosts of an allowlist zone from the agentd network rules. ok is
-// false for an open zone.
-func allowHosts(env map[string]string) (hosts []string, ok bool) {
-	var n struct {
-		Mode       string   `json:"mode"`
-		AllowHosts []string `json:"allow_hosts"`
-	}
-	if err := json.Unmarshal([]byte(env["FETTLE_AGENTD_NETWORK"]), &n); err != nil || n.Mode != "allowlist" {
-		return nil, false
-	}
-	return append([]string{}, n.AllowHosts...), true
 }
 
 // Create starts a sandbox of the zone's size and starts agentd in it through envd. An
@@ -257,12 +258,12 @@ func (p *Provider) Create(ctx context.Context, s computers.Spec) (computers.Mach
 		size = computers.SizeBrowser
 	}
 	tmpl := p.Template(size)
-	if s.Image != "" && s.Image != p.Image {
+	if s.Image != "" && s.Image != p.image() {
 		tmpl = s.Image // a provider template named by the caller
 	}
 	private := false
 	nw := &networkConfig{AllowPublicTraffic: &private}
-	if hosts, ok := allowHosts(s.Env); ok {
+	if hosts, ok := computers.EgressHosts(s.Env); ok {
 		// Allowed entries take precedence over denied ones; with no hosts nothing is allowed.
 		nw.AllowOut, nw.DenyOut = hosts, []string{"0.0.0.0/0"}
 	}

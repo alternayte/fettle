@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -34,11 +35,17 @@ type Config struct {
 	User    string
 	Network NetworkPolicy
 	Version string
+	// CA holds extra root certificates as PEM. The boot step installs them.
+	CA []byte
+	// Proxy is the upstream proxy URL with the user name; ProxyPassword is its password.
+	// With a proxy, all traffic of the computer goes through the filter proxy.
+	Proxy         string
+	ProxyPassword string
 }
 
 // SecretEnv lists the environment variables that hold secrets. The command
 // unsets them after it reads the configuration so that no child sees them.
-var SecretEnv = []string{"FETTLE_AGENTD_TOKEN", "FETTLE_AGENTD_TLS_CERT", "FETTLE_AGENTD_TLS_KEY"}
+var SecretEnv = []string{"FETTLE_AGENTD_TOKEN", "FETTLE_AGENTD_TLS_CERT", "FETTLE_AGENTD_TLS_KEY", "FETTLE_AGENTD_PROXY_PASSWORD"}
 
 // ConfigFromEnv reads the configuration from FETTLE_AGENTD_* variables.
 func ConfigFromEnv(getenv func(string) string) (Config, error) {
@@ -51,6 +58,10 @@ func ConfigFromEnv(getenv func(string) string) (Config, error) {
 		WSAddr:   getenv("FETTLE_AGENTD_WS_ADDR"),
 		Home:     getenv("FETTLE_AGENTD_HOME"),
 		User:     getenv("FETTLE_AGENTD_USER"),
+		CA:       []byte(getenv("FETTLE_AGENTD_CA")),
+		Proxy:    strings.TrimSpace(getenv("FETTLE_AGENTD_PROXY")),
+
+		ProxyPassword: getenv("FETTLE_AGENTD_PROXY_PASSWORD"),
 	}
 	if c.Addr == "" {
 		c.Addr = ":7421"
@@ -86,6 +97,12 @@ func (c *Config) validate() error {
 	case NetworkOpen, NetworkAllowlist:
 	default:
 		return fmt.Errorf("FETTLE_AGENTD_NETWORK: unknown mode %q", c.Network.Mode)
+	}
+	if c.Proxy != "" {
+		u, err := url.Parse(c.Proxy)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("FETTLE_AGENTD_PROXY must be an http:// or https:// URL, got %q", c.Proxy)
+		}
 	}
 	if !filepath.IsAbs(c.Home) {
 		return fmt.Errorf("FETTLE_AGENTD_HOME must be an absolute path, got %q", c.Home)

@@ -154,6 +154,7 @@ export async function createAppRouter() {
         sub("computers", () => import("@/features/settings/ComputersPage"), "ComputersPage"),
         sub("vault", () => import("@/features/settings/VaultPage"), "VaultPage"),
         sub("connectors", () => import("@/features/settings/ConnectorsPage"), "ConnectorsPage"),
+        sub("web", () => import("@/features/settings/WebPage"), "WebPage"),
         sub("approvals", () => import("@/features/settings/ApprovalsPage"), "ApprovalsPage"),
         sub("space", () => import("@/features/settings/SpacePage"), "SpacePage"),
         sub("budgets", () => import("@/features/settings/BudgetsPage"), "BudgetsPage"),

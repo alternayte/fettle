@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -134,6 +135,11 @@ func (s *Server) openBrowser(req client.BrowserContextRequest) (*browserCtx, err
 	)
 	if s.browsers.bin != "" {
 		opts = append(opts, chromedp.ExecPath(s.browsers.bin))
+	}
+	if s.network.Proxy != "" {
+		// The filter proxy checks the zone policy and signs in to the upstream proxy.
+		// Loopback stays direct, so the browser reaches servers that the bot starts.
+		opts = append(opts, chromedp.ProxyServer(s.network.Proxy))
 	}
 	if req.Screen != "" {
 		x, err := s.startScreen(req.Screen)
@@ -356,7 +362,7 @@ func (s *Server) browserNavigate(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(c.tab, 30*time.Second)
 	defer cancel()
 	if err := chromedp.Run(ctx, chromedp.Navigate(u.String())); err != nil {
-		s.fail(w, "browser", &httpError{status: http.StatusBadGateway, msg: "the page did not load: " + cleanCDP(err)})
+		s.fail(w, "browser", &httpError{status: http.StatusBadGateway, msg: "the page did not load: " + cleanNav(err, u.Hostname(), s.cfg.Network)})
 		return
 	}
 	snap, err := c.snapshot(ctx)
@@ -393,10 +399,56 @@ func (s *Server) browserSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 func cleanCDP(err error) string {
+	return cleanNav(err, "", NetworkPolicy{})
+}
+
+// cleanNav turns a browser error into plain words with the next step. host is the site the
+// browser tried to reach, when it is known; policy is the network policy of the zone.
+func cleanNav(err error, host string, policy NetworkPolicy) string {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return "it took too long"
 	}
+	if msg, ok := netErrorMessage(err.Error(), host, policy); ok {
+		return msg
+	}
 	return err.Error()
+}
+
+// netErrRe finds a Chromium network error code such as net::ERR_NAME_NOT_RESOLVED.
+var netErrRe = regexp.MustCompile(`net::(ERR_[A-Z0-9_]+)`)
+
+// Plain messages for network errors (§10.7). The code stays at the end, so the network check
+// can tell the steps apart.
+const (
+	msgInspectsHTTPS = "This network inspects HTTPS. Add your company root certificate in Settings, Computers."
+	msgProxy         = "The proxy did not answer."
+)
+
+func netErrorMessage(raw, host string, policy NetworkPolicy) (string, bool) {
+	m := netErrRe.FindStringSubmatch(raw)
+	if m == nil {
+		return "", false
+	}
+	code := m[1]
+	site := host
+	if site == "" {
+		site = "the site"
+	}
+	allowlisted := policy.Mode == NetworkAllowlist && host != "" && !hostAllowed(policy, host, "443")
+	var msg string
+	switch {
+	case strings.HasPrefix(code, "ERR_CERT_"):
+		msg = msgInspectsHTTPS
+	case code == "ERR_NAME_NOT_RESOLVED":
+		msg = "The computer could not look up " + site + "."
+	case allowlisted && (code == "ERR_CONNECTION_REFUSED" || code == "ERR_CONNECTION_RESET" || code == "ERR_TUNNEL_CONNECTION_FAILED"):
+		msg = site + " is not on the allowlist of this zone."
+	case code == "ERR_PROXY_CONNECTION_FAILED" || code == "ERR_TUNNEL_CONNECTION_FAILED":
+		msg = msgProxy
+	default:
+		return "", false
+	}
+	return msg + " (net::" + code + ")", true
 }
 
 func findElement(snap client.Snapshot, ref string) *client.Element {

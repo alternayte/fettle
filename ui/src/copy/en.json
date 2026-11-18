@@ -497,11 +497,13 @@
       "steps": {
         "runtime": "Container runtime",
         "service": "Container service",
+        "kernel": "Linux kernel",
         "image": "Computer image",
         "docker": "Docker",
         "kvm": "Virtualization",
         "kiln": "Kiln"
-      }
+      },
+      "downloading": "Downloading the computer image ({mb} MB)"
     },
     "model": {
       "title": "Add a model key",
@@ -690,6 +692,7 @@
       "tokens": "Access tokens",
       "notifications": "Notifications",
       "connectors": "Connectors",
+      "web": "Web",
       "budgets": "Budgets",
       "members": "Members",
       "account": "Account"
@@ -754,7 +757,7 @@
     "loadFailed": "Fettle cannot load the cost",
     "empty": {
       "title": "No cost in this range",
-      "body": "Model calls and computer time show here."
+      "body": "Model calls, searches and computer time show here."
     },
     "none": "None",
     "total": "Total",
@@ -773,6 +776,7 @@
       "tokensIn": "Tokens in",
       "tokensOut": "Tokens out",
       "time": "Computer time",
+      "searches": "Searches",
       "cost": "Cost"
     }
   },
@@ -973,7 +977,50 @@
     "testing": "Fettle starts the computer and runs a test command.",
     "testPass": "The computer works. It was ready in {start} and ran the command in {exec}: {output}",
     "testFail": "The computer test failed: {error}",
-    "underSecond": "under 1 s"
+    "underSecond": "under 1 s",
+    "check": "Check network",
+    "checking": "Fettle starts the computer and fetches one HTTPS page with curl and with the browser.",
+    "checkPass": "The computer reaches {url}.",
+    "checkFail": "The computer does not reach {url}.",
+    "checkNoStart": "The computer did not start: {error}",
+    "checkProxy": "It uses a proxy.",
+    "checkRoots": "It has extra root certificates.",
+    "tools": {
+      "curl": "curl",
+      "chromium": "Browser"
+    },
+    "steps": {
+      "dns": "DNS",
+      "connect": "Connect",
+      "tls": "TLS"
+    },
+    "stepState": {
+      "pass": "passed",
+      "fail": "failed",
+      "skip": "not run"
+    },
+    "server": {
+      "title": "This server",
+      "intro": "These settings apply to every space on this server. Only instance admins see them.",
+      "loadFailed": "Fettle could not load the settings of this server",
+      "saved": "The setting is saved. The next computer uses it.",
+      "reset": "The setting is back to its default.",
+      "resetDefault": "Reset to default",
+      "locked": "The environment variable {env} sets this value. Change the variable to change it.",
+      "image": "Computer image",
+      "imageHint": "Leave it empty to use the image of this build: {image}.",
+      "useHost": "Use this computer's certificates and proxy",
+      "useHostHint": "Computers trust the root certificates that your admin added here, and use the system proxy.",
+      "extraCA": "Extra root certificates",
+      "extraCAHint": "PEM text. Add your company root certificate when your network inspects HTTPS.",
+      "proxy": "Proxy",
+      "proxyHint": "For example http://user@proxy.example.com:3128. Put the password in the field below.",
+      "proxyPassword": "Proxy password",
+      "secretSet": "A password is set. Fettle does not show it.",
+      "secretUnset": "No password is set.",
+      "clear": "Clear",
+      "cleared": "The password is cleared."
+    }
   },
   "approvals": {
     "mode": "Approval mode",
@@ -1163,7 +1210,39 @@
     "composioHint": "A Composio key adds Composio's MCP endpoint and its apps.",
     "composioKey": "Composio key",
     "composioAdd": "Add Composio",
-    "signInFailed": "The sign-in did not finish: {reason}"
+    "signInFailed": "The sign-in did not finish: {reason}",
+    "edit": "Edit connector",
+    "editConnector": "Edit {name}",
+    "save": "Save changes",
+    "saved": "The connector is saved.",
+    "variables": "Variables",
+    "variablesHint": "Plain values for the server, such as a site address. Put keys and tokens on the account.",
+    "secretVariables": "Secret variables",
+    "secretHint": "Fettle seals each value. After you save, Fettle shows only the name.",
+    "varName": "Variable name",
+    "varValue": "Value of {name}",
+    "newVariable": "new variable",
+    "addVariable": "Add variable",
+    "removeVariable": "Remove {name}",
+    "set": "set",
+    "notSet": "not set",
+    "required": "required",
+    "willRemove": "removed when you save",
+    "replaceHint": "Type a new value to replace it.",
+    "remove": "Remove",
+    "keep": "Keep",
+    "newKey": "New key",
+    "newKeyHint": "Leave it empty to keep the key.",
+    "keySet": "Key: set",
+    "editAccount": "Edit account {label}",
+    "accountSaved": "The account is saved.",
+    "signInAgain": "Sign in again",
+    "needsSignIn": "The URL changed. Sign in again to use this account. Its grants stay.",
+    "urlWarnTitle": "Each account must sign in again",
+    "urlWarnBody": "A new URL needs a new sign-in. The accounts and their grants stay. Their tokens go.",
+    "urlWarnSave": "Save and sign in again",
+    "firstAccount": "First account",
+    "firstAccountHint": "Each account runs its own server with its own secret variables."
   },
   "skills": {
     "title": "Skills",
@@ -1634,6 +1713,63 @@
       "vaultSecret": "Give the hidden input with use_secret and the vault item",
       "chooseItem": "Choose an item",
       "addItem": "Add an item to the vault"
+    }
+  },
+  "web": {
+    "intro": "Bots read web pages with web_fetch. Bots search the web with web_search when this space has a search provider.",
+    "loadFailed": "Fettle cannot load the web settings",
+    "kinds": {
+      "tavily": "Tavily",
+      "exa": "Exa",
+      "searxng": "SearXNG",
+      "brave": "Brave Search"
+    },
+    "price": {
+      "tavily": "About $0.008 for each search.",
+      "exa": "Exa sends the cost of each search. Fettle records that cost.",
+      "searxng": "No cost. Your SearXNG server must allow the json format.",
+      "brave": "About $0.005 for each search."
+    },
+    "search": {
+      "title": "Search provider",
+      "on": "web_search uses {provider}.",
+      "keyEnds": "Key ends in {last4}",
+      "offTitle": "web_search is off",
+      "offBody": "No search provider is set. Bots use the browser to search the web.",
+      "remove": "Remove",
+      "removed": "web_search is off",
+      "removeFailed": "Fettle cannot remove the search provider"
+    },
+    "form": {
+      "provider": "Provider",
+      "baseURL": "SearXNG URL",
+      "baseURLHint": "The address of your SearXNG server.",
+      "key": "{provider} API key",
+      "keyOptional": "{provider} key (optional)",
+      "keyHint": "Fettle keeps the key in the vault. Nobody can read it back.",
+      "keyKeep": "Leave this empty to keep the key that ends in {last4}.",
+      "needURL": "Enter a SearXNG URL that starts with http:// or https://.",
+      "needKey": "Enter the API key of {provider}.",
+      "saved": "web_search uses {provider}"
+    },
+    "brave": {
+      "title": "Brave Search API terms",
+      "body": "The run journal keeps search results. The holder of the key accepts the Brave Search API terms.",
+      "link": "Read the Brave Search API terms"
+    },
+    "test": {
+      "title": "Test",
+      "query": "Search for",
+      "placeholder": "Acme desk prices",
+      "run": "Run a search",
+      "failed": "The search failed",
+      "summary": "{n} results in {ms} ms. Cost: {cost}.",
+      "none": "The provider found no results."
+    },
+    "fetch": {
+      "title": "Reading pages",
+      "noteTitle": "web_fetch needs no provider",
+      "body": "web_fetch reads public pages and PDFs from the server. It does not read private or local addresses. In an allowlist zone, it reads only the allowed hosts."
     }
   }
 }

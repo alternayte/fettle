@@ -23,6 +23,22 @@ type Def struct {
 	// Internal marks bookkeeping that Fettle writes for its own jobs (last run times). A
 	// space export leaves it out.
 	Internal bool
+	// Admin shows an instance setting to instance admins in the settings of the server.
+	Admin bool
+	// Env names the environment variable that sets this value. When it is set, the
+	// variable wins and the setting is locked.
+	Env string
+	// Secret keeps the value as an instance secret in the vault, not in the settings table.
+	// The API never returns it, only whether it is set.
+	Secret bool
+	// Desktop shows the setting only when the desktop app runs the server.
+	Desktop bool
+}
+
+// Lookup returns the definition of key.
+func Lookup(key string) (Def, bool) {
+	d, ok := defs[key]
+	return d, ok
 }
 
 // IsInternal reports whether a key is job bookkeeping of the instance.

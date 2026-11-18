@@ -43,6 +43,7 @@ import (
 	"github.com/alternayte/fettle/internal/teach"
 	"github.com/alternayte/fettle/internal/usage"
 	"github.com/alternayte/fettle/internal/vault"
+	"github.com/alternayte/fettle/internal/web"
 	"github.com/alternayte/fettle/internal/zones"
 )
 
@@ -66,6 +67,8 @@ type App struct {
 	Skael    *skills.Skael
 	Screens  *screens.Service
 	Teach    *teach.Service
+	// Web holds the search provider of each space and the web tools.
+	Web *web.Service
 	// Desktop is set when the desktop app runs this server in process (§15.1).
 	Desktop *Desktop
 	// Connectors holds the MCP connectors (§12).
@@ -95,6 +98,11 @@ type App struct {
 	stopped  bool
 	// Telemetry reports the counts it would send (REQ-CORE-012).
 	Telemetry *Telemetry
+	// host caches the certificates and proxy of the desktop host.
+	host hostCache
+	// netMu guards netKey, the network that the HTTP client uses now.
+	netMu  sync.Mutex
+	netKey string
 }
 
 // New opens storage, applies migrations and builds every service. It does not start jobs or HTTP.
@@ -150,6 +158,9 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.Log = NewLogger(cfg.LogLevel, os.Stderr, a.Vault.Redactor)
 	slog.SetDefault(a.Log)
 	a.Settings = settings.New(e, a.Audit)
+	if err := a.applyNetwork(ctx); err != nil {
+		a.Log.Warn("network settings", "error", err)
+	}
 	a.Users = auth.NewUserStore(e)
 	a.Spaces = spaces.New(e, a.Audit)
 	a.Bots = bots.New(e, a.Audit)
@@ -172,6 +183,11 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupRoutines()
 	a.setupPush()
 	a.setupConnectors()
+	a.setupWeb()
+	if err := a.Connectors.SealClientSecrets(ctx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("seal connector client secrets: %w", err)
+	}
 	a.setupSkills()
 	a.setupScreens()
 	a.setupTeach()

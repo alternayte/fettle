@@ -79,6 +79,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerRoutines(api)
 	a.registerPush(api)
 	a.registerConnectors(api)
+	a.registerWeb(api)
 	a.registerSkills(api)
 	a.registerScreens(api)
 	a.registerTeach(api)
@@ -100,6 +101,8 @@ func (a *App) registerAPI(api huma.API) {
 	}
 	a.registerSettings(api)
 	a.registerAdmin(api)
+	a.registerInstanceSettings(api)
+	a.registerNetworkCheck(api)
 	a.registerDiagnostics(api)
 }
 

@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/alternayte/drel"
+	connectors "github.com/alternayte/fettle/connectors"
 	uuid "github.com/google/uuid"
 )
 
@@ -23,6 +24,8 @@ var Connectors = struct {
 	OAuth      drel.ComparableColumn[OAuthClient]
 	Tools      drel.ComparableColumn[map[string]ToolSetting]
 	Icon       drel.StringColumn
+	Env        drel.ComparableColumn[map[string]string]
+	Variables  drel.ComparableColumn[[]connectors.Variable]
 	CreatedAt  drel.TimeColumn
 	UpdatedAt  drel.TimeColumn
 }{
@@ -37,6 +40,8 @@ var Connectors = struct {
 	OAuth:      drel.NewComparableCol[OAuthClient]("oauth"),
 	Tools:      drel.NewComparableCol[map[string]ToolSetting]("tools"),
 	Icon:       drel.NewStringCol("icon"),
+	Env:        drel.NewComparableCol[map[string]string]("env"),
+	Variables:  drel.NewComparableCol[[]connectors.Variable]("variables"),
 	CreatedAt:  drel.NewTimeCol("created_at"),
 	UpdatedAt:  drel.NewTimeCol("updated_at"),
 }
@@ -44,7 +49,7 @@ var Connectors = struct {
 func scanConnector(row drel.Row) (*Connector, error) {
 	p := &Connector{}
 	idPtr, createdAtPtr, updatedAtPtr := p.ScanPtrs()
-	err := row.Scan(idPtr, &p.SpaceID, &p.Name, &p.Kind, &p.URL, drel.JSON[[]string]{V: &p.Command}, &p.Auth, &p.HeaderName, drel.JSON[OAuthClient]{V: &p.OAuth}, drel.JSON[map[string]ToolSetting]{V: &p.Tools}, &p.Icon, createdAtPtr, updatedAtPtr)
+	err := row.Scan(idPtr, &p.SpaceID, &p.Name, &p.Kind, &p.URL, drel.JSON[[]string]{V: &p.Command}, &p.Auth, &p.HeaderName, drel.JSON[OAuthClient]{V: &p.OAuth}, drel.JSON[map[string]ToolSetting]{V: &p.Tools}, &p.Icon, drel.JSON[map[string]string]{V: &p.Env}, drel.JSON[[]connectors.Variable]{V: &p.Variables}, createdAtPtr, updatedAtPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +67,12 @@ type connectorSnapshot struct {
 	OAuth      OAuthClient
 	Tools      map[string]ToolSetting
 	Icon       string
+	Env        map[string]string
+	Variables  []connectors.Variable
 }
 
 func snapshotConnector(p *Connector) any {
-	return connectorSnapshot{SpaceID: p.SpaceID, Name: p.Name, Kind: p.Kind, URL: p.URL, Command: p.Command, Auth: p.Auth, HeaderName: p.HeaderName, OAuth: p.OAuth, Tools: p.Tools, Icon: p.Icon}
+	return connectorSnapshot{SpaceID: p.SpaceID, Name: p.Name, Kind: p.Kind, URL: p.URL, Command: p.Command, Auth: p.Auth, HeaderName: p.HeaderName, OAuth: p.OAuth, Tools: p.Tools, Icon: p.Icon, Env: p.Env, Variables: p.Variables}
 }
 
 func diffConnector(p *Connector, snap any) []drel.FieldChange {
@@ -101,6 +108,12 @@ func diffConnector(p *Connector, snap any) []drel.FieldChange {
 	if p.Icon != s.Icon {
 		changes = append(changes, drel.FieldChange{Column: "icon", Value: p.Icon})
 	}
+	if !maps.Equal(p.Env, s.Env) {
+		changes = append(changes, drel.FieldChange{Column: "env", Value: drel.JSON[map[string]string]{V: &p.Env}})
+	}
+	if !slices.Equal(p.Variables, s.Variables) {
+		changes = append(changes, drel.FieldChange{Column: "variables", Value: drel.JSON[[]connectors.Variable]{V: &p.Variables}})
+	}
 	return changes
 }
 
@@ -133,15 +146,19 @@ func connectorColumnValue(p *Connector, idx int) any {
 	case 10:
 		return p.Icon
 	case 11:
-		return p.CreatedAt()
+		return drel.JSON[map[string]string]{V: &p.Env}
 	case 12:
+		return drel.JSON[[]connectors.Variable]{V: &p.Variables}
+	case 13:
+		return p.CreatedAt()
+	case 14:
 		return p.UpdatedAt()
 	}
 	return nil
 }
 
 func connectorInsertColumns(p *Connector) ([]string, []any) {
-	return []string{"space_id", "name", "kind", "url", "command", "auth", "header_name", "oauth", "tools", "icon"}, []any{p.SpaceID, p.Name, p.Kind, p.URL, drel.JSON[[]string]{V: &p.Command}, p.Auth, p.HeaderName, drel.JSON[OAuthClient]{V: &p.OAuth}, drel.JSON[map[string]ToolSetting]{V: &p.Tools}, p.Icon}
+	return []string{"space_id", "name", "kind", "url", "command", "auth", "header_name", "oauth", "tools", "icon", "env", "variables"}, []any{p.SpaceID, p.Name, p.Kind, p.URL, drel.JSON[[]string]{V: &p.Command}, p.Auth, p.HeaderName, drel.JSON[OAuthClient]{V: &p.OAuth}, drel.JSON[map[string]ToolSetting]{V: &p.Tools}, p.Icon, drel.JSON[map[string]string]{V: &p.Env}, drel.JSON[[]connectors.Variable]{V: &p.Variables}}
 }
 
 func connectorScanReturning(p *Connector, row drel.Row) error {
@@ -165,7 +182,7 @@ func connectorScanGenerated(p *Connector, row drel.Row) error {
 
 var ConnectorMeta = drel.ModelMeta[Connector]{
 	Table:         "connectors",
-	Columns:       []string{"id", "space_id", "name", "kind", "url", "command", "auth", "header_name", "oauth", "tools", "icon", "created_at", "updated_at"},
+	Columns:       []string{"id", "space_id", "name", "kind", "url", "command", "auth", "header_name", "oauth", "tools", "icon", "env", "variables", "created_at", "updated_at"},
 	PKColumns:     []string{"id"},
 	Scan:          scanConnector,
 	Snapshot:      snapshotConnector,

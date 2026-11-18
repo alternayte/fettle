@@ -11,8 +11,11 @@ import (
 	"strings"
 )
 
-// version is set by the release build.
-var version = "dev"
+// Set by the release build: the version, and the computer image that this release uses.
+var (
+	version       = "dev"
+	computerImage = ""
+)
 
 type command struct {
 	summary string

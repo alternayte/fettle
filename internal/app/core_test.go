@@ -27,15 +27,23 @@ import (
 
 	"github.com/alternayte/fettle/internal/app"
 	"github.com/alternayte/fettle/internal/apptest"
+	fakemcp "github.com/alternayte/fettle/internal/fakes/mcp"
 	fakemodel "github.com/alternayte/fettle/internal/fakes/model"
 	"github.com/alternayte/fettle/internal/models"
 	"github.com/alternayte/fettle/internal/testenv"
 )
 
-// TestMain lets a test re-run this binary as a "serve" process (SCN-CORE-003).
+// TestMain lets a test re-run this binary as a "serve" process (SCN-CORE-003), or as the
+// fake stdio MCP server of a stdio connector (SCN-CON-008).
 func TestMain(m *testing.M) {
 	if os.Getenv("FETTLE_TEST_SERVE") == "1" {
 		serveChild()
+		return
+	}
+	if os.Getenv("FETTLE_TEST_FAKEMAIL_STDIO") == "1" {
+		if err := (&fakemcp.Mail{ShowAccount: true}).ServeStdio(context.Background()); err != nil {
+			os.Exit(1)
+		}
 		return
 	}
 	os.Exit(m.Run())
