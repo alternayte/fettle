@@ -764,4 +764,16 @@ func TestSCN_CON_007_StdioVariablesReachTheProcessNotTheURL(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "did not start") {
 		t.Fatalf("missing program: %v", err)
 	}
+
+	// A server that starts and stops at once shows its exit code and its error output.
+	conn, err = a.c.MCPStdio(ctx, client.MCPStdioRequest{Argv: []string{"sh", "-c", `echo "JIRA_URL is not set" >&2; exit 3`}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.ReadAll(conn)
+	_ = conn.Close()
+	var ex *client.MCPExitError
+	if !errors.As(err, &ex) || ex.ExitCode != 3 || !strings.Contains(ex.Stderr, "JIRA_URL is not set") {
+		t.Fatalf("exit: %v", err)
+	}
 }

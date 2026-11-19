@@ -29,6 +29,10 @@ var ErrUnauthorized = errors.New("agentd: unauthorized")
 var ErrNotFound = errors.New("agentd: not found")
 
 // Error is a non-2xx reply from agentd.
+// Protocol is the agentd protocol of this build. Change it with every change to an endpoint
+// that an older server or agentd cannot handle; the server refuses a computer that differs.
+const Protocol = 1
+
 type Error struct {
 	Status  int
 	Message string
@@ -334,4 +338,24 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, body
 		msg = s
 	}
 	return nil, &Error{Status: resp.StatusCode, Message: msg}
+}
+
+// dialError turns a refused websocket handshake into an Error with agentd's reason. The
+// websocket library keeps the first 1024 bytes of the refusal body for this.
+func dialError(resp *http.Response, err error) error {
+	if resp == nil {
+		return err
+	}
+	msg := err.Error()
+	if resp.Body != nil {
+		raw, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		var er ErrorReply
+		if json.Unmarshal(raw, &er) == nil && er.Error != "" {
+			msg = er.Error
+		} else if s := strings.TrimSpace(string(raw)); s != "" {
+			msg = s
+		}
+	}
+	return &Error{Status: resp.StatusCode, Message: msg}
 }

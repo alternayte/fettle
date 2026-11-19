@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"strings"
 	"sync"
 	"time"
@@ -169,13 +168,13 @@ func (a *App) connectorTool(c *connectors.Connector, acc *connectors.ConnectorAc
 
 // leasedConn releases the computer lease when the stdio stream closes.
 type leasedConn struct {
-	net.Conn
+	io.ReadWriteCloser
 	release func()
 	once    sync.Once
 }
 
 func (c *leasedConn) Close() error {
-	err := c.Conn.Close()
+	err := c.ReadWriteCloser.Close()
 	c.once.Do(c.release)
 	return err
 }
@@ -202,5 +201,5 @@ func (a *App) stdioConnector(ctx context.Context, spaceID, botID uuid.UUID, comm
 		l.Release()
 		return nil, err
 	}
-	return &leasedConn{Conn: conn, release: l.Release}, nil
+	return &leasedConn{ReadWriteCloser: conn, release: l.Release}, nil
 }

@@ -486,8 +486,12 @@ func (m *Manager) waitHealthy(ctx context.Context, lv *live, c *Computer, mach M
 				return err
 			}
 			hctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-			_, err = cl.Health(hctx)
+			h, err := cl.Health(hctx)
 			cancel()
+			if err == nil && h.Protocol != client.Protocol {
+				// Waiting does not help: the image or the binary holds another agentd.
+				return fmt.Errorf("the computer runs fettle-agentd %q with protocol %d, but this server needs protocol %d. The computer image %q or the fettle-agentd binary does not match this server. For a development build, run `just image` and `just build`; otherwise set the image of this release in Settings, Computers", h.Version, h.Protocol, client.Protocol, m.image())
+			}
 			if err == nil {
 				lv.client = cl
 				_, _ = m.E.Exec(ctx, "UPDATE computers SET agentd_url = $1 WHERE id = $2", url, c.ID())
