@@ -595,6 +595,53 @@ function lines(s: string): string[] {
     .filter(Boolean);
 }
 
+/** commandText shows a command so that commandArgs reads it back unchanged. */
+function commandText(cmd: string[]): string {
+  if (cmd.length === 1 && /[\s'"\\]/.test(cmd[0])) return `'${cmd[0].split("'").join(`'\\''`)}'`;
+  return cmd.join("\n");
+}
+
+/**
+ * commandArgs reads the command field. One argument per line keeps each line as it is. A
+ * single line splits into words like a shell does, with quotes and backslashes, because
+ * people paste a command as one line and no program name holds a space.
+ */
+function commandArgs(s: string): string[] {
+  const ls = lines(s);
+  if (ls.length !== 1) return ls;
+  const out: string[] = [];
+  let cur = "";
+  let started = false;
+  let quote: "'" | '"' | null = null;
+  const line = ls[0];
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote === "'") {
+      if (ch === "'") quote = null;
+      else cur += ch;
+    } else if (quote === '"') {
+      if (ch === '"') quote = null;
+      else if (ch === "\\" && i + 1 < line.length && '"\\$`'.includes(line[i + 1])) cur += line[++i];
+      else cur += ch;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      started = true;
+    } else if (ch === "\\" && i + 1 < line.length) {
+      cur += line[++i];
+      started = true;
+    } else if (/\s/.test(ch)) {
+      if (started) out.push(cur);
+      cur = "";
+      started = false;
+    } else {
+      cur += ch;
+      started = true;
+    }
+  }
+  if (started) out.push(cur);
+  return out;
+}
+
 function sameEnv(a: Record<string, string>, b: Record<string, string>): boolean {
   const ka = Object.keys(a);
   return ka.length === Object.keys(b).length && ka.every((k) => a[k] === b[k]);
@@ -621,7 +668,7 @@ function ConnectorForm({
   const [name, setName] = useState(edit?.name ?? initial?.name ?? "");
   const [stdio, setStdio] = useState((edit?.kind ?? initial?.kind) === "mcp_stdio");
   const [url, setUrl] = useState(edit?.url ?? initial?.url ?? "");
-  const [command, setCommand] = useState((edit?.command ?? initial?.command ?? []).join("\n"));
+  const [command, setCommand] = useState(commandText(edit?.command ?? initial?.command ?? []));
   const [auth, setAuth] = useState<"none" | "oauth" | "header">(
     (edit?.auth as "none" | "oauth" | "header" | undefined) ?? initial?.auth ?? "oauth",
   );
@@ -638,7 +685,7 @@ function ConnectorForm({
     const body: ConnectorEdit = {};
     if (name.trim() !== c.name) body.name = name.trim();
     if (c.kind === "mcp_stdio") {
-      const cmd = lines(command);
+      const cmd = commandArgs(command);
       if (cmd.join("\n") !== (c.command ?? []).join("\n")) body.command = cmd;
       const e = plainEnv(env);
       if (!sameEnv(e, c.env ?? {})) body.env = e;
@@ -664,7 +711,7 @@ function ConnectorForm({
       ? {
           name: name.trim(),
           kind: "mcp_stdio",
-          command: lines(command),
+          command: commandArgs(command),
           auth: "none",
           env: plainEnv(env),
           variables: declared.length ? declared : undefined,

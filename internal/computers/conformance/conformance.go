@@ -188,6 +188,35 @@ func Run(t *testing.T, p computers.Provider, image string) {
 	})
 }
 
+// destroyZone removes, when the test ends, every machine that the computer rows of a zone
+// name. It is registered before the first machine starts, so a test that fails early leaves
+// no machine behind on the provider.
+func destroyZone(t *testing.T, e *drel.Engine, p computers.Provider, zoneID uuid.UUID) {
+	t.Cleanup(func() {
+		ctx := context.Background()
+		rows, err := drel.NewRepository(e, computers.ComputerMeta).Where(computers.Computers.ZoneID.Eq(zoneID)).All(ctx)
+		if err != nil {
+			t.Errorf("list the computers of the zone: %v", err)
+			return
+		}
+		for _, c := range rows {
+			if c.ProviderRef == "" {
+				continue
+			}
+			m, err := p.Attach(ctx, c.ProviderRef)
+			if errors.Is(err, computers.ErrGone) {
+				continue
+			}
+			if err == nil {
+				err = m.Destroy(ctx)
+			}
+			if err != nil {
+				t.Errorf("destroy the machine %s: %v", c.ProviderRef, err)
+			}
+		}
+	})
+}
+
 // Manager checks the computer manager with a provider: acquire, bot home, checkpoint,
 // sleep and resume, copy fork, and replacement after a restart restore the files.
 func Manager(t *testing.T, kind string, p computers.Provider, image string) {
@@ -212,6 +241,7 @@ func Manager(t *testing.T, kind string, p computers.Provider, image string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	destroyZone(t, db.Engine, p, personal.ID())
 	newManager := func() *computers.Manager {
 		return computers.NewManager(&computers.Manager{E: db.Engine, Zones: zs, Vault: v, Objects: store, Audit: al, Providers: map[string]computers.Provider{kind: p}, Default: kind, Image: image})
 	}
@@ -250,11 +280,18 @@ func Manager(t *testing.T, kind string, p computers.Provider, image string) {
 	if err != nil {
 		t.Fatalf("fork: %v", err)
 	}
+	forkGone := false
+	t.Cleanup(func() {
+		if !forkGone {
+			_ = f.Destroy(context.Background())
+		}
+	})
 	if b, err := f.Client.ReadFile(ctx, home+"/report.md"); err != nil || string(b) != "v1" {
 		t.Fatalf("fork file %q %v", b, err)
 	}
 	_ = f.Client.WriteFile(ctx, home+"/report.md", []byte("fork"), 0o644)
 	_ = f.Destroy(ctx)
+	forkGone = true
 
 	// A new manager (as after a restart) does not know the token: it replaces the machine and
 	// restores the workspace from the object store.
@@ -278,7 +315,6 @@ func Manager(t *testing.T, kind string, p computers.Provider, image string) {
 	if c2.ID() == c.ID() {
 		t.Fatal("the replacement kept the old computer row and token")
 	}
-	t.Cleanup(func() { _ = mgr2.Destroy(context.Background(), c2.ID()); _ = mgr.Destroy(context.Background(), c.ID()) })
 }
 
 // ResumeTimes measures how long a sleeping computer takes to resume, and how long a new
@@ -305,6 +341,7 @@ func ResumeTimes(t *testing.T, kind string, p computers.Provider, image string, 
 	if err != nil {
 		t.Fatal(err)
 	}
+	destroyZone(t, db.Engine, p, personal.ID())
 	newManager := func() *computers.Manager {
 		m := computers.NewManager(&computers.Manager{E: db.Engine, Zones: zs, Vault: v, Objects: store, Audit: al, Providers: map[string]computers.Provider{kind: p}, Default: kind, Image: image})
 		if err := m.SetEnabled(ctx, audit.Actor{Kind: "system", ID: "conformance"}, nil, kind, true); err != nil {
@@ -329,11 +366,6 @@ func ResumeTimes(t *testing.T, kind string, p computers.Provider, image string, 
 	}
 	l.Release()
 	c, _ := mgr.Current(ctx, personal.ID())
-	t.Cleanup(func() {
-		if c2, _ := mgr.Current(context.Background(), personal.ID()); c2 != nil {
-			_ = mgr.Destroy(context.Background(), c2.ID())
-		}
-	})
 	if err := mgr.Sleep(ctx, c.ID()); err != nil {
 		t.Fatalf("sleep: %v", err)
 	}

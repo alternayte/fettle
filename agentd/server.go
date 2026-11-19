@@ -197,6 +197,7 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, client.Health{
 		Version:          s.cfg.Version,
+		Protocol:         client.Protocol,
 		UptimeS:          int64(time.Since(s.started).Seconds()),
 		User:             name,
 		UID:              uid,

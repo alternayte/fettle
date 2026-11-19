@@ -10,7 +10,9 @@ import (
 
 // Health is the reply of GET /v1/health.
 type Health struct {
-	Version          string `json:"version"`
+	Version string `json:"version"`
+	// Protocol is the agentd protocol that the computer speaks; the server refuses another one.
+	Protocol         int    `json:"protocol"`
 	UptimeS          int64  `json:"uptime_s"`
 	User             string `json:"user"`
 	UID              int    `json:"uid"`
@@ -43,6 +45,13 @@ type MCPStdioRequest struct {
 type MCPStdioReply struct {
 	Status int    `json:"status,omitempty"`
 	Error  string `json:"error,omitempty"`
+}
+
+// MCPStdioExit is the last text message of GET /v1/mcp/stdio, after the server stops. Stderr
+// holds the end of its error output, so a server that fails to start says why.
+type MCPStdioExit struct {
+	ExitCode int    `json:"exit_code"`
+	Stderr   string `json:"stderr,omitempty"`
 }
 
 // ExecResult is the final line of an exec stream. OutputFile is relative to

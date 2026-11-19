@@ -130,7 +130,13 @@ func (a *App) registerRuns(api huma.API) {
 			return nil, err
 		}
 		for _, e := range evs {
-			v.Events = append(v.Events, EventView{Seq: e.Seq, At: e.At, Type: e.Type, Data: json.RawMessage(e.Data), Truncated: e.PayloadKey != nil})
+			data := json.RawMessage(e.Data)
+			if !json.Valid(data) {
+				// An event that redaction broke before it kept JSON valid: show it as text,
+				// so one event does not stop the whole run from loading.
+				data, _ = json.Marshal(e.Data)
+			}
+			v.Events = append(v.Events, EventView{Seq: e.Seq, At: e.At, Type: e.Type, Data: data, Truncated: e.PayloadKey != nil})
 		}
 		return &struct{ Body RunView }{Body: v}, nil
 	})

@@ -176,7 +176,7 @@ func (j *Journal) Append(ctx context.Context, runID uuid.UUID, fence int64, up *
 				return err
 			}
 			if j.Redact != nil {
-				data = []byte(j.Redact(ctx, spaceID, string(data)))
+				data = redactJSON(data, func(s string) string { return j.Redact(ctx, spaceID, s) })
 			}
 			re := &RunEvent{RunID: runID, Seq: seq, At: j.now(), Type: ev.Type, Data: string(data)}
 			if len(data) > PayloadLimit {
@@ -259,4 +259,49 @@ func (j *Journal) Page(ctx context.Context, runID uuid.UUID, afterSeq int64, lim
 		limit = 10000
 	}
 	return drel.NewRepository(j.e, RunEventMeta).Where(RunEvents.RunID.Eq(runID)).Where(RunEvents.Seq.GT(afterSeq)).OrderBy(RunEvents.Seq.Asc()).Limit(limit).All(ctx)
+}
+
+// redactJSON redacts the strings and numbers of a JSON document and keeps it valid JSON.
+// A plain replace on the text breaks the document when a secret name holds a quote or a
+// secret matches a number, and then no reader can load the event.
+func redactJSON(data []byte, redact func(string) string) []byte {
+	if redact(string(data)) == string(data) {
+		return data
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var v any
+	if err := dec.Decode(&v); err != nil {
+		out, _ := json.Marshal(redact(string(data)))
+		return out
+	}
+	out, err := json.Marshal(redactValue(v, redact))
+	if err != nil {
+		out, _ = json.Marshal(redact(string(data)))
+	}
+	return out
+}
+
+func redactValue(v any, redact func(string) string) any {
+	switch x := v.(type) {
+	case string:
+		return redact(x)
+	case json.Number:
+		if r := redact(string(x)); r != string(x) {
+			return r
+		}
+		return x
+	case []any:
+		for i := range x {
+			x[i] = redactValue(x[i], redact)
+		}
+		return x
+	case map[string]any:
+		m := make(map[string]any, len(x))
+		for k, val := range x {
+			m[redact(k)] = redactValue(val, redact)
+		}
+		return m
+	}
+	return v
 }

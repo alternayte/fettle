@@ -84,14 +84,11 @@ func (c *Client) TeachPTY(ctx context.Context, id string, cols, rows int) (*webs
 	u := strings.Replace(c.base, "https://", "wss://", 1)
 	u = strings.Replace(u, "http://", "ws://", 1) + "/v1/teach/" + url.PathEscape(id) + "/pty?" + url.Values{"cols": {strconv.Itoa(cols)}, "rows": {strconv.Itoa(rows)}}.Encode()
 	ws, resp, err := websocket.Dial(ctx, u, &websocket.DialOptions{HTTPClient: c.http, HTTPHeader: http.Header{"Authorization": {"Bearer " + c.token}}})
-	if resp != nil && resp.Body != nil {
-		_ = resp.Body.Close()
-	}
 	if err != nil {
-		if resp != nil {
-			return nil, &Error{Status: resp.StatusCode, Message: err.Error()}
-		}
-		return nil, err
+		return nil, dialError(resp, err)
+	}
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close() // the websocket owns the connection; this body is the handshake's
 	}
 	ws.SetReadLimit(1 << 20)
 	return ws, nil
