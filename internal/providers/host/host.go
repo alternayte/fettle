@@ -109,6 +109,9 @@ type machine struct {
 	mu   sync.Mutex
 	cmd  *exec.Cmd
 	done chan struct{} // closed when the agentd process of cmd exits
+	// parent is the write end of the pipe that agentd watches. This process holds it until
+	// agentd exits; when this process ends, the kernel closes it and agentd stops.
+	parent *os.File
 }
 
 // running reports whether agentd runs. The caller holds m.mu.
@@ -145,23 +148,31 @@ func (m *machine) start() error {
 	for _, k := range keys {
 		env = append(env, k+"="+m.spec.Env[k])
 	}
-	cmd.Env = env
 	cmd.Dir = m.home
 	cmd.SysProcAttr = groupAttr()
-	logf, err := os.OpenFile(filepath.Join(filepath.Dir(m.home), "agentd.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	// agentd stops when it reads the end of this pipe, so it does not outlive this process.
+	r, w, err := os.Pipe()
 	if err != nil {
 		return err
 	}
+	cmd.Env = append(env, "FETTLE_AGENTD_PARENT_FD="+inheritParent(cmd, r))
+	logf, err := os.OpenFile(filepath.Join(filepath.Dir(m.home), "agentd.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		_, _ = r.Close(), w.Close()
+		return err
+	}
 	cmd.Stdout, cmd.Stderr = logf, logf
-	if err := cmd.Start(); err != nil {
-		_ = logf.Close()
+	err = cmd.Start()
+	_ = r.Close()
+	if err != nil {
+		_, _ = logf.Close(), w.Close()
 		return err
 	}
 	done := make(chan struct{})
-	m.cmd, m.done = cmd, done
+	m.cmd, m.done, m.parent = cmd, done, w
 	go func() {
 		_ = cmd.Wait()
-		_ = logf.Close()
+		_, _ = logf.Close(), w.Close()
 		close(done)
 	}()
 	return nil

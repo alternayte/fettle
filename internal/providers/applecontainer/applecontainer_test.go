@@ -4,8 +4,11 @@ package applecontainer_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,6 +36,37 @@ func root(t *testing.T) string {
 	return filepath.Join(d, "fettle-providers", "applecontainer")
 }
 
+// sweep deletes the computers in the runtime under r. The root is a lasting folder, and a run
+// that hits the go test timeout ends without its cleanups, so each test sweeps before and
+// after it runs. The service must run on r, which Prepare makes sure of.
+func sweep(t *testing.T, r string) {
+	t.Helper()
+	bin := filepath.Join(r, "install", "bin", "container")
+	out, err := exec.Command(bin, "list", "--all", "--format", "json").Output()
+	if err != nil {
+		t.Errorf("list the computers: %v", err)
+		return
+	}
+	var list []struct {
+		Configuration struct {
+			ID     string            `json:"id"`
+			Labels map[string]string `json:"labels"`
+		} `json:"configuration"`
+	}
+	if err := json.Unmarshal(out, &list); err != nil {
+		t.Errorf("read the computer list: %v", err)
+		return
+	}
+	for _, c := range list {
+		if c.Configuration.Labels["fettle.computer"] != "1" {
+			continue
+		}
+		if out, err := exec.Command(bin, "delete", "--force", c.Configuration.ID).CombinedOutput(); err != nil {
+			t.Errorf("delete the computer %s: %s", c.Configuration.ID, strings.TrimSpace(string(out)))
+		}
+	}
+}
+
 func TestSCN_CMP_006_AppleContainerInstallAndConformance(t *testing.T) {
 	if err := applecontainer.Supported(); err != nil {
 		conformance.Report(t, "SCN-CMP-006", "applecontainer", false, map[string]any{"skipped": err.Error()})
@@ -56,6 +90,8 @@ func TestSCN_CMP_006_AppleContainerInstallAndConformance(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(r, "install", "bin", "container")); err != nil {
 		t.Fatal("the runtime is not in the data folder")
 	}
+	sweep(t, r)
+	t.Cleanup(func() { sweep(t, r) })
 	pass := false
 	defer func() {
 		conformance.Report(t, "SCN-CMP-006", "applecontainer", pass && !t.Failed(), map[string]any{
@@ -71,10 +107,13 @@ func TestSCN_CMP_010_AppleContainerResumeTimes(t *testing.T) {
 	if err := applecontainer.Supported(); err != nil {
 		t.Fatal(err)
 	}
-	p := applecontainer.New(root(t), image())
+	r := root(t)
+	p := applecontainer.New(r, image())
 	if err := p.Prepare(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
+	sweep(t, r)
+	t.Cleanup(func() { sweep(t, r) })
 	resume, replace := conformance.ResumeTimes(t, "applecontainer", p, image(), 200)
 	pass := resume <= 5*time.Second
 	conformance.Report(t, "SCN-CMP-010", "applecontainer", pass, map[string]any{"resume_ms": resume.Milliseconds(), "import_200mib_ms": replace.Milliseconds()})
