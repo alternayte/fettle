@@ -1173,7 +1173,7 @@
     "connect": "Connect",
     "stdio": "Command in the computer",
     "command": "Command",
-    "commandHint": "The program and its arguments, one per line. It runs in the zone computer.",
+    "commandHint": "The program and its arguments, on one line or one per line. Use quotes for an argument with spaces. It runs in the zone computer.",
     "kinds": {
       "mcp_remote": "Remote",
       "mcp_stdio": "In the computer",
