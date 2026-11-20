@@ -243,7 +243,7 @@ func TestSCN_CMP_020_ExtraRootsGoIntoTheSystemStoreAndChromium(t *testing.T) {
 	if c, err := x509.ParseCertificate(der); err != nil || c.Subject.CommonName != "Acme Inspection Root" {
 		t.Fatalf("policy certificate: %v", err)
 	}
-	if env := rootsEnv(); env["SSL_CERT_FILE"] != caBundle || env["NODE_EXTRA_CA_CERTS"] != caBundle || env["REQUESTS_CA_BUNDLE"] != caBundle || env["UV_NATIVE_TLS"] != "1" {
+	if env := rootsEnv(); env["SSL_CERT_FILE"] != caBundle || env["NODE_EXTRA_CA_CERTS"] != caBundle || env["REQUESTS_CA_BUNDLE"] != caBundle || env["UV_SYSTEM_CERTS"] != "1" {
 		t.Fatalf("env %v", env)
 	}
 

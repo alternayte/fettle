@@ -141,6 +141,7 @@ func (s *shell) start() error {
 	// The desktop user cannot set environment variables, so the app reads the certificates
 	// and the proxy of this computer (§15.1).
 	cfg.HostSettings = true
+	cfg.Desktop = true
 	cfg.Addr = freeAddr(cfg.Addr)
 	a, err := app.New(context.Background(), &cfg)
 	if err != nil {

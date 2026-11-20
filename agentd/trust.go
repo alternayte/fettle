@@ -83,6 +83,6 @@ func rootsEnv() map[string]string {
 		"SSL_CERT_DIR":        filepath.Dir(caBundle),
 		"NODE_EXTRA_CA_CERTS": caBundle,
 		"REQUESTS_CA_BUNDLE":  caBundle,
-		"UV_NATIVE_TLS":       "1",
+		"UV_SYSTEM_CERTS":     "1",
 	}
 }

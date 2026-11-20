@@ -42,6 +42,9 @@ type Config struct {
 	// HostSettings lets the server use the certificates and proxy of the host: the desktop
 	// app sets it.
 	HostSettings bool
+	// Desktop is true when the desktop app runs the server. It then ignores
+	// FETTLE_COMPUTER_IMAGE.
+	Desktop bool
 	// RescueAfterSeconds overrides the River rescue timeout (tests use 2 s).
 	RescueAfterSeconds int
 }
