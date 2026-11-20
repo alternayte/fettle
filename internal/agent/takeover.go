@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/url"
 	"strings"
 	"time"
 
@@ -21,10 +22,10 @@ var ErrScreenControlled = errors.New("a person controls the screen")
 func (a *Agent) registerTakeover() {
 	a.Tools.Add(Tool{
 		Name:        "request_takeover",
-		Description: "Ask a person to take over your screen, for example to solve a CAPTCHA or to sign in with a passkey. Your work waits until the person presses Done. Then take a new snapshot, because the page changed.",
+		Description: "Ask a person to take over your screen, for example to solve a CAPTCHA or to sign in with a passkey. Your work waits until the person presses Done. Then take a new snapshot, because the page changed. When you must be signed in to a site, set site: the person can then share their sign-in for that site from Chrome instead.",
 		Class:       envelopes.ClassRead,
 		NoSubagent:  true,
-		Schema:      schema(`{"type":"object","properties":{"reason":{"type":"string","description":"What the person must do, in one sentence."}},"required":["reason"],"additionalProperties":false}`),
+		Schema:      schema(`{"type":"object","properties":{"reason":{"type":"string","description":"What the person must do, in one sentence."},"site":{"type":"string","description":"The host name of the site to sign in to, such as github.com, when the person must sign you in."}},"required":["reason"],"additionalProperties":false}`),
 		// The run loop handles request_takeover, because it parks the run.
 		Run: func(context.Context, *ToolEnv, json.RawMessage) (ToolOutput, error) {
 			return ToolOutput{}, errors.New("request_takeover runs in the loop")
@@ -54,9 +55,11 @@ func (x *exec) requestTakeover(ctx context.Context, st *state, call models.ToolC
 	}
 	var in struct {
 		Reason string `json:"reason"`
+		Site   string `json:"site"`
 	}
 	_ = json.Unmarshal(call.Args, &in)
 	reason := strings.TrimSpace(in.Reason)
+	site := SiteHost(in.Site)
 	if reason == "" {
 		reason = "The bot needs a person on its screen."
 	}
@@ -64,7 +67,32 @@ func (x *exec) requestTakeover(ctx context.Context, st *state, call models.ToolC
 	if _, err := x.append(ctx, nil, runs.New{Type: runs.EvTakeoverRequested, Data: map[string]string{"call_id": call.ID, "card_id": cardID, "reason": reason}}); err != nil {
 		return err
 	}
-	return x.postCard(ctx, chats.Card{ID: cardID, Kind: "takeover", Title: "Take over the screen", Detail: reason, Data: map[string]string{"call_id": call.ID, "bot_id": x.run.BotID.String()}}, runs.StatusWaiting)
+	data := map[string]string{"call_id": call.ID, "bot_id": x.run.BotID.String()}
+	if site != "" {
+		data["site"] = site
+	}
+	return x.postCard(ctx, chats.Card{ID: cardID, Kind: "takeover", Title: "Take over the screen", Detail: reason, Data: data}, runs.StatusWaiting)
+}
+
+// SiteHost returns the lower-case host name of a site that a bot names, as "github.com" or
+// "https://github.com/login", or "" when it names no host.
+func SiteHost(site string) string {
+	s := strings.TrimSpace(strings.ToLower(site))
+	if s == "" {
+		return ""
+	}
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	h := u.Hostname()
+	if h == "" || strings.ContainsAny(h, " /@") {
+		return ""
+	}
+	return h
 }
 
 // waitForScreen parks the run while a person controls the screen. Done wakes it; a timer

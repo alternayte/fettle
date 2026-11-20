@@ -33,6 +33,9 @@ jobs:
           install-only: true
           version: "~> v2"
       - run: just setup
+      # Ubuntu 24.04 stops unprivileged user namespaces through AppArmor, and Chromium's
+      # sandbox needs them. The host provider tests start Chromium on the runner.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: just ci
       - uses: actions/upload-artifact@v4
         if: always()

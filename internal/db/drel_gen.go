@@ -33,6 +33,8 @@ import (
 type DB struct {
 	*drel.Engine
 	AuditEntries        *audit.AuditEntryRepository
+	ExtensionPairings   *auth.ExtensionPairingRepository
+	ExtensionTokens     *auth.ExtensionTokenRepository
 	Users               *auth.UserRepository
 	Bots                *bots.BotRepository
 	InstructionVersions *bots.InstructionVersionRepository
@@ -88,6 +90,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 	return &DB{
 		Engine:              engine,
 		AuditEntries:        &audit.AuditEntryRepository{Repository: drel.NewRepository(engine, audit.AuditEntryMeta)},
+		ExtensionPairings:   &auth.ExtensionPairingRepository{Repository: drel.NewRepository(engine, auth.ExtensionPairingMeta)},
+		ExtensionTokens:     &auth.ExtensionTokenRepository{Repository: drel.NewRepository(engine, auth.ExtensionTokenMeta)},
 		Users:               &auth.UserRepository{Repository: drel.NewRepository(engine, auth.UserMeta)},
 		Bots:                &bots.BotRepository{Repository: drel.NewRepository(engine, bots.BotMeta)},
 		InstructionVersions: &bots.InstructionVersionRepository{Repository: drel.NewRepository(engine, bots.InstructionVersionMeta)},
@@ -137,7 +141,9 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 				AuditEntries: &audit.AuditEntryRepository{Repository: drel.NewRepository(engine, audit.AuditEntryMeta)},
 			},
 			Auth: AuthRepos{
-				Users: &auth.UserRepository{Repository: drel.NewRepository(engine, auth.UserMeta)},
+				ExtensionPairings: &auth.ExtensionPairingRepository{Repository: drel.NewRepository(engine, auth.ExtensionPairingMeta)},
+				ExtensionTokens:   &auth.ExtensionTokenRepository{Repository: drel.NewRepository(engine, auth.ExtensionTokenMeta)},
+				Users:             &auth.UserRepository{Repository: drel.NewRepository(engine, auth.UserMeta)},
 			},
 			Bots: BotsRepos{
 				Bots:                &bots.BotRepository{Repository: drel.NewRepository(engine, bots.BotMeta)},
@@ -230,6 +236,8 @@ func Open(dsn string, opts ...drel.Option) (*DB, error) {
 // the fields, stage with Add and Remove, then let WithTx commit.
 type TxRepos struct {
 	AuditEntries        *audit.TxAuditEntryRepository
+	ExtensionPairings   *auth.TxExtensionPairingRepository
+	ExtensionTokens     *auth.TxExtensionTokenRepository
 	Users               *auth.TxUserRepository
 	Bots                *bots.TxBotRepository
 	InstructionVersions *bots.TxInstructionVersionRepository
@@ -283,6 +291,8 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 	tx := drel.MustFromContext(ctx)
 	return TxRepos{
 		AuditEntries:        &audit.TxAuditEntryRepository{TxRepository: drel.NewTxRepository(tx, audit.AuditEntryMeta)},
+		ExtensionPairings:   &auth.TxExtensionPairingRepository{TxRepository: drel.NewTxRepository(tx, auth.ExtensionPairingMeta)},
+		ExtensionTokens:     &auth.TxExtensionTokenRepository{TxRepository: drel.NewTxRepository(tx, auth.ExtensionTokenMeta)},
 		Users:               &auth.TxUserRepository{TxRepository: drel.NewTxRepository(tx, auth.UserMeta)},
 		Bots:                &bots.TxBotRepository{TxRepository: drel.NewTxRepository(tx, bots.BotMeta)},
 		InstructionVersions: &bots.TxInstructionVersionRepository{TxRepository: drel.NewTxRepository(tx, bots.InstructionVersionMeta)},
@@ -332,7 +342,9 @@ func (db *DB) Tx(ctx context.Context) TxRepos {
 				AuditEntries: &audit.TxAuditEntryRepository{TxRepository: drel.NewTxRepository(tx, audit.AuditEntryMeta)},
 			},
 			Auth: AuthTxRepos{
-				Users: &auth.TxUserRepository{TxRepository: drel.NewTxRepository(tx, auth.UserMeta)},
+				ExtensionPairings: &auth.TxExtensionPairingRepository{TxRepository: drel.NewTxRepository(tx, auth.ExtensionPairingMeta)},
+				ExtensionTokens:   &auth.TxExtensionTokenRepository{TxRepository: drel.NewTxRepository(tx, auth.ExtensionTokenMeta)},
+				Users:             &auth.TxUserRepository{TxRepository: drel.NewTxRepository(tx, auth.UserMeta)},
 			},
 			Bots: BotsTxRepos{
 				Bots:                &bots.TxBotRepository{TxRepository: drel.NewTxRepository(tx, bots.BotMeta)},
@@ -433,12 +445,16 @@ type AuditTxRepos struct {
 
 // AuthRepos holds the untracked repositories of the "auth" module.
 type AuthRepos struct {
-	Users *auth.UserRepository
+	ExtensionPairings *auth.ExtensionPairingRepository
+	ExtensionTokens   *auth.ExtensionTokenRepository
+	Users             *auth.UserRepository
 }
 
 // AuthTxRepos holds the tracked repositories of the "auth" module.
 type AuthTxRepos struct {
-	Users *auth.TxUserRepository
+	ExtensionPairings *auth.TxExtensionPairingRepository
+	ExtensionTokens   *auth.TxExtensionTokenRepository
+	Users             *auth.TxUserRepository
 }
 
 // BotsRepos holds the untracked repositories of the "bots" module.

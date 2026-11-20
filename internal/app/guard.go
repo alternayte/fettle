@@ -28,7 +28,8 @@ func OwnerOnlyRoute(method, rest string) bool {
 	case "memory", "skills", "routines":
 		return !read
 	case "bots":
-		if len(seg) >= 3 && seg[2] == "screen" {
+		// Members take over a screen and share a sign-in, as they sign in by takeover.
+		if len(seg) >= 3 && (seg[2] == "screen" || seg[2] == "sign-ins") {
 			return false
 		}
 		return !read

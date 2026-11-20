@@ -25,7 +25,7 @@ const APIPrefix = "/api/v1"
 // Handler returns the full HTTP handler: health, metrics, the API and the UI.
 func (a *App) Handler() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.Recoverer, securityHeaders)
+	r.Use(middleware.Recoverer, securityHeaders, extensionCORS)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
@@ -41,6 +41,8 @@ func (a *App) Handler() http.Handler {
 	r.Get(APIPrefix+"/screen/stream", a.screenStream)
 	// The teach terminal carries the control token of the screen (§13.3).
 	r.Get(APIPrefix+"/teach/pty", a.teachPTYStream)
+	// The pairing page of the Chrome extension; its code is in the URL fragment.
+	r.Get("/pair", pairHandler)
 	if a.SignIn != nil {
 		r.Handle("/api/auth/*", a.SignIn.Handler())
 	}
@@ -51,11 +53,11 @@ func (a *App) Handler() http.Handler {
 	r.Post(APIPrefix+"/invites/{token}/signup", a.inviteSignup)
 	r.Group(func(g chi.Router) {
 		if a.Cfg.Mode == ModeLocal {
-			g.Use(auth.LocalAuth(a.LocalToken, func(ctx context.Context) (*auth.User, error) { return a.LocalOwner(ctx) }, publicAPIPath))
+			g.Use(auth.LocalAuth(a.LocalToken, func(ctx context.Context) (*auth.User, error) { return a.LocalOwner(ctx) }, publicAPIPath, a.Extensions))
 		} else {
 			g.Use(a.SignIn.Middleware(publicAPIPath))
 		}
-		g.Use(a.spaceGuard)
+		g.Use(tokenScope, a.spaceGuard)
 		g.Get(APIPrefix+"/admin/usage", a.usageExport)
 		g.Post(APIPrefix+"/spaces/{space}/export", a.spaceExport)
 		g.Post(APIPrefix+"/space-import", a.spaceImport)
@@ -66,7 +68,7 @@ func (a *App) Handler() http.Handler {
 }
 
 func publicAPIPath(p string) bool {
-	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local" || p == APIPrefix+"/instance" ||
+	return p == APIPrefix+"/openapi.json" || p == APIPrefix+"/openapi.yaml" || strings.HasPrefix(p, APIPrefix+"/schemas/") || p == APIPrefix+"/auth/local" || p == APIPrefix+"/instance" || p == APIPrefix+"/extension/claim" ||
 		(strings.HasPrefix(p, APIPrefix+"/invites/") && strings.Count(p, "/") == 4)
 }
 

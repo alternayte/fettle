@@ -13,6 +13,8 @@ import {
   useBot,
   useMoveBotZone,
   useZones,
+  useBotSignIns,
+  useRemoveSignIn,
   useBotMemory,
   useInstructionVersions,
   usePutBotMemory,
@@ -254,6 +256,55 @@ function BotSkills({ botId }: { botId: string }) {
 }
 
 /** Manage holds duplicate, archive, primary and delete (§6.1, §9.8). */
+/** SignIns lists the sites that hold cookies in the bot's browser, with Sign out for each. */
+function SignIns({ bot }: { bot: SchemaBotView }) {
+  const [asked, setAsked] = useState(false);
+  const sites = useBotSignIns(bot.id, asked);
+  const remove = useRemoveSignIn(bot.id);
+  return (
+    <div>
+      <p className="mb-3 max-w-[var(--measure)] text-sm text-ink-soft">{t("botPage.signInsBody", { bot: bot.name })}</p>
+      {!asked ? (
+        <Btn size="sm" onClick={() => setAsked(true)}>
+          {t("botPage.signInsShow")}
+        </Btn>
+      ) : sites.isPending ? (
+        <p className="text-sm text-ink-faint">{t("botPage.signInsLoading")}</p>
+      ) : sites.isError ? (
+        <p className="text-sm text-ink-soft">
+          {t("botPage.signInsFailed")} {errorText(sites.error)}
+        </p>
+      ) : (
+        <ul aria-label={t("botPage.signIns")}>
+          {(sites.data ?? []).length === 0 && (
+            <li className="border-y border-rule py-3 text-sm text-ink-faint">
+              {t("botPage.signInsNone", { bot: bot.name })}
+            </li>
+          )}
+          {(sites.data ?? []).map((site) => (
+            <li key={site} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-rule py-2">
+              <span className="truncate font-mono text-sm text-ink">{site}</span>
+              <Btn
+                kind="danger"
+                size="sm"
+                busy={remove.isPending && remove.variables === site}
+                onClick={() =>
+                  remove.mutate(site, {
+                    onSuccess: () => toast.success(t("botPage.signedOut", { bot: bot.name, site })),
+                    onError: (err) => toast.error(t("botPage.signOutFailed"), { description: errorText(err) }),
+                  })
+                }
+              >
+                {t("botPage.signOut")}
+              </Btn>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function Computer({ bot }: { bot: SchemaBotView }) {
   const { isOwner } = useSession();
   const zones = useZones();
@@ -509,6 +560,11 @@ export function BotPage() {
       <Section id="computer" title={t("botPage.computer")}>
         <Computer key={b.zone_id ?? ""} bot={b} />
       </Section>
+      {(b.zone_size === "browser" || b.zone_size === "desktop") && (
+        <Section id="sign-ins" title={t("botPage.signIns")}>
+          <SignIns key={b.id} bot={b} />
+        </Section>
+      )}
       <Section id="instructions" title={t("botPage.instructions")}>
         <Instructions key={b.instructions_rev} bot={b} />
       </Section>

@@ -1,6 +1,117 @@
 {
   "tables": [
     {
+      "name": "extension_pairings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "users",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "hash",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamptz",
+          "notNull": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_extension_pairings_hash",
+          "columns": [
+            "hash"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "extension_tokens",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid PRIMARY KEY",
+          "notNull": true,
+          "pk": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true,
+          "ref": "users",
+          "refColumn": "id",
+          "onDelete": "CASCADE"
+        },
+        {
+          "name": "hash",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "last4",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "name": "last_used_at",
+          "type": "timestamptz",
+          "notNull": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "default": "NOW()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_extension_tokens_user_id",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "uq_extension_tokens_hash",
+          "columns": [
+            "hash"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
       "name": "users",
       "columns": [
         {

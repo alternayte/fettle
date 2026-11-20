@@ -18,7 +18,13 @@ setup:
     go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
     cd ui && bun install --frozen-lockfile
     cd sdk/typescript && bun install --frozen-lockfile
+    cd extension && bun install --frozen-lockfile
     cd tests/e2e && bun install --frozen-lockfile && bunx playwright install chromium
+
+# recipe: extension
+# Build the Chrome extension into extension/dist. Load it in Chrome with Load unpacked.
+extension:
+    cd extension && bun install --frozen-lockfile && bun run build
 
 # recipe: ui
 # Build the UI into ui/dist for the embed.
@@ -104,9 +110,11 @@ lint: build
     golangci-lint run --build-tags ee ./ee/... ./cmd/fettle/
     cd ui && bunx eslint . && bunx tsc -b --noEmit && bun scripts/copylint.ts
     cd sdk/typescript && bunx tsc -p . --noEmit
+    cd extension && bunx tsc --noEmit
     scripts/forbid.sh
     go run ./tools/licensecheck ui
     go run ./tools/licensecheck sdk/typescript
+    go run ./tools/licensecheck extension
     for c in checks/*.sh; do bash "$c" || exit 1; done
 
 # recipe: test

@@ -277,6 +277,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/extension/claim": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Use a pairing code. It returns a token that can only share a sign-in. */
+    post: operations["claim-extension-pairing"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/extension/pairings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start the pairing of the Chrome extension. The code works once, for 10 minutes. */
+    post: operations["create-extension-pairing"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/extension/targets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The bots that you can share a sign-in with, and their open sign-in requests. With url, it also names the site that a share from that address covers. */
+    get: operations["list-share-targets"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/extension/tokens": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The extension tokens of the desktop app. In server mode the extension uses an access token, which Account lists. */
+    get: operations["list-extension-tokens"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/extension/tokens/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoke an extension token. */
+    delete: operations["revoke-extension-token"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/instance": {
     parameters: {
       query?: never;
@@ -686,6 +771,41 @@ export interface paths {
     /** Return control of a bot's screen. With a takeover card, it answers the card and the bot continues. */
     post: operations["screen-done"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/bots/{bot}/sign-ins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The sites that hold cookies in the browser profile of a bot. It starts the computer when it sleeps. */
+    get: operations["list-bot-sign-ins"];
+    put?: never;
+    /** Put a sign-in that you share from your browser into the browser profile of a bot. Fettle keeps no copy. */
+    post: operations["share-sign-in"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/spaces/{space}/bots/{bot}/sign-ins/{site}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Sign a bot out of a site: remove the cookies and the stored data of the site from its browser profile. */
+    delete: operations["remove-bot-sign-in"];
     options?: never;
     head?: never;
     patch?: never;
@@ -2307,6 +2427,14 @@ export interface components {
       ms: number;
       pass: boolean;
     };
+    "Claim-extension-pairingRequest": {
+      code: string;
+    };
+    "Claim-extension-pairingResponse": {
+      account: string;
+      server: string;
+      token: string;
+    };
     ComputerProviderView: {
       /** @description The provider works on this server. */
       available: boolean;
@@ -2526,6 +2654,14 @@ export interface components {
       reason: string;
       text: string;
     };
+    ExtensionToken: {
+      /** Format: date-time */
+      created_at: string;
+      id: string;
+      last4: string;
+      /** Format: date-time */
+      last_used_at: string | null;
+    };
     FeatureView: {
       /** @description The feature works: the build has it and the licence names it. */
       available: boolean;
@@ -2630,8 +2766,14 @@ export interface components {
     "List-auditResponse": {
       entries: components["schemas"]["AuditView"][] | null;
     };
+    "List-bot-sign-insResponse": {
+      sites: string[] | null;
+    };
     "List-chatsResponse": {
       chats: components["schemas"]["ChatView"][] | null;
+    };
+    "List-extension-tokensResponse": {
+      tokens: components["schemas"]["ExtensionToken"][] | null;
     };
     "List-filesResponse": {
       files: components["schemas"]["FileView"][] | null;
@@ -2660,6 +2802,12 @@ export interface components {
     };
     "List-settingsResponse": {
       settings: components["schemas"]["SettingView"][] | null;
+    };
+    "List-share-targetsResponse": {
+      account: string;
+      /** @description The registrable domain of url, such as github.com. */
+      site?: string;
+      spaces: components["schemas"]["ShareSpace"][] | null;
     };
     "List-signalsResponse": {
       signals: components["schemas"]["SignalView"][] | null;
@@ -2788,6 +2936,15 @@ export interface components {
       chat_id?: string;
       run_id?: string;
       started: boolean;
+    };
+    Pairing: {
+      /** @description The code to type in the extension when the default browser is not Chrome. */
+      code: string;
+      /** Format: date-time */
+      expires_at: string;
+      server: string;
+      /** @description The pairing page. The extension reads the code from it. */
+      url: string;
     };
     PatchOutcome: {
       card_id?: string;
@@ -3106,6 +3263,18 @@ export interface components {
       /** @description Read-only stream token for /api/v1/screen/stream. Valid 10 minutes. */
       view_token: string;
     };
+    SessionCookie: {
+      domain: string;
+      /** Format: double */
+      expires?: number;
+      host_only?: boolean;
+      http_only?: boolean;
+      name: string;
+      path?: string;
+      same_site?: string;
+      secure?: boolean;
+      value: string;
+    };
     "Set-approval-modeRequest": {
       /** @enum {string} */
       mode: "ask" | "auto" | "never";
@@ -3154,6 +3323,40 @@ export interface components {
     SetupState: {
       needs_model: boolean;
       needs_name: boolean;
+    };
+    "Share-sign-inRequest": {
+      cookies: components["schemas"]["SessionCookie"][] | null;
+      /** @description The local storage of the origin of url. */
+      storage?: {
+        [key: string]: string;
+      };
+      /** @description The address of the tab that you share from. */
+      url: string;
+    };
+    ShareSpace: {
+      bots: components["schemas"]["ShareTarget"][] | null;
+      id: string;
+      name: string;
+      /**
+       * Format: int64
+       * @description The number of people who can use these bots.
+       */
+      people: number;
+    };
+    ShareTarget: {
+      id: string;
+      name: string;
+      /** @description Sites of open takeover requests of this bot. */
+      requests: string[] | null;
+    };
+    SharedSignIn: {
+      /** @description A run that waited for this sign-in continues. */
+      continued: boolean;
+      /** Format: int64 */
+      cookies: number;
+      site: string;
+      /** Format: int64 */
+      storage: number;
     };
     SignalView: {
       /** Format: date-time */
@@ -3580,6 +3783,8 @@ export type SchemaCheckE2bResponse = components["schemas"]["Check-e2bResponse"];
 export type SchemaCheckKilnRequest = components["schemas"]["Check-kilnRequest"];
 export type SchemaCheckKilnResponse = components["schemas"]["Check-kilnResponse"];
 export type SchemaCheckResult = components["schemas"]["CheckResult"];
+export type SchemaClaimExtensionPairingRequest = components["schemas"]["Claim-extension-pairingRequest"];
+export type SchemaClaimExtensionPairingResponse = components["schemas"]["Claim-extension-pairingResponse"];
 export type SchemaComputerProviderView = components["schemas"]["ComputerProviderView"];
 export type SchemaComputerSetup = components["schemas"]["ComputerSetup"];
 export type SchemaComputerTest = components["schemas"]["ComputerTest"];
@@ -3604,6 +3809,7 @@ export type SchemaEvalReport = components["schemas"]["EvalReport"];
 export type SchemaEvalResult = components["schemas"]["EvalResult"];
 export type SchemaEventView = components["schemas"]["EventView"];
 export type SchemaExpectation = components["schemas"]["Expectation"];
+export type SchemaExtensionToken = components["schemas"]["ExtensionToken"];
 export type SchemaFeatureView = components["schemas"]["FeatureView"];
 export type SchemaFileView = components["schemas"]["FileView"];
 export type SchemaGetSkillResponse = components["schemas"]["Get-skillResponse"];
@@ -3617,7 +3823,9 @@ export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
 export type SchemaInviteView = components["schemas"]["InviteView"];
 export type SchemaLicenseView = components["schemas"]["LicenseView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
+export type SchemaListBotSignInsResponse = components["schemas"]["List-bot-sign-insResponse"];
 export type SchemaListChatsResponse = components["schemas"]["List-chatsResponse"];
+export type SchemaListExtensionTokensResponse = components["schemas"]["List-extension-tokensResponse"];
 export type SchemaListFilesResponse = components["schemas"]["List-filesResponse"];
 export type SchemaListInstructionVersionsResponse = components["schemas"]["List-instruction-versionsResponse"];
 export type SchemaListInvitesResponse = components["schemas"]["List-invitesResponse"];
@@ -3627,6 +3835,7 @@ export type SchemaListModelProvidersResponse = components["schemas"]["List-model
 export type SchemaListModelRolesResponse = components["schemas"]["List-model-rolesResponse"];
 export type SchemaListRunsResponse = components["schemas"]["List-runsResponse"];
 export type SchemaListSettingsResponse = components["schemas"]["List-settingsResponse"];
+export type SchemaListShareTargetsResponse = components["schemas"]["List-share-targetsResponse"];
 export type SchemaListSignalsResponse = components["schemas"]["List-signalsResponse"];
 export type SchemaListTemplatesResponse = components["schemas"]["List-templatesResponse"];
 export type SchemaListUsersResponse = components["schemas"]["List-usersResponse"];
@@ -3648,6 +3857,7 @@ export type SchemaNetworkCheck = components["schemas"]["NetworkCheck"];
 export type SchemaNetworkProbe = components["schemas"]["NetworkProbe"];
 export type SchemaNetworkStep = components["schemas"]["NetworkStep"];
 export type SchemaOnboardingView = components["schemas"]["OnboardingView"];
+export type SchemaPairing = components["schemas"]["Pairing"];
 export type SchemaPatchOutcome = components["schemas"]["PatchOutcome"];
 export type SchemaPostMessageRequest = components["schemas"]["Post-messageRequest"];
 export type SchemaPostMessageResponse = components["schemas"]["Post-messageResponse"];
@@ -3687,6 +3897,7 @@ export type SchemaScoreReport = components["schemas"]["ScoreReport"];
 export type SchemaScreenDoneRequest = components["schemas"]["Screen-doneRequest"];
 export type SchemaScreenControl = components["schemas"]["ScreenControl"];
 export type SchemaScreenView = components["schemas"]["ScreenView"];
+export type SchemaSessionCookie = components["schemas"]["SessionCookie"];
 export type SchemaSetApprovalModeRequest = components["schemas"]["Set-approval-modeRequest"];
 export type SchemaSetConnectorToolRequest = components["schemas"]["Set-connector-toolRequest"];
 export type SchemaSetInstanceSettingRequest = components["schemas"]["Set-instance-settingRequest"];
@@ -3698,6 +3909,10 @@ export type SchemaSetWebSearchRequest = components["schemas"]["Set-web-searchReq
 export type SchemaSettingHistoryResponse = components["schemas"]["Setting-historyResponse"];
 export type SchemaSettingView = components["schemas"]["SettingView"];
 export type SchemaSetupState = components["schemas"]["SetupState"];
+export type SchemaShareSignInRequest = components["schemas"]["Share-sign-inRequest"];
+export type SchemaShareSpace = components["schemas"]["ShareSpace"];
+export type SchemaShareTarget = components["schemas"]["ShareTarget"];
+export type SchemaSharedSignIn = components["schemas"]["SharedSignIn"];
 export type SchemaSignalView = components["schemas"]["SignalView"];
 export type SchemaSkillDraftView = components["schemas"]["SkillDraftView"];
 export type SchemaSkillVersionView = components["schemas"]["SkillVersionView"];
@@ -4251,6 +4466,158 @@ export interface operations {
         "application/json": components["schemas"]["Desktop-windowRequest"];
       };
     };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "claim-extension-pairing": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Claim-extension-pairingRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Claim-extension-pairingResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "create-extension-pairing": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Pairing"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-share-targets": {
+    parameters: {
+      query?: {
+        /** @description The address of the tab to share from. */
+        url?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-share-targetsResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-extension-tokens": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-extension-tokensResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "revoke-extension-token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description No Content */
       204: {
@@ -5242,6 +5609,108 @@ export interface operations {
         "application/json": components["schemas"]["Screen-doneRequest"];
       };
     };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "list-bot-sign-ins": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["List-bot-sign-insResponse"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "share-sign-in": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Share-sign-inRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SharedSignIn"];
+        };
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "remove-bot-sign-in": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+        bot: string;
+        site: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description No Content */
       204: {

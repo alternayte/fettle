@@ -125,3 +125,39 @@ func TestSCN_AUTH_003_PersonalAccessTokens(t *testing.T) {
 		}
 	})
 }
+
+// In server mode the Chrome extension gets an access token that can only share a sign-in,
+// and Account lists it with that scope; a token from before scopes keeps every route.
+func TestExtensionPairingGivesAShareOnlyKey(t *testing.T) {
+	testenv.Each(t, func(t *testing.T, dialect string) {
+		_, url := serverApp(t, dialect, "http://fettle.test")
+		c := &client{t: t, url: url, origin: "http://fettle.test"}
+		if code := c.signIn("owner@acme.test", "acme-owner-pass-4410"); code != 200 {
+			t.Fatalf("sign-in: %d", code)
+		}
+		code, _, body := c.do("POST", "/api/v1/extension/pairings", nil, "")
+		var pair struct{ Code, URL string }
+		if code != 200 || json.Unmarshal([]byte(body), &pair) != nil || pair.URL != "http://fettle.test/pair#code="+pair.Code {
+			t.Fatalf("pairing: %d %s", code, body)
+		}
+		ext := &client{t: t, url: url, origin: "chrome-extension://acmeextensionid"}
+		code, h, body := ext.do("POST", "/api/v1/extension/claim", map[string]string{"code": pair.Code}, "")
+		var claim struct{ Token, Server, Account string }
+		if code != 200 || json.Unmarshal([]byte(body), &claim) != nil || !strings.HasPrefix(claim.Token, "fet_") || claim.Server != "http://fettle.test" {
+			t.Fatalf("claim: %d %s", code, body)
+		}
+		if h.Get("Access-Control-Allow-Origin") != "chrome-extension://acmeextensionid" {
+			t.Fatalf("claim CORS %v", h)
+		}
+		if code, _, body := ext.do("GET", "/api/v1/extension/targets", nil, claim.Token); code != 200 || !strings.Contains(body, "acme") {
+			t.Fatalf("targets: %d %s", code, body)
+		}
+		if code, _, _ := ext.do("GET", "/api/v1/me", nil, claim.Token); code != 403 {
+			t.Fatalf("GET /me with the extension key: %d", code)
+		}
+		_, _, keys := c.do("GET", "/api/auth/api-keys", nil, "")
+		if !strings.Contains(keys, "share-sign-in") || !strings.Contains(keys, "Chrome extension") {
+			t.Fatalf("the keys do not show the extension key with its scope: %s", keys)
+		}
+	})
+}

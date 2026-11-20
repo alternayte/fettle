@@ -31,7 +31,7 @@ var ErrNotFound = errors.New("agentd: not found")
 // Error is a non-2xx reply from agentd.
 // Protocol is the agentd protocol of this build. Change it with every change to an endpoint
 // that an older server or agentd cannot handle; the server refuses a computer that differs.
-const Protocol = 1
+const Protocol = 2
 
 type Error struct {
 	Status  int

@@ -37,8 +37,10 @@ type Server struct {
 	// Passkeys holds the WebAuthn passkeys of the accounts; the relying party is the host of
 	// FETTLE_BASE_URL. It is nil when that host is an IP address.
 	Passkeys *passkeys.Plugin
-	users    *UserStore
-	baseURL  string
+	// Keys issues the personal access tokens.
+	Keys    *apikeys.Plugin
+	users   *UserStore
+	baseURL string
 }
 
 // ServerConfig opens the server-mode sign-in on the Fettle database.
@@ -81,6 +83,10 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 	if net.ParseIP(u.Hostname()) == nil {
 		pk = passkeys.New(passkeys.RPDisplayName("Fettle"))
 	}
+	// A key holds ScopeAll, or only ScopeShareSignIn when the Chrome extension pairs. A key
+	// from before scopes holds ScopeAll.
+	keys := apikeys.New(apikeys.Prefix(TokenPrefix), apikeys.MaxTTL(366*24*time.Hour), apikeys.AllowNoExpiry(), apikeys.AdminRole("admin"),
+		apikeys.Scopes(ScopeAll, ScopeShareSignIn), apikeys.DefaultScopes(ScopeAll))
 	opts := []authall.Option{
 		authall.WithStore(st),
 		authall.WithBaseURL(strings.TrimRight(c.BaseURL, "/")),
@@ -93,7 +99,7 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 		authall.WithRateLimiter(limiter),
 		authall.WithPlugins(
 			roles.New(roles.Hierarchy("user", "admin")),
-			apikeys.New(apikeys.Prefix(TokenPrefix), apikeys.MaxTTL(366*24*time.Hour), apikeys.AllowNoExpiry(), apikeys.AdminRole("admin")),
+			keys,
 		),
 	}
 	if pk != nil {
@@ -107,7 +113,7 @@ func NewServer(e *drel.Engine, c ServerConfig) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{Auth: a, Passkeys: pk, users: NewUserStore(e), baseURL: strings.TrimRight(c.BaseURL, "/")}, nil
+	return &Server{Auth: a, Passkeys: pk, Keys: keys, users: NewUserStore(e), baseURL: strings.TrimRight(c.BaseURL, "/")}, nil
 }
 
 // Migrate applies the auth-all tables. The caller holds the migration lock.
@@ -165,11 +171,19 @@ func (s *Server) Middleware(public func(path string) bool) func(http.Handler) ht
 				writeErr(w, http.StatusForbidden, "This account is disabled.")
 				return
 			}
-			via := "session"
+			via, scope := "session", ""
 			if ap.Method == authall.MethodAPIKey {
 				via = "access_token"
+				switch {
+				case ap.HasScope(ScopeAll):
+				case ap.HasScope(ScopeShareSignIn):
+					scope = ScopeShareSignIn
+				default:
+					writeErr(w, http.StatusForbidden, "This access token has no scope that Fettle knows.")
+					return
+				}
 			}
-			p := &Principal{UserID: u.ID(), Email: u.Email, IsAdmin: u.IsAdmin, Via: via}
+			p := &Principal{UserID: u.ID(), Email: u.Email, IsAdmin: u.IsAdmin, Via: via, Scope: scope}
 			next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
 		})
 		return s.Auth.LoadSession(inner)
@@ -238,4 +252,15 @@ func (s *Server) SetActive(ctx context.Context, u *User, active bool) error {
 	}
 	_, err = s.Auth.RevokeUserSessions(ctx, au.ID)
 	return err
+}
+
+// CreateExtensionKey creates an access token that can only share a sign-in, for the Chrome
+// extension of a person, and returns its plaintext once.
+func (s *Server) CreateExtensionKey(ctx context.Context, email string) (string, error) {
+	au, err := s.Auth.GetUserByEmail(ctx, email)
+	if err != nil {
+		return "", err
+	}
+	_, plain, err := s.Keys.Create(ctx, au, apikeys.CreateInput{UserID: au.ID, Name: "Chrome extension", Scopes: ScopeShareSignIn})
+	return plain, err
 }

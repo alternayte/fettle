@@ -18,8 +18,11 @@ type Principal struct {
 	UserID  uuid.UUID
 	Email   string
 	IsAdmin bool
-	// Via is local_token, session or access_token.
+	// Via is local_token, session, access_token or extension_token.
 	Via string
+	// Scope limits the caller to the share routes when it is ScopeShareSignIn. Empty means
+	// every route.
+	Scope string
 }
 
 type ctxKey struct{}
@@ -81,8 +84,9 @@ func unsafeMethod(m string) bool {
 }
 
 // LocalAuth accepts only requests that carry the local token, as a bearer token or as
-// the UI cookie (SI-11). owner resolves the local owner. public lists paths that need no token.
-func LocalAuth(token string, owner func(context.Context) (*User, error), public func(path string) bool) func(http.Handler) http.Handler {
+// the UI cookie (SI-11), or an extension token, which only shares a sign-in. owner resolves
+// the local owner. public lists paths that need no token.
+func LocalAuth(token string, owner func(context.Context) (*User, error), public func(path string) bool, ext *Extensions) func(http.Handler) http.Handler {
 	cookie := CookieValue(token)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -91,8 +95,14 @@ func LocalAuth(token string, owner func(context.Context) (*User, error), public 
 				return
 			}
 			ok, viaCookie := false, false
-			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") && equal(strings.TrimPrefix(h, "Bearer "), token) {
+			var extToken *ExtensionToken
+			bearer, hasBearer := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+			if hasBearer && equal(bearer, token) {
 				ok = true
+			} else if hasBearer && ext != nil && strings.HasPrefix(bearer, ExtensionPrefix) {
+				if t, err := ext.Check(r.Context(), bearer); err == nil {
+					ok, extToken = true, t
+				}
 			} else if c, err := r.Cookie(LocalCookie); err == nil && equal(c.Value, cookie) {
 				ok, viaCookie = true, true
 			}
@@ -110,6 +120,13 @@ func LocalAuth(token string, owner func(context.Context) (*User, error), public 
 				return
 			}
 			p := &Principal{UserID: u.ID(), Email: u.Email, IsAdmin: true, Via: "local_token"}
+			if extToken != nil {
+				if extToken.UserID != u.ID() {
+					writeErr(w, http.StatusUnauthorized, "This extension token belongs to another account. Connect Chrome again.")
+					return
+				}
+				p.Via, p.Scope = "extension_token", ScopeShareSignIn
+			}
 			next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
 		})
 	}

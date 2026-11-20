@@ -39,6 +39,7 @@ This page describes how Fettle keeps secrets, limits bots and records their work
 - A session ends after 12 hours without use, and after 30 days at most.
 - Fettle limits sign-ins to 10 per minute from one address, and 10 per 15 minutes for one email.
 - Personal access tokens start with `fet_`. Fettle shows a token one time.
+- The Chrome extension gets a token that can only share a sign-in: an access token with the scope `share-sign-in` in server mode, or an extension token that starts with `fext_` in local mode. See [Shared sign-ins](sign-ins.md).
 - A space is the authorization boundary. A person has the role `owner` or `member` in a space.
 
 ## Approvals

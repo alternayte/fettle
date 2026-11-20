@@ -1476,3 +1476,51 @@ export function useDiagnostics() {
     mutationFn: async () => (await must(api.GET("/api/v1/admin/diagnostics"))).checks ?? [],
   });
 }
+
+// ---------------------------------------------------------------- shared sign-ins
+
+/** useBotSignIns lists the sites with cookies in a bot's browser. It wakes the computer, so it runs on request. */
+export function useBotSignIns(botId: string, enabled: boolean) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: [...keys.bot(space, botId), "sign-ins"],
+    enabled,
+    queryFn: async () =>
+      (await must(api.GET("/api/v1/spaces/{space}/bots/{bot}/sign-ins", { params: { path: { space, bot: botId } } })))
+        .sites,
+  });
+}
+
+export function useRemoveSignIn(botId: string) {
+  const qc = useQueryClient();
+  const space = useSpaceId();
+  return useMutation({
+    mutationFn: (site: string) =>
+      must(
+        api.DELETE("/api/v1/spaces/{space}/bots/{bot}/sign-ins/{site}", {
+          params: { path: { space, bot: botId, site } },
+        }),
+      ),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...keys.bot(space, botId), "sign-ins"] }),
+  });
+}
+
+export function useCreatePairing() {
+  return useMutation({ mutationFn: () => must(api.POST("/api/v1/extension/pairings")) });
+}
+
+export function useExtensionTokens(enabled: boolean) {
+  return useQuery({
+    queryKey: ["extension-tokens"],
+    enabled,
+    queryFn: async () => (await must(api.GET("/api/v1/extension/tokens"))).tokens,
+  });
+}
+
+export function useRevokeExtensionToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => must(api.DELETE("/api/v1/extension/tokens/{id}", { params: { path: { id } } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["extension-tokens"] }),
+  });
+}

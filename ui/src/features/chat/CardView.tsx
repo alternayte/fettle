@@ -485,6 +485,18 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
               <Monitor aria-hidden className="size-3.5" />
               {t("card.takeover.open")}
             </Link>
+            {card.data.site && (
+              <a
+                href={`https://${card.data.site}/`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-7 items-center gap-1.5 rounded-sm border border-rule-strong bg-surface-raised px-2.5 text-sm font-[var(--weight-medium)] text-ink transition-colors duration-[var(--dur-1)] hover:bg-surface-sunk"
+                title={t("card.takeover.shareHint", { site: card.data.site })}
+              >
+                <KeyRound aria-hidden className="size-3.5" />
+                {t("card.takeover.share")}
+              </a>
+            )}
             <RecordTakeover botId={card.data.bot_id} cardId={card.id} />
           </>
         )}
