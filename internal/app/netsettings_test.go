@@ -17,19 +17,30 @@ import (
 func TestSCN_OPS_006_ComputerImageChoice(t *testing.T) {
 	t.Setenv("FETTLE_COMPUTER_IMAGE", "")
 	release := "ghcr.io/alternayte/fettle-computer:1.0.0-rc.4"
-	cases := []struct{ env, setting, ldflag, want string }{
+	cases := []struct {
+		env, setting, ldflag string
+		readEnv              bool
+		want                 string
+	}{
 		// A build without the ldflag is a local build, whatever its version says.
-		{"", "", "", "fettle-computer:dev"},
+		{"", "", "", true, "fettle-computer:dev"},
 		// A pre-release is a release: the ldflag names its published image.
-		{"", "", release, release},
-		{"", "ghcr.io/acme/computer:7", release, "ghcr.io/acme/computer:7"},
-		{"", "  ", release, release},
-		{"ghcr.io/acme/computer:env", "ghcr.io/acme/computer:7", release, "ghcr.io/acme/computer:env"},
+		{"", "", release, true, release},
+		{"", "ghcr.io/acme/computer:7", release, true, "ghcr.io/acme/computer:7"},
+		{"", "  ", release, true, release},
+		{"ghcr.io/acme/computer:env", "ghcr.io/acme/computer:7", release, true, "ghcr.io/acme/computer:env"},
+		// A pin to another release of this image is left over from an upgrade.
+		{"", "ghcr.io/alternayte/fettle-computer:1.0.0-rc.3", release, true, release},
+		{"", "ghcr.io/alternayte/fettle-computer@sha256:abc", release, true, release},
+		{"", "ghcr.io/alternayte/fettle-computer:1.0.0-rc.3", "", true, "ghcr.io/alternayte/fettle-computer:1.0.0-rc.3"},
+		// The desktop app does not read the variable.
+		{"ghcr.io/alternayte/fettle-computer:1.0.0-rc.3", "", release, false, release},
+		{"ghcr.io/acme/computer:env", "ghcr.io/acme/computer:7", release, false, "ghcr.io/acme/computer:7"},
 	}
 	for _, c := range cases {
 		t.Setenv("FETTLE_COMPUTER_IMAGE", c.env)
-		if got := app.ComputerImage(c.ldflag, c.setting); got != c.want {
-			t.Errorf("env %q setting %q ldflag %q: %q, want %q", c.env, c.setting, c.ldflag, got, c.want)
+		if got := app.ComputerImage(c.ldflag, c.setting, c.readEnv); got != c.want {
+			t.Errorf("env %q setting %q ldflag %q readEnv %v: %q, want %q", c.env, c.setting, c.ldflag, c.readEnv, got, c.want)
 		}
 	}
 }
@@ -83,10 +94,14 @@ func TestSCN_OPS_007_InstanceSettingsLockSecretsAndApplyAtOnce(t *testing.T) {
 	if code, _ := e.Do("PUT", "/admin/settings/computers.image", map[string]any{"value": "not an image"}, nil); code != http.StatusUnprocessableEntity {
 		t.Fatalf("a bad image: %d", code)
 	}
+	// A pin to another release of this image is refused.
+	if code, _ := e.Do("PUT", "/admin/settings/computers.image", map[string]any{"value": "ghcr.io/alternayte/fettle-computer:1.0.0-rc.3"}, nil); code != http.StatusUnprocessableEntity {
+		t.Fatalf("an image of another release: %d", code)
+	}
 
 	// The variable locks the field.
 	t.Setenv("FETTLE_COMPUTER_IMAGE", "ghcr.io/acme/computer:env")
-	if l := instanceSettings(e)["computers.image"]; !l.Locked || l.Env != "FETTLE_COMPUTER_IMAGE" {
+	if l := instanceSettings(e)["computers.image"]; !l.Locked || l.Env != "FETTLE_COMPUTER_IMAGE" || string(l.Value) != `"ghcr.io/acme/computer:env"` {
 		t.Fatalf("locked image: %+v", l)
 	}
 	if code, body := e.Do("PUT", "/admin/settings/computers.image", map[string]any{"value": "ghcr.io/acme/computer:8"}, nil); code != http.StatusConflict || !strings.Contains(body, "FETTLE_COMPUTER_IMAGE") {

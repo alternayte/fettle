@@ -162,7 +162,7 @@ For `fettle-computer:dev`, the error tells you to run `just image`.
 
 Instance admins see the section **This server** in Settings, Computers.
 The settings apply to every space.
-An environment variable wins over each setting. Then the field is read-only and names the variable.
+An environment variable wins over each setting. Then the field is read-only, shows the value of the variable and names the variable.
 
 | Setting | Field | Variable that locks it |
 | --- | --- | --- |
@@ -171,6 +171,9 @@ An environment variable wins over each setting. Then the field is read-only and 
 | `computers.proxy` | Proxy URL, with the user name | `HTTPS_PROXY` |
 | `computers.proxy_password` | Proxy password | `HTTPS_PROXY` |
 | `computers.use_host_settings` | Use this computer's certificates and proxy (desktop app only) | none |
+
+The desktop app ignores `FETTLE_COMPUTER_IMAGE`. Use the field to change the image there.
+A release ignores a computer image that names another release of `ghcr.io/alternayte/fettle-computer`, and uses its own image. An upgrade thus never keeps an old pin. Fettle refuses to save such an image.
 
 The proxy password is an instance secret in the vault. The API never returns it. It shows only whether a password is set.
 Do not put the password in the proxy URL. Fettle refuses such a URL.
@@ -188,7 +191,7 @@ At boot, as root, agentd installs the extra roots:
 
 - It writes them to `/usr/local/share/ca-certificates` and runs `update-ca-certificates`.
 - It writes the Chromium policy `/etc/chromium/policies/managed/fettle.json` with `CACertificates`. Chromium on Linux does not read the system store.
-- Commands get `SSL_CERT_FILE`, `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE` and `UV_NATIVE_TLS=1`.
+- Commands get `SSL_CERT_FILE`, `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE` and `UV_SYSTEM_CERTS=1`.
 
 ### Filter proxy
 

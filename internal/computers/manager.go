@@ -490,7 +490,7 @@ func (m *Manager) waitHealthy(ctx context.Context, lv *live, c *Computer, mach M
 			cancel()
 			if err == nil && h.Protocol != client.Protocol {
 				// Waiting does not help: the image or the binary holds another agentd.
-				return fmt.Errorf("the computer runs fettle-agentd %q with protocol %d, but this server needs protocol %d. The computer image %q or the fettle-agentd binary does not match this server. For a development build, run `just image` and `just build`; otherwise set the image of this release in Settings, Computers", h.Version, h.Protocol, client.Protocol, m.image())
+				return fmt.Errorf("the computer runs fettle-agentd %q with protocol %d, but this server needs protocol %d. The computer image %q or the fettle-agentd binary does not match this server. For a development build, run `just image` and `just build`. For a release, leave the computer image in Settings, Computers empty, and remove FETTLE_COMPUTER_IMAGE if it names another image", h.Version, h.Protocol, client.Protocol, m.image())
 			}
 			if err == nil {
 				lv.client = cl

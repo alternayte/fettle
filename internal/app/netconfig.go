@@ -55,6 +55,28 @@ func envLock(d settings.Def) (string, bool) {
 	return "", false
 }
 
+// envLockOf is envLock for this server. The desktop app ignores FETTLE_COMPUTER_IMAGE: its
+// user cannot see or change a launchd variable, and a forgotten one pins an old image.
+func (a *App) envLockOf(d settings.Def) (string, bool) {
+	if d.Key == "computers.image" && a.Cfg.Desktop {
+		return "", false
+	}
+	return envLock(d)
+}
+
+// lockedValue is the value that the environment variable gives a locked setting, without
+// the password of a proxy URL.
+func lockedValue(name string) string {
+	v := strings.TrimSpace(os.Getenv(name))
+	if u, err := url.Parse(v); err == nil && u.User != nil {
+		if _, ok := u.User.Password(); ok {
+			u.User = url.User(u.User.Username())
+			return u.String()
+		}
+	}
+	return v
+}
+
 // BuiltinImage is the computer image that this build names: the release image that the
 // main.computerImage ldflag sets, else the local build.
 func BuiltinImage(ldflag string) string {
@@ -64,13 +86,33 @@ func BuiltinImage(ldflag string) string {
 	return computers.DevImage
 }
 
-// ComputerImage chooses the computer image: FETTLE_COMPUTER_IMAGE, else the computers.image
-// setting, else the image of this build.
-func ComputerImage(ldflag, setting string) string {
-	if v := strings.TrimSpace(os.Getenv("FETTLE_COMPUTER_IMAGE")); v != "" {
+// imageRepo is an image reference without its tag or digest.
+func imageRepo(ref string) string {
+	if i := strings.Index(ref, "@"); i >= 0 {
+		ref = ref[:i]
+	}
+	if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
+		ref = ref[:i]
+	}
+	return ref
+}
+
+// StaleRelease reports whether image names another release of the image of this release
+// build. Such a pin is left over from an earlier version, and its fettle-agentd does not
+// match this server.
+func StaleRelease(ldflag, image string) bool {
+	image = strings.TrimSpace(image)
+	return ldflag != "" && image != "" && image != ldflag && imageRepo(image) == imageRepo(ldflag)
+}
+
+// ComputerImage chooses the computer image: FETTLE_COMPUTER_IMAGE when readEnv, else the
+// computers.image setting, else the image of this build. A setting that names another
+// release of this build's image gives way to the image of this build.
+func ComputerImage(ldflag, setting string, readEnv bool) string {
+	if v := strings.TrimSpace(os.Getenv("FETTLE_COMPUTER_IMAGE")); readEnv && v != "" {
 		return v
 	}
-	if v := strings.TrimSpace(setting); v != "" {
+	if v := strings.TrimSpace(setting); v != "" && !StaleRelease(ldflag, v) {
 		return v
 	}
 	return BuiltinImage(ldflag)
@@ -78,7 +120,7 @@ func ComputerImage(ldflag, setting string) string {
 
 // computerImage returns the image that computers use now.
 func (a *App) computerImage(ctx context.Context) string {
-	return ComputerImage(a.Cfg.ComputerImage, a.Settings.String(ctx, nil, "computers.image"))
+	return ComputerImage(a.Cfg.ComputerImage, a.Settings.String(ctx, nil, "computers.image"), !a.Cfg.Desktop)
 }
 
 // applyImage gives the current image to the computer manager and the providers.

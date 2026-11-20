@@ -60,7 +60,8 @@ func (a *App) instanceSettingView(ctx context.Context, d settings.Def) (Instance
 	def, _ := json.Marshal(a.instanceDefault(d))
 	v := InstanceSettingView{Key: d.Key, Default: def, Secret: d.Secret, Doc: d.Doc}
 	v.Env = d.Env
-	if name, ok := envLock(d); ok {
+	name, locked := a.envLockOf(d)
+	if locked {
 		v.Locked, v.Env = true, name
 	}
 	if d.Secret {
@@ -71,11 +72,23 @@ func (a *App) instanceSettingView(ctx context.Context, d settings.Def) (Instance
 		v.Value, v.Set, v.IsDefault = json.RawMessage("null"), len(b) > 0, len(b) == 0
 		return v, nil
 	}
+	if locked {
+		// The view shows what applies: the value of the variable, not the stored one.
+		v.Value, _ = json.Marshal(lockedValue(name))
+		return v, nil
+	}
 	cur, err := a.Settings.Get(ctx, nil, d.Key)
 	if err != nil {
 		return v, err
 	}
 	v.Value, v.IsDefault = cur.Value, cur.IsDefault || string(cur.Value) == `""`
+	if d.Key == "computers.image" {
+		var s string
+		if json.Unmarshal(cur.Value, &s) == nil && StaleRelease(a.Cfg.ComputerImage, s) {
+			// A pin to another release does not apply, so the view shows the default.
+			v.Value, v.IsDefault = json.RawMessage(`""`), true
+		}
+	}
 	return v, nil
 }
 
@@ -122,11 +135,14 @@ func (a *App) registerInstanceSettings(api huma.API) {
 		if !ok {
 			return nil, huma.Error404NotFound("This server has no setting " + in.Key + ".")
 		}
-		if name, locked := envLock(d); locked {
+		if name, locked := a.envLockOf(d); locked {
 			return nil, huma.Error409Conflict("The environment variable " + name + " sets this value. Change the variable, or remove it and restart Fettle.")
 		}
 		if err := checkInstanceSetting(d.Key, in.Body.Value); err != nil {
 			return nil, huma.Error422UnprocessableEntity(err.Error())
+		}
+		if s, ok := in.Body.Value.(string); ok && d.Key == "computers.image" && StaleRelease(a.Cfg.ComputerImage, s) {
+			return nil, huma.Error422UnprocessableEntity("This is the image of another Fettle release. This version uses " + a.Cfg.ComputerImage + ". Leave the field empty to use it.")
 		}
 		if d.Secret {
 			s, _ := in.Body.Value.(string)
