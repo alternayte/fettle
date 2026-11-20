@@ -65,7 +65,7 @@ func ownerOnly(method, rest string) bool {
 	case "memory":
 		return !read
 	case "bots":
-		if len(seg) >= 3 && seg[2] == "screen" {
+		if len(seg) >= 3 && (seg[2] == "screen" || seg[2] == "sign-ins") {
 			return false
 		}
 		return !read

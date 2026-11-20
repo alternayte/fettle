@@ -160,7 +160,9 @@
     },
     "takeover": {
       "open": "Open the screen",
-      "record": "Record this as a skill"
+      "record": "Record this as a skill",
+      "share": "Share from Chrome",
+      "shareHint": "Opens {site} in your browser. In Chrome, click the Fettle icon to share your sign-in."
     },
     "resolved": {
       "allowed": "Allowed",
@@ -676,7 +678,16 @@
     "moveHint": "The bot uses the new computer from its next run. Its own files move with it.",
     "openScreen": "Open the screen",
     "noScreen": "Only a desktop zone has a screen you can watch and take over.",
-    "teachHint": "Show {bot} how to do some work once, and it drafts a skill."
+    "teachHint": "Show {bot} how to do some work once, and it drafts a skill.",
+    "signIns": "Signed-in sites",
+    "signInsBody": "{bot} keeps the sign-ins that people give it, by takeover or from Chrome. To read the sites, Fettle starts the computer.",
+    "signInsShow": "Show the sites",
+    "signInsLoading": "Fettle reads the sites from the computer.",
+    "signInsFailed": "Fettle could not read the sites.",
+    "signInsNone": "{bot} is not signed in to a site.",
+    "signOut": "Sign out",
+    "signedOut": "{bot} is signed out of {site}.",
+    "signOutFailed": "Fettle could not sign the bot out"
   },
   "settings": {
     "nav": "Settings pages",
@@ -1087,7 +1098,24 @@
     "failed": "Fettle could not change the tokens",
     "localOnly": "In local mode, the CLI uses the local token. Access tokens are for server mode.",
     "signOut": "Sign out",
-    "needName": "Give the token a name."
+    "needName": "Give the token a name.",
+    "shareOnly": "Can only share a sign-in."
+  },
+  "chrome": {
+    "title": "Chrome extension",
+    "intro": "The Fettle extension for Chrome shares your sign-in for one site with a bot. The bot then does not sign in again. Fettle keeps no copy.",
+    "connect": "Connect Chrome",
+    "opened": "Fettle opened the pairing page in your browser. In Chrome, click the Fettle icon, then click Connect.",
+    "typeCode": "If your default browser is not Chrome, open the extension in Chrome and type these values:",
+    "server": "Server",
+    "code": "Code",
+    "expires": "The code works one time, for 10 minutes.",
+    "tokens": "Connected extensions",
+    "none": "No extension is connected.",
+    "token": "Chrome extension …{last4}",
+    "paired": "Connected {when}",
+    "serverTokens": "The extension uses an access token that can only share a sign-in. Access tokens lists it, and you can revoke it there.",
+    "failed": "Fettle could not change the Chrome connection"
   },
   "notify": {
     "intro": "Fettle can tell this device when a bot needs you. A notification opens the exact card or run.",

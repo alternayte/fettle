@@ -1,0 +1,16 @@
+{
+  "name": "fettle-chrome-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shares a sign-in for one site from Chrome with a Fettle bot.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "bun build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.4",
+    "typescript": "~5.8.3"
+  }
+}

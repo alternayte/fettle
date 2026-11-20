@@ -8,6 +8,7 @@ import { createToken, listTokens, revokeToken, signOut } from "@/api/signin";
 import { Notice, Section } from "@/app/Page";
 import { Btn, Field, inputCls } from "@/components/form";
 import { t } from "@/lib/copy";
+import { ChromeExtension } from "./ChromeExtension";
 import { formatDay } from "@/lib/format";
 
 export function TokensPage() {
@@ -18,7 +19,15 @@ export function TokensPage() {
   const [name, setName] = useState("");
   const [fresh, setFresh] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  if (!server) return <Notice title={t("tokens.localOnly")} />;
+  if (!server)
+    return (
+      <div>
+        <Notice title={t("tokens.localOnly")} />
+        <div className="mt-8">
+          <ChromeExtension />
+        </div>
+      </div>
+    );
   return (
     <div>
       <p className="mb-6 max-w-[var(--measure)] text-sm text-ink-soft">{t("tokens.intro")}</p>
@@ -68,6 +77,9 @@ export function TokensPage() {
             <li key={k.id} className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-rule py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-[var(--weight-medium)] text-ink">{k.name}</p>
+                {k.scopes?.length === 1 && k.scopes[0] === "share-sign-in" && (
+                  <p className="text-xs text-ink-soft">{t("tokens.shareOnly")}</p>
+                )}
                 <p className="figures text-ink-faint">
                   {k.start}… ·{" "}
                   {k.lastUsedAt ? t("tokens.lastUsed", { when: formatDay(k.lastUsedAt) }) : t("tokens.neverUsed")}
@@ -95,6 +107,7 @@ export function TokensPage() {
           ))}
         </ul>
       </Section>
+      <ChromeExtension />
       <Btn
         className="mt-8"
         kind="quiet"

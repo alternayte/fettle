@@ -696,6 +696,40 @@
         ],
         "type": "object"
       },
+      "Claim-extension-pairingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "Claim-extension-pairingResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "server",
+          "account"
+        ],
+        "type": "object"
+      },
       "ComputerProviderView": {
         "additionalProperties": false,
         "properties": {
@@ -1445,6 +1479,35 @@
         ],
         "type": "object"
       },
+      "ExtensionToken": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last4": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "last4",
+          "created_at",
+          "last_used_at"
+        ],
+        "type": "object"
+      },
       "FeatureView": {
         "additionalProperties": false,
         "properties": {
@@ -1829,6 +1892,24 @@
         ],
         "type": "object"
       },
+      "List-bot-sign-insResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "sites": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "sites"
+        ],
+        "type": "object"
+      },
       "List-chatsResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1844,6 +1925,24 @@
         },
         "required": [
           "chats"
+        ],
+        "type": "object"
+      },
+      "List-extension-tokensResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/ExtensionToken"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "tokens"
         ],
         "type": "object"
       },
@@ -2009,6 +2108,32 @@
         },
         "required": [
           "settings"
+        ],
+        "type": "object"
+      },
+      "List-share-targetsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "site": {
+            "description": "The registrable domain of url, such as github.com.",
+            "type": "string"
+          },
+          "spaces": {
+            "items": {
+              "$ref": "#/components/schemas/ShareSpace"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "account",
+          "spaces"
         ],
         "type": "object"
       },
@@ -2552,6 +2677,33 @@
         },
         "required": [
           "started"
+        ],
+        "type": "object"
+      },
+      "Pairing": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "The code to type in the extension when the default browser is not Chrome.",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "url": {
+            "description": "The pairing page. The extension reads the code from it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "url",
+          "server",
+          "expires_at"
         ],
         "type": "object"
       },
@@ -3747,6 +3899,45 @@
         ],
         "type": "object"
       },
+      "SessionCookie": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "expires": {
+            "format": "double",
+            "type": "number"
+          },
+          "host_only": {
+            "type": "boolean"
+          },
+          "http_only": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "same_site": {
+            "type": "string"
+          },
+          "secure": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "domain"
+        ],
+        "type": "object"
+      },
       "Set-approval-modeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3938,6 +4129,125 @@
         "required": [
           "needs_model",
           "needs_name"
+        ],
+        "type": "object"
+      },
+      "Share-sign-inRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cookies": {
+            "items": {
+              "$ref": "#/components/schemas/SessionCookie"
+            },
+            "maxItems": 400,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "storage": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The local storage of the origin of url.",
+            "type": "object"
+          },
+          "url": {
+            "description": "The address of the tab that you share from.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "cookies"
+        ],
+        "type": "object"
+      },
+      "ShareSpace": {
+        "additionalProperties": false,
+        "properties": {
+          "bots": {
+            "items": {
+              "$ref": "#/components/schemas/ShareTarget"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "people": {
+            "description": "The number of people who can use these bots.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "people",
+          "bots"
+        ],
+        "type": "object"
+      },
+      "ShareTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "requests": {
+            "description": "Sites of open takeover requests of this bot.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "requests"
+        ],
+        "type": "object"
+      },
+      "SharedSignIn": {
+        "additionalProperties": false,
+        "properties": {
+          "continued": {
+            "description": "A run that waited for this sign-in continues.",
+            "type": "boolean"
+          },
+          "cookies": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "site": {
+            "type": "string"
+          },
+          "storage": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "site",
+          "cookies",
+          "storage",
+          "continued"
         ],
         "type": "object"
       },
@@ -5997,6 +6307,187 @@
         ]
       }
     },
+    "/api/v1/extension/claim": {
+      "post": {
+        "operationId": "claim-extension-pairing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Claim-extension-pairingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Claim-extension-pairingResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Use a pairing code. It returns a token that can only share a sign-in.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
+    "/api/v1/extension/pairings": {
+      "post": {
+        "operationId": "create-extension-pairing",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pairing"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start the pairing of the Chrome extension. The code works once, for 10 minutes.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
+    "/api/v1/extension/targets": {
+      "get": {
+        "operationId": "list-share-targets",
+        "parameters": [
+          {
+            "description": "The address of the tab to share from.",
+            "explode": false,
+            "in": "query",
+            "name": "url",
+            "schema": {
+              "description": "The address of the tab to share from.",
+              "maxLength": 4096,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-share-targetsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The bots that you can share a sign-in with, and their open sign-in requests. With url, it also names the site that a share from that address covers.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
+    "/api/v1/extension/tokens": {
+      "get": {
+        "operationId": "list-extension-tokens",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-extension-tokensResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The extension tokens of the desktop app. In server mode the extension uses an access token, which Account lists.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
+    "/api/v1/extension/tokens/{id}": {
+      "delete": {
+        "operationId": "revoke-extension-token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke an extension token.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
     "/api/v1/instance": {
       "get": {
         "operationId": "get-instance",
@@ -7415,6 +7906,169 @@
         "summary": "Return control of a bot's screen. With a takeover card, it answers the card and the bot continues.",
         "tags": [
           "screens"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/sign-ins": {
+      "get": {
+        "operationId": "list-bot-sign-ins",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/List-bot-sign-insResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The sites that hold cookies in the browser profile of a bot. It starts the computer when it sleeps.",
+        "tags": [
+          "sign-ins"
+        ]
+      },
+      "post": {
+        "operationId": "share-sign-in",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Share-sign-inRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedSignIn"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Put a sign-in that you share from your browser into the browser profile of a bot. Fettle keeps no copy.",
+        "tags": [
+          "sign-ins"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/bots/{bot}/sign-ins/{site}": {
+      "delete": {
+        "operationId": "remove-bot-sign-in",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bot",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "site",
+            "required": true,
+            "schema": {
+              "maxLength": 253,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign a bot out of a site: remove the cookies and the stored data of the site from its browser profile.",
+        "tags": [
+          "sign-ins"
         ]
       }
     },

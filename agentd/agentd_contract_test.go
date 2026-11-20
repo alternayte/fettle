@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -270,6 +271,46 @@ func TestSCN_CMP_012_AgentdEndpointsTokenAndPinnedTLS(t *testing.T) {
 		}
 		if !slices.Contains(names, "report.csv") {
 			t.Fatalf("downloads %v", names)
+		}
+	})
+
+	t.Run("shared sign-in", func(t *testing.T) {
+		site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			title := "signed out"
+			if k, err := r.Cookie("acme_session"); err == nil && k.Value == "acme-cookie-77" {
+				title = "signed in"
+			}
+			_, _ = fmt.Fprintf(w, `<!doctype html><title>%s</title><p id=t></p><script>document.getElementById('t').textContent = 'token ' + (localStorage.getItem('acme_token') || 'none')</script>`, title)
+		}))
+		defer site.Close()
+		if err := c.BrowserOpen(ctx, client.BrowserContextRequest{ID: "share-1", Ephemeral: true}); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = c.BrowserClose(ctx, "share-1") }()
+		err := c.BrowserSession(ctx, "share-1", client.SessionRequest{
+			Cookies: []client.SessionCookie{{Name: "acme_session", Value: "acme-cookie-77", Domain: "127.0.0.1", Path: "/", HostOnly: true, HTTPOnly: true, SameSite: "lax"}},
+			Origin:  site.URL,
+			Storage: map[string]string{"acme_token": "acme-ls-88"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		snap, err := c.BrowserNavigate(ctx, "share-1", site.URL+"/me")
+		if err != nil || snap.Title != "signed in" || !strings.Contains(snap.Text, "token acme-ls-88") {
+			t.Fatalf("after the share: %q %q %v", snap.Title, snap.Text, err)
+		}
+		hosts, err := c.BrowserCookieHosts(ctx, "share-1")
+		if err != nil || !slices.Contains(hosts, "127.0.0.1") {
+			t.Fatalf("hosts %v %v", hosts, err)
+		}
+		if err := c.BrowserSignOut(ctx, "share-1", "127.0.0.1"); err != nil {
+			t.Fatal(err)
+		}
+		if snap, err = c.BrowserNavigate(ctx, "share-1", site.URL+"/me"); err != nil || snap.Title != "signed out" {
+			t.Fatalf("after sign-out: %q %v", snap.Title, err)
+		}
+		if hosts, _ = c.BrowserCookieHosts(ctx, "share-1"); slices.Contains(hosts, "127.0.0.1") {
+			t.Fatalf("hosts after sign-out %v", hosts)
 		}
 	})
 

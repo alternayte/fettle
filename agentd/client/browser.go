@@ -161,3 +161,56 @@ func (c *Client) BrowserFill(ctx context.Context, id string, req FillRequest) er
 	var out map[string]any
 	return c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/fill", nil, req, &out)
 }
+
+// SessionCookie is one cookie of a shared sign-in, in the fields of chrome.cookies.
+// Expires is seconds since the epoch, or 0 for a session cookie. SameSite is
+// no_restriction, lax, strict or unspecified.
+type SessionCookie struct {
+	Name     string  `json:"name"`
+	Value    string  `json:"value"`
+	Domain   string  `json:"domain"`
+	Path     string  `json:"path,omitempty"`
+	HostOnly bool    `json:"host_only,omitempty"`
+	Secure   bool    `json:"secure,omitempty"`
+	HTTPOnly bool    `json:"http_only,omitempty"`
+	SameSite string  `json:"same_site,omitempty"`
+	Expires  float64 `json:"expires,omitempty"`
+}
+
+// SessionRequest is the body of POST /v1/browser/{ctx}/session: the cookies of a shared
+// sign-in, and the local storage of one origin.
+type SessionRequest struct {
+	Cookies []SessionCookie   `json:"cookies"`
+	Origin  string            `json:"origin,omitempty"`
+	Storage map[string]string `json:"storage,omitempty"`
+}
+
+// CookieHosts lists the hosts that hold cookies in a browser context, without values.
+type CookieHosts struct {
+	Hosts []string `json:"hosts"`
+}
+
+// SignOutRequest is the body of POST /v1/browser/{ctx}/sign-out. agentd removes the
+// cookies of Domain and of its subdomains, and the stored data of their origins.
+type SignOutRequest struct {
+	Domain string `json:"domain"`
+}
+
+// BrowserSession puts the cookies and the local storage of a shared sign-in into a context.
+func (c *Client) BrowserSession(ctx context.Context, id string, req SessionRequest) error {
+	var out map[string]any
+	return c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/session", nil, req, &out)
+}
+
+// BrowserCookieHosts lists the hosts that hold cookies in a context.
+func (c *Client) BrowserCookieHosts(ctx context.Context, id string) ([]string, error) {
+	var out CookieHosts
+	err := c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/cookie-hosts", nil, struct{}{}, &out)
+	return out.Hosts, err
+}
+
+// BrowserSignOut removes the cookies and the stored data of a domain from a context.
+func (c *Client) BrowserSignOut(ctx context.Context, id, domain string) error {
+	var out map[string]any
+	return c.doJSON(ctx, http.MethodPost, "/v1/browser/"+url.PathEscape(id)+"/sign-out", nil, SignOutRequest{Domain: domain}, &out)
+}

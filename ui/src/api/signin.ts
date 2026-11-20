@@ -26,6 +26,7 @@ export type AccessToken = {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  scopes?: string[];
 };
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {

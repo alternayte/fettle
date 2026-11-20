@@ -74,20 +74,22 @@ type App struct {
 	// Connectors holds the MCP connectors (§12).
 	Connectors *connectors.Service
 	// SignIn is the server-mode sign-in; nil in local mode.
-	SignIn    *auth.Server
-	Spaces    *spaces.Service
-	Bots      *bots.Service
-	Chats     *chats.Service
-	Envs      *envelopes.Service
-	Runs      *runs.Service
-	Journal   *runs.Journal
-	Models    *models.Service
-	Usage     *usage.Service
-	Policy    *policy.Service
-	Zones     *zones.Service
-	Computers *computers.Manager
-	Agent     *agent.Agent
-	Queue     jobs.Queue
+	SignIn *auth.Server
+	Spaces *spaces.Service
+	// Extensions holds the pairing codes and the local-mode tokens of the Chrome extension.
+	Extensions *auth.Extensions
+	Bots       *bots.Service
+	Chats      *chats.Service
+	Envs       *envelopes.Service
+	Runs       *runs.Service
+	Journal    *runs.Journal
+	Models     *models.Service
+	Usage      *usage.Service
+	Policy     *policy.Service
+	Zones      *zones.Service
+	Computers  *computers.Manager
+	Agent      *agent.Agent
+	Queue      jobs.Queue
 
 	MasterKeySource vault.MasterKeySource
 	LocalToken      string
@@ -164,6 +166,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	}
 	a.Users = auth.NewUserStore(e)
 	a.Spaces = spaces.New(e, a.Audit)
+	a.Extensions = auth.NewExtensions(e)
 	a.Bots = bots.New(e, a.Audit)
 	a.Bots.MaxPerSpace = func(ctx context.Context, sp uuid.UUID) int { return a.Settings.Int(ctx, &sp, "bots.max_per_space") }
 	a.Chats = chats.New(e, a.Hub)

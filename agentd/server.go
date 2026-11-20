@@ -117,6 +117,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /v1/browser/{ctx}/screenshot", s.browserScreenshot)
 	mux.HandleFunc("POST /v1/browser/{ctx}/downloads", s.browserDownloads)
 	mux.HandleFunc("POST /v1/browser/{ctx}/fill", s.browserFill)
+	mux.HandleFunc("POST /v1/browser/{ctx}/session", s.browserSession)
+	mux.HandleFunc("POST /v1/browser/{ctx}/cookie-hosts", s.browserCookieHosts)
+	mux.HandleFunc("POST /v1/browser/{ctx}/sign-out", s.browserSignOut)
 	// A websocket upgrade is a GET; Appendix B names this route POST /v1/mcp/stdio (D-135).
 	mux.HandleFunc("GET /v1/mcp/stdio", s.mcpStdio)
 	mux.HandleFunc("POST /v1/screen/{id}/start", s.screenStart)
