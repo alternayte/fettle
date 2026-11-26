@@ -234,7 +234,11 @@
     },
     "stopFailed": "Fettle cannot stop the run",
     "rerun": "Run again",
-    "rerunFailed": "Fettle did not run it again"
+    "rerunFailed": "Fettle did not run it again",
+    "activity": {
+      "elapsed": "{seconds} s",
+      "open": "{label}. Open the timeline"
+    }
   },
   "timeline": {
     "title": "Run timeline",
@@ -289,6 +293,14 @@
       "error": "error: {error}",
       "budget": "Needs {estimate}. {left} is left.",
       "cancel": "A person stopped the run."
+    },
+    "timing": {
+      "title": "Where the time went",
+      "wait": "Wait for a worker",
+      "router": "Router",
+      "model": "Model",
+      "tools": "Tools",
+      "firstToken": "First token in {time}"
     }
   },
   "vault": {

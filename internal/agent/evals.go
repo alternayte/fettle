@@ -57,7 +57,7 @@ func (a *Agent) EvalSkill(ctx context.Context, in EvalInput) (skills.EvalReport,
 		for trial := 0; trial < in.Trials; trial++ {
 			ctxt := Assemble(Input{BotName: b.Name, BotJob: b.Job, Instructions: b.Instructions, LoadedSkill: in.SkillText,
 				Now: a.now(), TimeZone: tz, Goal: c.Prompt, GoalOrigin: OriginUser, Capabilities: UserCapabilities, ContextWindow: 128000})
-			req := models.Request{System: ctxt.System, Messages: ctxt.Messages, Tools: tools, MaxTokens: 4096}
+			req := models.Request{System: ctxt.System, SystemTail: ctxt.SystemTail, Messages: ctxt.Messages, Tools: tools, MaxTokens: 4096}
 			resp, idx, err := models.CallWithFallback(ctx, a.HTTP, targets, req, nil, nil)
 			if err != nil {
 				res.Error = err.Error()

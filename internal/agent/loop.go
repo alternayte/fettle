@@ -68,6 +68,8 @@ type exec struct {
 	st *state
 	// forkDiff is the diff of a forked sub-agent, reported to its owner.
 	forkDiff []FileDiff
+	// routerMS is the time of the router call of this attempt.
+	routerMS int64
 }
 
 // Work runs steps until the run finishes or waits (§7.2).
@@ -117,6 +119,7 @@ func (w *Worker) Work(rctx context.Context, job *river.Job[runs.Args]) error {
 	if errors.Is(err, errWaitRace) || errors.Is(err, errParked) {
 		err = nil // parked, or a wake inserted the next job
 	}
+	x.endActivity(context.WithoutCancel(ctx))
 	a.publishRun(context.WithoutCancel(ctx), run.ID())
 	if err != nil && ctx.Err() == nil {
 		a.Log.Error("run attempt failed; River retries it", "run", run.ID(), "error", err)
@@ -163,16 +166,19 @@ func (x *exec) loop(ctx context.Context) error {
 				step = *x.env.Step
 			} else if x.run.Kind == "owner" {
 				// Envelopes with a fixed step skip the router (§9.3).
+				x.activity(ctx, actRouting, "")
+				rs := time.Now()
 				if step, err = x.route(ctx); err != nil {
 					return err
 				}
+				x.routerMS = time.Since(rs).Milliseconds()
 			}
 			if atts := x.attachments(ctx); len(atts) > 0 && a.DeliverAttachments != nil && x.bot.ZoneID != nil {
 				if err := a.DeliverAttachments(ctx, x.run.SpaceID, x.run.BotID, atts); err != nil {
 					a.Log.Warn("deliver attachments", "run", x.run.ID(), "error", a.Vault.Redactor.Global(err.Error()))
 				}
 			}
-			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvRunStarted, Data: evRunStarted{Step: step, Goal: x.env.Goal}}); err != nil {
+			if _, err := x.append(ctx, nil, runs.New{Type: runs.EvRunStarted, Data: evRunStarted{Step: step, Goal: x.env.Goal, QueueMS: x.queueMS(), RouterMS: x.routerMS}}); err != nil {
 				return err
 			}
 			if err := a.Envelopes.SetStatus(ctx, x.env.ID(), "running", nil); err != nil {
@@ -231,6 +237,8 @@ func (x *exec) loop(ctx context.Context) error {
 			if err := x.runTool(ctx, st, st.pending[0]); err != nil {
 				return err
 			}
+			// The run line shows the current duration and cost during long tool chains.
+			a.publishRun(ctx, x.run.ID())
 			continue
 		}
 		if !st.needsModel() {
@@ -472,7 +480,7 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 			return err
 		}
 	}
-	req := models.Request{System: c.System, Messages: c.Messages, Tools: toolDefs(tools), MaxTokens: 4096}
+	req := models.Request{System: c.System, SystemTail: c.SystemTail, Messages: c.Messages, Tools: toolDefs(tools), MaxTokens: 4096}
 
 	// Budget check before the call (§8.4).
 	est := models.Estimate(c.Tokens, int64(req.MaxTokens), targets[0].Target)
@@ -480,13 +488,19 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 		return err
 	}
 
+	x.activity(ctx, actThinking, "")
 	msgID := uuid.NewSHA1(x.run.ID(), []byte(fmt.Sprintf("turn-%d", st.modelTurns+1)))
 	streamStarted := false
+	var firstToken int64
 	var chatID uuid.UUID
 	if x.env.ChatID != nil {
 		chatID = *x.env.ChatID
 	}
+	var start time.Time
 	onDelta := func(d string) {
+		if firstToken == 0 {
+			firstToken = max(time.Since(start).Milliseconds(), 1)
+		}
 		if x.env.ChatID == nil {
 			return
 		}
@@ -497,7 +511,7 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 		a.Chats.Publish(chatID, "delta", map[string]string{"id": msgID.String(), "text": d})
 	}
 	var switches []models.Switch
-	start := time.Now()
+	start = time.Now()
 	resp, idx, err := models.CallWithFallback(ctx, a.HTTP, targets, req, onDelta, func(s models.Switch) { switches = append(switches, s) })
 	for _, s := range switches {
 		if _, aerr := x.append(ctx, nil, runs.New{Type: runs.EvModelSwitch, Data: s}); aerr != nil {
@@ -539,7 +553,7 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 	t := targets[idx].Target
 	cost, reported := models.Cost(resp.Usage, t)
 	text := a.Vault.Redactor.String(ctx, x.run.SpaceID, resp.Text)
-	data := evModelTurn{Text: text, ToolCalls: resp.ToolCalls, Usage: resp.Usage, CostUSD: cost, Reported: reported, Model: resp.Model, Role: models.RoleOwner, Request: fmt.Sprintf("%d messages, %d tools, about %d tokens", len(req.Messages), len(req.Tools), c.Tokens), Duration: time.Since(start).Milliseconds()}
+	data := evModelTurn{Text: text, ToolCalls: resp.ToolCalls, Usage: resp.Usage, CostUSD: cost, Reported: reported, Model: resp.Model, Role: models.RoleOwner, Request: fmt.Sprintf("%d messages, %d tools, about %d tokens", len(req.Messages), len(req.Tools), c.Tokens), Duration: time.Since(start).Milliseconds(), FirstTokenMS: firstToken}
 	var msg *chats.Message
 	err = a.E.WithTx(ctx, func(ctx context.Context) error {
 		if strings.TrimSpace(text) != "" && x.env.ChatID != nil {
@@ -586,6 +600,10 @@ func (x *exec) modelTurn(ctx context.Context, st *state) error {
 		} else if streamStarted {
 			a.Chats.Publish(chatID, "message_removed", map[string]string{"id": msgID.String()})
 		}
+	}
+	if len(resp.ToolCalls) == 0 {
+		// The reply is final: the live line goes away.
+		x.activity(ctx, "", "")
 	}
 	a.publishRun(ctx, x.run.ID())
 	return nil
@@ -653,6 +671,7 @@ func (x *exec) runTool(ctx context.Context, st *state, call models.ToolCall) err
 		_, err := x.append(ctx, nil, runs.New{Type: runs.EvToolCall, Data: evTool{CallID: call.ID, Tool: call.Name, Args: call.Args, Error: "This tool is not available in this run."}})
 		return err
 	}
+	x.activity(ctx, toolLabel(call.Name, call.Args), call.Name)
 	if call.Name == "sleep_until" {
 		return x.sleepUntil(ctx, call)
 	}

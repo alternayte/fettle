@@ -30,6 +30,9 @@ export function toRunLine(r: SchemaRunLine): RunLine {
     tokens: r.tokens,
     state: r.state as RunLine["state"],
     verified: r.verified ?? null,
+    activity: r.activity?.label
+      ? { label: r.activity.label, tool: r.activity.tool, started_at: r.activity.started_at }
+      : undefined,
   };
 }
 

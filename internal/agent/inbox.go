@@ -178,6 +178,10 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 		a.Chats.Publish(chatID, "message", a.MessageView(ctx, m))
 	}
 	for _, id := range started {
+		// The chat shows at once that the bot took the message.
+		if r, err := a.Runs.Find(ctx, id); err == nil {
+			a.setActivity(ctx, spaceID, id, r.EnvelopeID, r.BotID, &chatID, actThinking, "")
+		}
 		a.publishRun(ctx, id)
 	}
 	if !res.Steered && !res.Status && res.EnvelopeID != nil && a.Learning != nil {
