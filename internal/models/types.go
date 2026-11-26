@@ -82,8 +82,11 @@ type Schema struct {
 
 // Request is one model call.
 type Request struct {
-	Model       string    `json:"model"`
-	System      string    `json:"system"`
+	Model  string `json:"model"`
+	System string `json:"system"`
+	// SystemTail is system text that changes often, such as the time. It follows System,
+	// after the cache point, so the stable start of the prompt can be cached.
+	SystemTail  string    `json:"system_tail,omitempty"`
 	Messages    []Message `json:"messages"`
 	Tools       []ToolDef `json:"tools,omitempty"`
 	Output      *Schema   `json:"output,omitempty"`
@@ -158,3 +161,17 @@ func IsRetryable(err error) bool {
 
 // FirstTokenTimeout is the time a call may take before its first token.
 var FirstTokenTimeout = 60 * time.Second
+
+// FullSystem is the system prompt with its tail, for adapters that do not cache.
+func (r Request) FullSystem() string {
+	switch {
+	case r.SystemTail == "":
+		return r.System
+	case r.System == "":
+		return r.SystemTail
+	}
+	return r.System + "\n\n" + r.SystemTail
+}
+
+// ephemeral is the cache point of the Anthropic API and of OpenRouter.
+var ephemeral = map[string]string{"type": "ephemeral"}

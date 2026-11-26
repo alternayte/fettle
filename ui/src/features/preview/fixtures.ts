@@ -211,6 +211,7 @@ export const run: RunDetail = {
   verified: true,
   score: 100,
   events: buildEvents(),
+  timing: { queue_ms: 140, router_ms: 1200, model_ms: 96_000, tools_ms: 154_000, first_token_ms: 900 },
 };
 
 export const wizard: WizardModel = {

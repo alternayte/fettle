@@ -68,6 +68,14 @@ export interface RunLine {
   tokens: number;
   state: RunState;
   verified: boolean | null;
+  /** The current step of a live run, as one short label. */
+  activity?: Activity;
+}
+
+export interface Activity {
+  label: string;
+  tool?: string;
+  started_at: string;
 }
 
 export interface Attachment {

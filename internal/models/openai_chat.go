@@ -54,10 +54,27 @@ func ocContent(parts []Part) any {
 	return out
 }
 
-func (openAIChat) body(req Request) map[string]any {
+// openRouterCaches reports whether a request through c can carry cache_control. Only
+// OpenRouter passes it on, and only to Anthropic and Google models; other
+// OpenAI-compatible servers can refuse the field.
+func openRouterCaches(c Conn, model string) bool {
+	if !strings.Contains(strings.ToLower(c.BaseURL), "openrouter.ai") {
+		return false
+	}
+	m := strings.ToLower(model)
+	return strings.HasPrefix(m, "anthropic/") || strings.HasPrefix(m, "google/")
+}
+
+func (openAIChat) body(req Request, cache bool) map[string]any {
 	msgs := []ocMessage{}
-	if req.System != "" {
-		msgs = append(msgs, ocMessage{Role: "system", Content: req.System})
+	if cache && req.System != "" {
+		parts := []map[string]any{{"type": "text", "text": req.System, "cache_control": ephemeral}}
+		if req.SystemTail != "" {
+			parts = append(parts, map[string]any{"type": "text", "text": "\n\n" + req.SystemTail})
+		}
+		msgs = append(msgs, ocMessage{Role: "system", Content: parts})
+	} else if sys := req.FullSystem(); sys != "" {
+		msgs = append(msgs, ocMessage{Role: "system", Content: sys})
 	}
 	for _, m := range req.Messages {
 		switch m.Role {
@@ -127,7 +144,7 @@ type ocChunk struct {
 }
 
 func (a openAIChat) Call(ctx context.Context, hc *http.Client, c Conn, req Request, onDelta func(string)) (Response, error) {
-	resp, err := post(ctx, hc, c, "/chat/completions", a.body(req), nil)
+	resp, err := post(ctx, hc, c, "/chat/completions", a.body(req, openRouterCaches(c, req.Model)), nil)
 	if err != nil {
 		return Response{}, err
 	}

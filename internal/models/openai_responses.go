@@ -37,8 +37,8 @@ func (openAIResponses) body(req Request) map[string]any {
 		}
 	}
 	b := map[string]any{"model": req.Model, "input": input, "stream": true, "store": false}
-	if req.System != "" {
-		b["instructions"] = req.System
+	if sys := req.FullSystem(); sys != "" {
+		b["instructions"] = sys
 	}
 	if req.MaxTokens > 0 {
 		b["max_output_tokens"] = req.MaxTokens

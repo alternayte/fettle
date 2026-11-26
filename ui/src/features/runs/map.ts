@@ -2,7 +2,7 @@ import type { SchemaEventView, SchemaRunView } from "@/api/schema";
 import type { RunState } from "@/features/chat/types";
 import { has, t } from "@/lib/copy";
 import { formatUSD } from "@/lib/format";
-import type { RunDetail, RunEvent } from "./types";
+import type { RunDetail, RunEvent, RunTiming } from "./types";
 
 type Data = Record<string, unknown>;
 
@@ -88,6 +88,36 @@ export function toRunEvent(ev: SchemaEventView): RunEvent {
   };
 }
 
+/** toTiming adds the timings of the journal: queue and router from run_started, model and
+ * tool times from their events, and the first token of the first model turn. */
+export function toTiming(events: SchemaEventView[]): RunTiming {
+  const out: RunTiming = { queue_ms: 0, router_ms: 0, model_ms: 0, tools_ms: 0, first_token_ms: 0 };
+  const turn = (d: Data) => {
+    out.model_ms += num(d.duration_ms) ?? 0;
+    if (!out.first_token_ms) out.first_token_ms = num(d.first_token_ms) ?? 0;
+  };
+  for (const ev of events) {
+    const d = (ev.data && typeof ev.data === "object" ? ev.data : {}) as Data;
+    switch (ev.type) {
+      case "run_started":
+        out.queue_ms = num(d.queue_ms) ?? 0;
+        out.router_ms = num(d.router_ms) ?? 0;
+        break;
+      case "model_turn":
+        turn(d);
+        break;
+      case "run_finished":
+        if (d.turn && typeof d.turn === "object") turn(d.turn as Data);
+        break;
+      case "tool_call":
+      case "tool_result":
+        out.tools_ms += num(d.duration_ms) ?? 0;
+        break;
+    }
+  }
+  return out;
+}
+
 export function toRunDetail(r: SchemaRunView): RunDetail {
   return {
     id: r.line.run_id,
@@ -103,5 +133,6 @@ export function toRunDetail(r: SchemaRunView): RunDetail {
     helpers: r.line.helpers,
     verified: r.line.verified ?? null,
     events: (r.events ?? []).map(toRunEvent),
+    timing: toTiming(r.events ?? []),
   };
 }

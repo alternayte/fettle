@@ -44,6 +44,38 @@
         ],
         "type": "object"
       },
+      "Activity": {
+        "additionalProperties": false,
+        "properties": {
+          "bot_id": {
+            "type": "string"
+          },
+          "envelope_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "envelope_id",
+          "bot_id",
+          "label",
+          "started_at"
+        ],
+        "type": "object"
+      },
       "Add-composioRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3577,6 +3609,9 @@
       "RunLine": {
         "additionalProperties": false,
         "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/Activity"
+          },
           "bot_id": {
             "type": "string"
           },
@@ -8730,6 +8765,40 @@
                             "type": "string"
                           },
                           "event": {
+                            "const": "activity",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "oneOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event activity",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "data": {
+                            "contentEncoding": "base64",
+                            "type": "string"
+                          },
+                          "event": {
                             "const": "bot",
                             "description": "The event name.",
                             "type": "string"
@@ -12005,6 +12074,40 @@
                   "description": "Each oneOf object in the array represents one possible Server Sent Events (SSE) message, serialized as UTF-8 text according to the SSE specification.",
                   "items": {
                     "oneOf": [
+                      {
+                        "properties": {
+                          "data": {
+                            "contentEncoding": "base64",
+                            "type": "string"
+                          },
+                          "event": {
+                            "const": "activity",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "oneOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event activity",
+                        "type": "object"
+                      },
                       {
                         "properties": {
                           "data": {

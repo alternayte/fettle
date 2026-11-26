@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -16,6 +17,7 @@ import (
 )
 
 func init() {
+	settings.Register(settings.Def{Key: "agent.router_timeout", Scope: "space", Default: "4s", Doc: "The time limit of the router call, as a duration such as 4s. When it passes, the step is single and the reply starts at once."})
 	settings.Register(settings.Def{Key: "agent.max_step", Scope: "space", Default: "hire", Doc: "The highest step on the ladder that the router may pick: direct, single, fanout, forked, handoff or hire."})
 }
 
@@ -117,7 +119,21 @@ func (x *exec) decide(ctx context.Context, ev *evRoute) (string, error) {
 		Output:    &models.Schema{Name: "route", Schema: routeSchema},
 		MaxTokens: maxOut,
 	}
-	resp, err := a.callTargets(ctx, x.run.SpaceID, x.run.BotID, x.run.ID(), "", models.RoleRouter, targets, req)
+	limit := x.routerTimeout(ctx)
+	rctx, cancel := context.WithTimeout(ctx, limit)
+	resp, err := a.callTargets(rctx, x.run.SpaceID, x.run.BotID, x.run.ID(), "", models.RoleRouter, targets, req)
+	timedOut := rctx.Err() == context.DeadlineExceeded
+	cancel()
+	if err != nil && ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+	if err != nil && timedOut {
+		// A slow router does not hold the first token. single keeps the tools, so the
+		// work can still be done.
+		ev.Rules = append(ev.Rules, "router_timeout")
+		ev.Error = fmt.Sprintf("the router did not answer in %s", limit)
+		return "single", nil
+	}
 	if err != nil {
 		ev.Rules = append(ev.Rules, "R7")
 		ev.Error = truncate(a.Vault.Redactor.String(ctx, x.run.SpaceID, err.Error()), 300)
@@ -252,4 +268,13 @@ func (x *exec) routerInput(ctx context.Context) (string, error) {
 	fmt.Fprintf(&b, "\nLimits: fanout has 2 to %d parts; forked has 2 to 3 parts; hops left %d; highest step %s.\n",
 		min(max, 8), x.env.Budget.HopsRemaining, a.Settings.String(context.WithoutCancel(ctx), &x.run.SpaceID, "agent.max_step"))
 	return b.String(), nil
+}
+
+// routerTimeout is the time limit of the router call (setting agent.router_timeout).
+func (x *exec) routerTimeout(ctx context.Context) time.Duration {
+	d, err := time.ParseDuration(strings.TrimSpace(x.a.Settings.String(ctx, &x.run.SpaceID, "agent.router_timeout")))
+	if err != nil || d <= 0 {
+		return 4 * time.Second
+	}
+	return d
 }

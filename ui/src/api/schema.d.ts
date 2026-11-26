@@ -2237,6 +2237,15 @@ export interface components {
       /** @description Names of the zones that hold this account. */
       zones: string[] | null;
     };
+    Activity: {
+      bot_id: string;
+      envelope_id: string;
+      label: string;
+      run_id: string;
+      /** Format: date-time */
+      started_at: string;
+      tool?: string;
+    };
     "Add-composioRequest": {
       key: string;
     };
@@ -3179,6 +3188,7 @@ export interface components {
       version?: number;
     };
     RunLine: {
+      activity?: components["schemas"]["Activity"];
       bot_id: string;
       /** Format: double */
       cost_usd: number;
@@ -3759,6 +3769,7 @@ export interface components {
   pathItems: never;
 }
 export type SchemaAccountView = components["schemas"]["AccountView"];
+export type SchemaActivity = components["schemas"]["Activity"];
 export type SchemaAddComposioRequest = components["schemas"]["Add-composioRequest"];
 export type SchemaAddConnectorAccountRequest = components["schemas"]["Add-connector-accountRequest"];
 export type SchemaAddPolicyRuleRequest = components["schemas"]["Add-policy-ruleRequest"];
@@ -6120,6 +6131,18 @@ export interface operations {
                  * @description The event name.
                  * @constant
                  */
+                event: "activity";
+                /** @description The event ID. */
+                id?: number | string;
+                /** @description The retry time in milliseconds. */
+                retry?: number;
+              }
+            | {
+                data: string;
+                /**
+                 * @description The event name.
+                 * @constant
+                 */
                 event: "bot";
                 /** @description The event ID. */
                 id?: number | string;
@@ -8220,6 +8243,18 @@ export interface operations {
         };
         content: {
           "text/event-stream": (
+            | {
+                data: string;
+                /**
+                 * @description The event name.
+                 * @constant
+                 */
+                event: "activity";
+                /** @description The event ID. */
+                id?: number | string;
+                /** @description The retry time in milliseconds. */
+                retry?: number;
+              }
             | {
                 data: string;
                 /**

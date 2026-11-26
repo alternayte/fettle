@@ -109,10 +109,12 @@ type Input struct {
 
 // Context is the assembled model input.
 type Context struct {
-	System   string
-	Messages []models.Message
-	Items    []Item
-	Tokens   int64
+	System string
+	// SystemTail is the part of the system prompt that changes each minute (the time).
+	SystemTail string
+	Messages   []models.Message
+	Items      []Item
+	Tokens     int64
 }
 
 const baseRules = `You are %s, a bot in Fettle. Your job: %s.
@@ -274,7 +276,7 @@ func orNone(s string) string {
 
 // render turns items into a system prompt and model messages.
 func render(items []Item) Context {
-	var sys []string
+	var sys, tail []string
 	var msgs []models.Message
 	var tokens int64
 	// Images of tool results follow the tool messages of their turn as one user message,
@@ -296,7 +298,12 @@ func render(items []Item) Context {
 		}
 		switch it.Role {
 		case "system":
-			sys = append(sys, it.Text)
+			if it.Name == "time" {
+				// The time changes each minute, so it stays after the cache point.
+				tail = append(tail, it.Text)
+			} else {
+				sys = append(sys, it.Text)
+			}
 		case "assistant":
 			m := models.Message{Role: "assistant", ToolCalls: it.toolCalls}
 			if it.Text != "" {
@@ -311,5 +318,5 @@ func render(items []Item) Context {
 		}
 	}
 	flush()
-	return Context{System: strings.Join(sys, "\n\n"), Messages: msgs, Items: items, Tokens: tokens}
+	return Context{System: strings.Join(sys, "\n\n"), SystemTail: strings.Join(tail, "\n\n"), Messages: msgs, Items: items, Tokens: tokens}
 }

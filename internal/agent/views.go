@@ -40,6 +40,8 @@ type RunLine struct {
 	Tokens     int64   `json:"tokens"`
 	State      string  `json:"state"`
 	Verified   *bool   `json:"verified"`
+	// Activity is the current step of a live run, or nil.
+	Activity *Activity `json:"activity,omitempty"`
 }
 
 // MessageView converts a message.
@@ -110,7 +112,7 @@ func (a *Agent) RunLineFor(ctx context.Context, r *runs.Run) (RunLine, error) {
 		v := len(vdata) > 0 && strings.Contains(vdata, `"pass":true`)
 		verified = &v
 	}
-	return RunLine{RunID: r.ID().String(), EnvelopeID: r.EnvelopeID.String(), BotID: r.BotID.String(), Step: step, Label: label(env.Goal), Helpers: helpers, DurationMS: dur, CostUSD: cost, Tokens: tokens, State: r.Status, Verified: verified}, nil
+	return RunLine{RunID: r.ID().String(), EnvelopeID: r.EnvelopeID.String(), BotID: r.BotID.String(), Step: step, Label: label(env.Goal), Helpers: helpers, DurationMS: dur, CostUSD: cost, Tokens: tokens, State: r.Status, Verified: verified, Activity: a.activityOf(r.ID())}, nil
 }
 
 // publishRun sends the run line to the run's chat and the bot status to the space.
