@@ -74,6 +74,8 @@ It refuses these addresses after it resolves the host name:
 
 When the server uses a proxy, Fettle resolves the host before it sends the request to the proxy, and checks the addresses.
 A proxy on a private network is not refused.
+When this host cannot resolve a name, Fettle sends the request to the proxy, which resolves it. Many work networks resolve public names only in the proxy.
+A name that resolves on this host to a private address is still refused, and the allowlist of the zone still applies.
 
 `web_fetch` follows at most 5 redirects.
 It checks the host and the addresses of each redirect.
