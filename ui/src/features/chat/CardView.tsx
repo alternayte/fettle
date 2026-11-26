@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import {
+  Bug,
   Check,
+  Copy,
+  ExternalLink,
   CircleHelp,
   Coins,
   GitCompare,
@@ -42,6 +45,7 @@ const icons = {
   connect: Plug,
   patch: GitCompare,
   teach: GraduationCap,
+  issue: Bug,
 } as const;
 
 type TeachCardStep = {
@@ -293,7 +297,10 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         <span className="label-caps ml-auto">{t(`card.kind.${card.kind}`)}</span>
       </header>
       <div className="space-y-2 px-3 py-2.5 pl-4">
-        {card.detail && <p className="text-sm whitespace-pre-line text-ink-soft">{card.detail}</p>}
+        {card.detail && card.kind !== "issue" && (
+          <p className="text-sm whitespace-pre-line text-ink-soft">{card.detail}</p>
+        )}
+        {card.kind === "issue" && <IssueDraft card={card} />}
         {card.tool && (
           <p className="text-sm text-ink-soft">
             {t("card.approval.tool")} <code className="font-mono text-xs text-ink">{card.tool}</code>
@@ -459,6 +466,23 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
             </ActionButton>
           </>
         )}
+        {card.kind === "issue" && card.data?.url && (
+          <>
+            <a
+              href={card.data.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => onAnswer({ action: "opened" })}
+              className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-glaze px-3 text-sm font-[var(--weight-medium)] text-glaze-ink hover:brightness-105"
+            >
+              <ExternalLink aria-hidden className="size-3.5" />
+              {t("card.issue.open")}
+            </a>
+            <ActionButton kind="quiet" onClick={() => onAnswer({ action: "dismiss" })}>
+              {t("card.issue.dismiss")}
+            </ActionButton>
+          </>
+        )}
         {card.kind === "connect" && (
           <>
             <Link
@@ -513,5 +537,30 @@ export function CardView({ card, onAnswer }: { card: Card; onAnswer: (a: CardAns
         <span className="figures ml-auto hidden text-ink-faint sm:inline">{t("card.waits")}</span>
       </footer>
     </motion.section>
+  );
+}
+
+/** IssueDraft shows the redacted issue text that the person reads before they open it. */
+function IssueDraft({ card }: { card: Card }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    void navigator.clipboard?.writeText(card.detail ?? "").then(() => setCopied(true));
+  };
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm text-ink-soft">{t("card.issue.intro", { repo: card.data?.repo ?? "" })}</p>
+      <pre className="max-h-64 overflow-auto rounded-sm border border-rule bg-surface-sunk p-2 font-mono text-xs whitespace-pre-wrap text-ink">
+        {card.detail}
+      </pre>
+      {card.data?.cut === "true" && <p className="text-xs text-ink-faint">{t("card.issue.cut")}</p>}
+      <button
+        type="button"
+        onClick={copy}
+        className="inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs text-ink-soft hover:bg-surface-sunk hover:text-ink"
+      >
+        <Copy aria-hidden className="size-3.5" />
+        {copied ? t("card.issue.copied") : t("card.issue.copy")}
+      </button>
+    </div>
   );
 }

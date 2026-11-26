@@ -19,7 +19,8 @@ The help menu of the UI has "Report a problem", which opens the same draft witho
 - The person reads the draft in the card. "Open on GitHub" opens `https://github.com/<repo>/issues/new` with the title and body in the query, in a new tab. Nothing goes to GitHub before the person submits there — no token is needed and the person sees each word.
 - The repository is the instance setting `fettle.issue_repo` (default `alternayte/fettle`) — a fork can get its own reports.
 - When the URL would be longer than 7,500 characters, the body is cut and the card has "Copy" for the full text — browsers and GitHub refuse very long URLs.
-- The help menu "Report a problem" calls `GET /issue-draft`, which returns the same redacted diagnostics, and shows the same form with empty text fields.
+- The help menu "Report a problem" calls `GET /spaces/{space}/issue-draft`, which returns the same redacted diagnostics, and shows the same form with empty text fields — the model providers of the diagnostics belong to a space.
+- The setting `fettle.issue_repo` is in Settings, Computers, This server — the other instance settings are there.
 
 ## Out
 - Changes to settings by a bot.
