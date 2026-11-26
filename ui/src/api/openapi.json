@@ -210,7 +210,8 @@
               "create",
               "decline",
               "skip",
-              "apply"
+              "apply",
+              "opened"
             ],
             "type": "string"
           },
@@ -1193,6 +1194,54 @@
         ],
         "type": "object"
       },
+      "Diagnostics": {
+        "additionalProperties": false,
+        "properties": {
+          "arch": {
+            "type": "string"
+          },
+          "computer_provider": {
+            "type": "string"
+          },
+          "failed_checks": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "mode": {
+            "type": "string"
+          },
+          "model_providers": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "os": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "os",
+          "arch",
+          "mode",
+          "computer_provider",
+          "model_providers",
+          "failed_checks"
+        ],
+        "type": "object"
+      },
       "DiagnosticsResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1866,6 +1915,31 @@
           "role",
           "expires_at",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "IssueDraftView": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnostics": {
+            "$ref": "#/components/schemas/Diagnostics"
+          },
+          "markdown": {
+            "type": "string"
+          },
+          "max_url": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "repo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo",
+          "diagnostics",
+          "markdown",
+          "max_url"
         ],
         "type": "object"
       },
@@ -9846,6 +9920,49 @@
         "summary": "Stop an invite link",
         "tags": [
           "members"
+        ]
+      }
+    },
+    "/api/v1/spaces/{space}/issue-draft": {
+      "get": {
+        "operationId": "issue-draft",
+        "parameters": [
+          {
+            "description": "Space ID",
+            "in": "path",
+            "name": "space",
+            "required": true,
+            "schema": {
+              "description": "Space ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueDraftView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The redacted diagnostics and the repository for a GitHub issue about Fettle",
+        "tags": [
+          "help"
         ]
       }
     },

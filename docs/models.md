@@ -4,7 +4,7 @@ Bots use your own model keys.
 Fettle keeps each key encrypted in the vault of the space.
 The model loop of each run runs in the server. A key never enters a computer or a model context.
 
-Add model providers in **Settings**, **Models**.
+Add model providers in **Settings**, **Models** (`/settings/models`).
 
 ## API types
 

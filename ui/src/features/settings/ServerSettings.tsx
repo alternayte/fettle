@@ -177,6 +177,7 @@ export function ServerSettings() {
   const proxy = by["computers.proxy"];
   const password = by["computers.proxy_password"];
   const host = by["computers.use_host_settings"];
+  const issueRepo = by["fettle.issue_repo"];
   return (
     <div className="max-w-[var(--measure)] space-y-6">
       <p className="text-sm text-ink-soft">{t("computers.server.intro")}</p>
@@ -209,6 +210,14 @@ export function ServerSettings() {
         />
       )}
       {password && <SecretSetting s={password} label={t("computers.server.proxyPassword")} />}
+      {issueRepo && (
+        <TextSetting
+          key={`${issueRepo.key}-${String(issueRepo.value)}`}
+          s={issueRepo}
+          label={t("computers.server.issueRepo")}
+          hint={t("computers.server.issueRepoHint")}
+        />
+      )}
     </div>
   );
 }

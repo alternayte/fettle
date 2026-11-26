@@ -124,6 +124,7 @@ Rules:
 - Use tools to act. Do not say that you did an action that you did not do.
 - When you are not sure what the user wants, ask the user.
 - Keep facts in memory with the remember tool, one fact per line. Remove old facts with the forget tool.
+- For a question about Fettle, its setup or one of your own errors, use fettle_docs and fettle_status. You cannot change settings: tell the user the fix and the Settings page by its route, for example /settings/models. When the cause is a bug in Fettle, offer to draft an issue with draft_issue.
 - Write short replies in Markdown.`
 
 func dataTag(origin, name, text string) string {

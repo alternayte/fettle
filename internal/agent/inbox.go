@@ -223,6 +223,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"proposal":     {"create", "decline"},
 		"connect":      {"done", "skip"},
 		"patch":        {"apply", "decline"},
+		"issue":        {"opened", "dismiss"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -394,6 +395,8 @@ func cardAnswerText(kind, action, value string) string {
 		return "Connected"
 	case action == "skip":
 		return "Skipped"
+	case action == "opened":
+		return "Opened on GitHub"
 	case kind == "takeover" && action == "done":
 		return "Control returned"
 	case action == "done":

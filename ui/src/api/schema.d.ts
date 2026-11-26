@@ -1190,6 +1190,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/issue-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The redacted diagnostics and the repository for a GitHub issue about Fettle */
+    get: operations["issue-draft"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/learning/patches/run": {
     parameters: {
       query?: never;
@@ -2297,7 +2314,8 @@ export interface components {
         | "create"
         | "decline"
         | "skip"
-        | "apply";
+        | "apply"
+        | "opened";
       value?: string;
     };
     "Assign-skillRequest": {
@@ -2561,6 +2579,15 @@ export interface components {
       path: string;
       title?: string;
     };
+    Diagnostics: {
+      arch: string;
+      computer_provider: string;
+      failed_checks: string[] | null;
+      mode: string;
+      model_providers: string[] | null;
+      os: string;
+      version: string;
+    };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
     };
@@ -2760,6 +2787,13 @@ export interface components {
       /** @enum {string} */
       role: "owner" | "member";
       url?: string;
+    };
+    IssueDraftView: {
+      diagnostics: components["schemas"]["Diagnostics"];
+      markdown: string;
+      /** Format: int64 */
+      max_url: number;
+      repo: string;
     };
     LicenseView: {
       customer?: string;
@@ -3811,6 +3845,7 @@ export type SchemaDesktopConnectRequest = components["schemas"]["Desktop-connect
 export type SchemaDesktopConnectResponse = components["schemas"]["Desktop-connectResponse"];
 export type SchemaDesktopOpenRequest = components["schemas"]["Desktop-openRequest"];
 export type SchemaDesktopWindowRequest = components["schemas"]["Desktop-windowRequest"];
+export type SchemaDiagnostics = components["schemas"]["Diagnostics"];
 export type SchemaDiagnosticsResponse = components["schemas"]["DiagnosticsResponse"];
 export type SchemaEditionView = components["schemas"]["EditionView"];
 export type SchemaEntry = components["schemas"]["Entry"];
@@ -3832,6 +3867,7 @@ export type SchemaInstanceSettingView = components["schemas"]["InstanceSettingVi
 export type SchemaInstanceView = components["schemas"]["InstanceView"];
 export type SchemaInviteInfo = components["schemas"]["InviteInfo"];
 export type SchemaInviteView = components["schemas"]["InviteView"];
+export type SchemaIssueDraftView = components["schemas"]["IssueDraftView"];
 export type SchemaLicenseView = components["schemas"]["LicenseView"];
 export type SchemaListAuditResponse = components["schemas"]["List-auditResponse"];
 export type SchemaListBotSignInsResponse = components["schemas"]["List-bot-sign-insResponse"];
@@ -6756,6 +6792,38 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "issue-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IssueDraftView"];
+        };
       };
       /** @description Error */
       default: {

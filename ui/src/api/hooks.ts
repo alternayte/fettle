@@ -1524,3 +1524,14 @@ export function useRevokeExtensionToken() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["extension-tokens"] }),
   });
 }
+
+/** useIssueDraft returns the redacted diagnostics and the repository for Report a problem. */
+export function useIssueDraft(enabled: boolean) {
+  const space = useSpaceId();
+  return useQuery({
+    queryKey: ["s", space, "issue-draft"] as const,
+    queryFn: () => must(api.GET("/api/v1/spaces/{space}/issue-draft", { params: { path: { space } } })),
+    enabled,
+    staleTime: 60_000,
+  });
+}

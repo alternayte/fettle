@@ -16,6 +16,7 @@
 - [Skills and routines](skills.md): skill files, evals, Skael sync, templates, schedules and webhooks.
 - [Server](server.md): server mode, accounts, passkeys, tokens and HTTPS.
 - [Operations](operations.md): health, logs, doctor, upgrades, backups and export of a space.
+- [Help from your bots](self-help.md): bots that read these docs, check their own setup and draft a GitHub issue.
 
 ## Reference
 

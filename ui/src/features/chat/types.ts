@@ -33,7 +33,8 @@ export type CardKind =
   | "proposal"
   | "connect"
   | "patch"
-  | "teach";
+  | "teach"
+  | "issue";
 export type CardStatus = "pending" | "allowed" | "denied" | "answered" | "expired";
 
 export interface Card {
