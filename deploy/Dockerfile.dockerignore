@@ -10,6 +10,7 @@
 !connectors
 !docs/*.md
 !docs/specs/*.md
+!docs/embed.go
 !ui
 ui/node_modules
 ui/dist
