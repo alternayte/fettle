@@ -1,5 +1,6 @@
 # The contributor licence agreement check (CLA.md): a pull request merges only after each
-# author signs the CLA with a comment.
+# author signs the CLA with a comment. Commits that Claude Code writes for the owner
+# (author Claude <noreply@anthropic.com>) are on the allowlist.
 name: CLA
 on:
   issue_comment:
@@ -23,4 +24,4 @@ jobs:
           path-to-signatures: signatures/cla.json
           path-to-document: https://github.com/alternayte/fettle/blob/main/CLA.md
           branch: cla-signatures
-          allowlist: alternayte,dependabot[bot]
+          allowlist: alternayte,dependabot[bot],Claude,claude
