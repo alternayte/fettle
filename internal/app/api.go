@@ -105,6 +105,7 @@ func (a *App) registerAPI(api huma.API) {
 	a.registerInstanceSettings(api)
 	a.registerNetworkCheck(api)
 	a.registerDiagnostics(api)
+	a.registerIssueDraft(api)
 }
 
 func op(id, method, path, summary string, tags ...string) huma.Operation {

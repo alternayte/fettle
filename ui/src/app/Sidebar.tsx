@@ -1,9 +1,12 @@
+import { useState } from "react";
 import {
   Activity,
   Check,
   ChevronsUpDown,
   AlarmClock,
   BookOpen,
+  Bug,
+  CircleHelp,
   FileText,
   List,
   Hourglass,
@@ -29,7 +32,11 @@ import { useTheme, type ThemePref } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { BotMark } from "@/features/chat/BotMark";
 import { NewGroup } from "./NewGroup";
+import { ReportProblem } from "./ReportProblem";
 import type { Bot, ChatSummary } from "@/features/chat/types";
+
+/** DOCS_URL is the docs of Fettle on GitHub. A bot reads the same docs with fettle_docs. */
+const DOCS_URL = "https://github.com/alternayte/fettle/tree/main/docs";
 
 export type NavTarget =
   | { kind: "chat"; chatId: string }
@@ -112,6 +119,7 @@ export function Sidebar({
   isOwner: boolean;
 }) {
   const { pref, setPref } = useTheme();
+  const [reporting, setReporting] = useState(false);
   const ThemeIcon = themeIcon[pref];
   const direct = chats.filter((c) => c.kind === "direct");
   const groups = chats.filter((c) => c.kind === "group");
@@ -272,6 +280,26 @@ export function Sidebar({
           <ThemeIcon aria-hidden className="size-3.5" />
           {t(`shell.themes.${pref}`)}
         </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs text-ink-faint hover:bg-surface-sunk hover:text-ink"
+            aria-label={t("help.menu")}
+          >
+            <CircleHelp aria-hidden className="size-3.5" />
+            {t("help.label")}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onSelect={() => window.open(DOCS_URL, "_blank", "noreferrer")}>
+              <BookOpen aria-hidden className="size-4" />
+              {t("help.docs")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setReporting(true)}>
+              <Bug aria-hidden className="size-4" />
+              {t("help.report.open")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <ReportProblem open={reporting} onOpenChange={setReporting} />
       </div>
     </nav>
   );

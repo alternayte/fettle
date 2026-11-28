@@ -4,7 +4,45 @@ import { ChevronDown, X } from "lucide-react";
 import { has, t, tn } from "@/lib/copy";
 import { formatClockPrecise, formatDuration, formatTokens, formatUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { RunDetail, RunEvent } from "./types";
+import type { RunDetail, RunEvent, RunTiming } from "./types";
+
+const segments: { key: keyof RunTiming; label: string; tone: string }[] = [
+  { key: "queue_ms", label: "timeline.timing.wait", tone: "bg-ink-faint" },
+  { key: "router_ms", label: "timeline.timing.router", tone: "bg-glaze" },
+  { key: "model_ms", label: "timeline.timing.model", tone: "bg-info" },
+  { key: "tools_ms", label: "timeline.timing.tools", tone: "bg-ok" },
+];
+
+/** TimingBar shows where the time of a run went: the wait for a worker, the router, the
+ * model turns and the tools. */
+export function TimingBar({ timing }: { timing: RunTiming }) {
+  const parts = segments.filter((s) => timing[s.key] > 0);
+  const total = parts.reduce((n, s) => n + timing[s.key], 0);
+  if (total === 0) return null;
+  return (
+    <div className="mt-3" data-testid="timing-bar">
+      <p className="label-caps">{t("timeline.timing.title")}</p>
+      <div className="mt-1 flex h-1.5 w-full overflow-hidden rounded-full bg-surface-sunk" aria-hidden>
+        {parts.map((s) => (
+          <span key={s.key} className={s.tone} style={{ width: `${(timing[s.key] / total) * 100}%` }} />
+        ))}
+      </div>
+      <ul className="figures mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-soft">
+        {parts.map((s) => (
+          <li key={s.key} className="inline-flex items-center gap-1">
+            <span aria-hidden className={cn("inline-block size-1.5 rounded-full", s.tone)} />
+            {t(s.label)} {formatDuration(timing[s.key])}
+          </li>
+        ))}
+        {timing.first_token_ms > 0 && (
+          <li className="text-ink-faint">
+            {t("timeline.timing.firstToken", { time: formatDuration(timing.first_token_ms) })}
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
 
 // Event families decide the margin glyph. Shape and text carry meaning; colour only supports it.
 const family: Record<string, { glyph: string; tone: string }> = {
@@ -126,6 +164,7 @@ export function TimelineHeader({ run, onClose }: { run: RunDetail; onClose?: () 
         {stat(t("timeline.stat.cost"), formatUSD(run.cost_usd))}
         {stat(t("timeline.stat.tokens"), formatTokens(run.tokens_in + run.tokens_out))}
       </dl>
+      <TimingBar timing={run.timing} />
     </header>
   );
 }

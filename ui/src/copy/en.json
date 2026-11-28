@@ -124,7 +124,8 @@
       "proposal": "Proposal",
       "connect": "Connect",
       "patch": "Skill patch",
-      "teach": "Skill review"
+      "teach": "Skill review",
+      "issue": "Issue draft"
     },
     "patch": {
       "diff": "Changes to the skill",
@@ -205,6 +206,14 @@
       "open": "Open {url}",
       "login": "login {n}",
       "review": "Review"
+    },
+    "issue": {
+      "intro": "Read the draft. Private details are removed. Nothing goes to GitHub until you submit it on {repo}.",
+      "open": "Open on GitHub",
+      "dismiss": "Dismiss",
+      "copy": "Copy the full text",
+      "copied": "Copied",
+      "cut": "The text is long, so the GitHub page gets only its start. Copy the full text and paste it there."
     }
   },
   "run": {
@@ -234,7 +243,11 @@
     },
     "stopFailed": "Fettle cannot stop the run",
     "rerun": "Run again",
-    "rerunFailed": "Fettle did not run it again"
+    "rerunFailed": "Fettle did not run it again",
+    "activity": {
+      "elapsed": "{seconds} s",
+      "open": "{label}. Open the timeline"
+    }
   },
   "timeline": {
     "title": "Run timeline",
@@ -289,6 +302,14 @@
       "error": "error: {error}",
       "budget": "Needs {estimate}. {left} is left.",
       "cancel": "A person stopped the run."
+    },
+    "timing": {
+      "title": "Where the time went",
+      "wait": "Wait for a worker",
+      "router": "Router",
+      "model": "Model",
+      "tools": "Tools",
+      "firstToken": "First token in {time}"
     }
   },
   "vault": {
@@ -1030,7 +1051,9 @@
       "secretSet": "A password is set. Fettle does not show it.",
       "secretUnset": "No password is set.",
       "clear": "Clear",
-      "cleared": "The password is cleared."
+      "cleared": "The password is cleared.",
+      "issueRepo": "Repository for problem reports",
+      "issueRepoHint": "The GitHub repository, as owner/name, that Report a problem and bot issue drafts open. Use it to send reports to a fork."
     }
   },
   "approvals": {
@@ -1798,6 +1821,24 @@
       "title": "Reading pages",
       "noteTitle": "web_fetch needs no provider",
       "body": "web_fetch reads public pages and PDFs from the server. It does not read private or local addresses. In an allowlist zone, it reads only the allowed hosts."
+    }
+  },
+  "help": {
+    "label": "Help",
+    "menu": "Open the help menu",
+    "docs": "Read the docs",
+    "report": {
+      "open": "Report a problem",
+      "title": "Report a problem",
+      "intro": "Write what happened. Fettle adds diagnostics without private details. Open on GitHub opens a filled issue on {repo}. Nothing goes to GitHub until you submit it there.",
+      "titleLabel": "Title",
+      "what": "What happened",
+      "expected": "What you expected",
+      "steps": "Steps",
+      "diagnostics": "Diagnostics",
+      "diagnosticsHint": "Fettle removed email addresses, IP addresses, private host names, home folders and user names.",
+      "loading": "Getting the diagnostics…",
+      "need": "Type a title of 5 or more characters and what happened."
     }
   }
 }

@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -231,18 +232,26 @@ func (g *guard) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	host := normHost(req.URL.Hostname())
-	viaProxy := true
+	viaProxy, knownProxy := true, false
 	if g.proxy != nil {
 		pu, err := g.proxy(req)
 		if err != nil {
 			return nil, err
 		}
 		viaProxy = pu != nil
+		knownProxy = viaProxy
 	}
 	// Through a proxy the dial goes to the proxy, so resolve the target here and check it.
 	if (viaProxy || !g.dialChecks) && g.over[host] == "" {
 		if _, isIP := parseIP(host); !isIP {
 			addrs, err := g.resolver.LookupNetIP(req.Context(), "ip", host)
+			var dnsErr *net.DNSError
+			if err != nil && knownProxy && errors.As(err, &dnsErr) {
+				// Many work networks resolve public names only in the proxy. A name that
+				// this host cannot resolve goes to the proxy, which resolves it. A name that
+				// resolves here to a private address is still refused below.
+				return g.next.RoundTrip(req)
+			}
 			if err != nil {
 				return nil, fmt.Errorf("web_fetch cannot resolve %s: %w", host, err)
 			}

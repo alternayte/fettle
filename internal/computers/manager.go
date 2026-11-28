@@ -207,6 +207,19 @@ func (m *Manager) Current(ctx context.Context, zoneID uuid.UUID) (*Computer, err
 	return m.current(ctx, zoneID)
 }
 
+// ProviderKind returns the provider kind of a zone, and the reason when the zone cannot
+// use it. The kind is empty when no provider is set up.
+func (m *Manager) ProviderKind(ctx context.Context, z *zones.Zone) (string, error) {
+	_, row, err := m.providerFor(ctx, z)
+	if row != nil {
+		return row.Kind, err
+	}
+	if _, ok := m.Providers[m.Default]; ok && z.ProviderID == nil {
+		return m.Default, err
+	}
+	return "", err
+}
+
 func (m *Manager) providerFor(ctx context.Context, z *zones.Zone) (Provider, *ProviderRow, error) {
 	if z.ProviderID != nil {
 		row, err := drel.NewRepository(m.E, ProviderRowMeta).Where(ProviderRows.ID.Eq(*z.ProviderID)).FirstOrNil(ctx)

@@ -100,6 +100,9 @@ type App struct {
 	stopped  bool
 	// Telemetry reports the counts it would send (REQ-CORE-012).
 	Telemetry *Telemetry
+
+	// selfDoctor keeps the doctor result for fettle_status and issue drafts.
+	selfDoctor doctorCache
 	// host caches the certificates and proxy of the desktop host.
 	host hostCache
 	// netMu guards netKey, the network that the HTTP client uses now.
@@ -196,6 +199,7 @@ func New(ctx context.Context, cfg *Config) (*App, error) {
 	a.setupScreens()
 	a.setupTeach()
 	a.registerSelfTools()
+	a.registerSelfHelp()
 	a.registerChanges()
 	a.registerPrimaryChange()
 	if err := a.installExtensions(); err != nil {

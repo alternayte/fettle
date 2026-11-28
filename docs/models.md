@@ -4,7 +4,7 @@ Bots use your own model keys.
 Fettle keeps each key encrypted in the vault of the space.
 The model loop of each run runs in the server. A key never enters a computer or a model context.
 
-Add model providers in **Settings**, **Models**.
+Add model providers in **Settings**, **Models** (`/settings/models`).
 
 ## API types
 
@@ -73,6 +73,26 @@ Then Fettle tries the same model 2 more times.
 Then Fettle uses the next model of the role.
 A stream that fails after its first token does not get a retry.
 The run timeline records each switch to the next model.
+
+## Router time limit
+
+Before a bot starts new work, the `router` role picks how to do the work.
+The space setting `agent.router_timeout` sets the time limit of this call. The default is `4s`.
+When the router does not answer in this time, the bot does the work itself (the step is **Work**), and the reply starts at once.
+The `route_decision` row of the run timeline then shows the rule `router_timeout`.
+To make the router fast, give the `router` role a small, fast model.
+
+## Prompt caching
+
+Fettle marks the start of each prompt as a cache point, so that the provider can keep it for the next turns of a run.
+A cached start makes the first token come sooner and costs less.
+
+- `anthropic-messages`: Fettle sends a cache point after the tool list and after the system prompt.
+- `openai-chat` with OpenRouter: Fettle sends a cache point after the system prompt for Anthropic models (`anthropic/…`) and Google models (`google/…`). OpenRouter sends it to the model provider.
+- Other providers: Fettle sends no cache point. OpenAI and DeepSeek cache the start of a prompt automatically.
+
+The time of day is after the cache point, so a change of the time does not stop the cache.
+Fettle records the cached input tokens of each call as cache reads in the usage export.
 
 ## Budgets
 

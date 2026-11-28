@@ -1,4 +1,5 @@
-# The server image needs the Go sources and the UI sources, not build output or packages.
+# The server image needs the Go sources, the UI sources and the docs that the binary
+# embeds, not build output, packages or images.
 *
 !go.mod
 !go.sum
@@ -7,6 +8,9 @@
 !internal
 !templates
 !connectors
+!docs/*.md
+!docs/specs/*.md
+!docs/embed.go
 !ui
 ui/node_modules
 ui/dist

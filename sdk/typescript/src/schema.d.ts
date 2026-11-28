@@ -1190,6 +1190,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/spaces/{space}/issue-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The redacted diagnostics and the repository for a GitHub issue about Fettle */
+    get: operations["issue-draft"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/spaces/{space}/learning/patches/run": {
     parameters: {
       query?: never;
@@ -2237,6 +2254,15 @@ export interface components {
       /** @description Names of the zones that hold this account. */
       zones: string[] | null;
     };
+    Activity: {
+      bot_id: string;
+      envelope_id: string;
+      label: string;
+      run_id: string;
+      /** Format: date-time */
+      started_at: string;
+      tool?: string;
+    };
     "Add-composioRequest": {
       key: string;
     };
@@ -2288,7 +2314,8 @@ export interface components {
         | "create"
         | "decline"
         | "skip"
-        | "apply";
+        | "apply"
+        | "opened";
       value?: string;
     };
     "Assign-skillRequest": {
@@ -2552,6 +2579,15 @@ export interface components {
       path: string;
       title?: string;
     };
+    Diagnostics: {
+      arch: string;
+      computer_provider: string;
+      failed_checks: string[] | null;
+      mode: string;
+      model_providers: string[] | null;
+      os: string;
+      version: string;
+    };
     DiagnosticsResponse: {
       checks: components["schemas"]["Check"][] | null;
     };
@@ -2751,6 +2787,13 @@ export interface components {
       /** @enum {string} */
       role: "owner" | "member";
       url?: string;
+    };
+    IssueDraftView: {
+      diagnostics: components["schemas"]["Diagnostics"];
+      markdown: string;
+      /** Format: int64 */
+      max_url: number;
+      repo: string;
     };
     LicenseView: {
       customer?: string;
@@ -3179,6 +3222,7 @@ export interface components {
       version?: number;
     };
     RunLine: {
+      activity?: components["schemas"]["Activity"];
       bot_id: string;
       /** Format: double */
       cost_usd: number;
@@ -5927,6 +5971,18 @@ export interface operations {
                  * @description The event name.
                  * @constant
                  */
+                event: "activity";
+                /** @description The event ID. */
+                id?: number | string;
+                /** @description The retry time in milliseconds. */
+                retry?: number;
+              }
+            | {
+                data: string;
+                /**
+                 * @description The event name.
+                 * @constant
+                 */
                 event: "bot";
                 /** @description The event ID. */
                 id?: number | string;
@@ -6540,6 +6596,38 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Error */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ErrorModel"];
+        };
+      };
+    };
+  };
+  "issue-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Space ID */
+        space: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IssueDraftView"];
+        };
       };
       /** @description Error */
       default: {
@@ -8033,6 +8121,18 @@ export interface operations {
         };
         content: {
           "text/event-stream": (
+            | {
+                data: string;
+                /**
+                 * @description The event name.
+                 * @constant
+                 */
+                event: "activity";
+                /** @description The event ID. */
+                id?: number | string;
+                /** @description The retry time in milliseconds. */
+                retry?: number;
+              }
             | {
                 data: string;
                 /**

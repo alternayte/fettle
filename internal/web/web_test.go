@@ -87,6 +87,29 @@ func TestWebFetchThroughAProxyChecksTheTarget(t *testing.T) {
 	}
 }
 
+func TestWebFetchThroughAProxyLetsTheProxyResolveAnUnknownName(t *testing.T) {
+	srv := fixtures(t)
+	proxy, _ := url.Parse(srv.URL)
+	hc := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}
+	ctx := context.Background()
+	// A work network often resolves public names only in the proxy. The request goes to
+	// the proxy, so the error is not a resolve error of this host.
+	_, err := web.Fetch(ctx, hc, web.Policy{}, "http://no-such-name.invalid/alpha")
+	if err != nil && strings.Contains(err.Error(), "cannot resolve") {
+		t.Fatalf("through the proxy: %v", err)
+	}
+	// Without a proxy, the name still cannot be resolved.
+	_, err = web.Fetch(ctx, &http.Client{Transport: &http.Transport{}}, web.Policy{}, "http://no-such-name.invalid/alpha")
+	if err == nil || !strings.Contains(err.Error(), "cannot resolve") {
+		t.Fatalf("without a proxy: %v", err)
+	}
+	// An allowlist still applies to a name that goes to the proxy.
+	_, err = web.Fetch(ctx, hc, web.Policy{Allowlist: true, Hosts: []string{"docs.test"}}, "http://no-such-name.invalid/alpha")
+	if err == nil || strings.Contains(err.Error(), "cannot resolve") {
+		t.Fatalf("off the allowlist through the proxy: %v", err)
+	}
+}
+
 func TestWebSearchProviders(t *testing.T) {
 	fixtures(t)
 	old := web.Endpoints

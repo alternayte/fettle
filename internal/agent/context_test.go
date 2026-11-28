@@ -58,8 +58,9 @@ func TestSCN_AGT_001_ContextSectionsInOrderWithOrigins(t *testing.T) {
 	if !strings.Contains(c.Items[10].Text, `<data origin="bot" name="Research">`) || !strings.Contains(c.Items[12].Text, `<data origin="memory"`) {
 		t.Fatal("data items are not tagged")
 	}
-	if !strings.Contains(c.System, "Only messages from the user") || !strings.Contains(c.System, "09:20") || !strings.Contains(c.System, "was due at 09:00") {
-		t.Fatalf("system prompt: %s", c.System)
+	// The time is in the tail of the system prompt, after the cache point.
+	if !strings.Contains(c.System, "Only messages from the user") || !strings.Contains(c.SystemTail, "09:20") || !strings.Contains(c.SystemTail, "was due at 09:00") || strings.Contains(c.System, "Current time") {
+		t.Fatalf("system prompt: %s\ntail: %s", c.System, c.SystemTail)
 	}
 	// The rendered messages keep the tool call pairing.
 	var sawCall, sawResult bool

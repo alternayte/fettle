@@ -178,6 +178,10 @@ func (a *Agent) PostMessage(ctx context.Context, user audit.Actor, spaceID, chat
 		a.Chats.Publish(chatID, "message", a.MessageView(ctx, m))
 	}
 	for _, id := range started {
+		// The chat shows at once that the bot took the message.
+		if r, err := a.Runs.Find(ctx, id); err == nil {
+			a.setActivity(ctx, spaceID, id, r.EnvelopeID, r.BotID, &chatID, actThinking, "")
+		}
 		a.publishRun(ctx, id)
 	}
 	if !res.Steered && !res.Status && res.EnvelopeID != nil && a.Learning != nil {
@@ -219,6 +223,7 @@ func (a *Agent) AnswerCard(ctx context.Context, user audit.Actor, spaceID uuid.U
 		"proposal":     {"create", "decline"},
 		"connect":      {"done", "skip"},
 		"patch":        {"apply", "decline"},
+		"issue":        {"opened", "dismiss"},
 	}[card.Kind]
 	ok := false
 	for _, v := range valid {
@@ -390,6 +395,8 @@ func cardAnswerText(kind, action, value string) string {
 		return "Connected"
 	case action == "skip":
 		return "Skipped"
+	case action == "opened":
+		return "Opened on GitHub"
 	case kind == "takeover" && action == "done":
 		return "Control returned"
 	case action == "done":

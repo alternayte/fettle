@@ -52,7 +52,9 @@ type Agent struct {
 	// of the answer (§13.3).
 	TeachAnswer func(ctx context.Context, user audit.Actor, spaceID uuid.UUID, card chats.Card) error
 	// bg counts background work that uses the database after a request returns.
-	bg     *sync.WaitGroup
+	bg *sync.WaitGroup
+	// acts holds the current Activity of each run that shows one, by run ID.
+	acts   *sync.Map
 	Vault  *vault.Vault
 	Tools  *Registry
 	Policy *policy.Service
@@ -115,6 +117,7 @@ type Metrics interface {
 func New(a Agent) *Agent {
 	ag := &a
 	ag.bg = &sync.WaitGroup{}
+	ag.acts = &sync.Map{}
 	if ag.Tools == nil {
 		ag.Tools = NewRegistry()
 	}

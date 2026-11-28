@@ -43,6 +43,7 @@ type (
 	SSEMessageRemoved json.RawMessage
 	SSERun            json.RawMessage
 	SSEBot            json.RawMessage
+	SSEActivity       json.RawMessage
 )
 
 func (m SSEMessage) MarshalJSON() ([]byte, error)        { return m, nil }
@@ -50,6 +51,7 @@ func (m SSEDelta) MarshalJSON() ([]byte, error)          { return m, nil }
 func (m SSEMessageRemoved) MarshalJSON() ([]byte, error) { return m, nil }
 func (m SSERun) MarshalJSON() ([]byte, error)            { return m, nil }
 func (m SSEBot) MarshalJSON() ([]byte, error)            { return m, nil }
+func (m SSEActivity) MarshalJSON() ([]byte, error)       { return m, nil }
 
 func sseData(ev chats.Event) any {
 	switch ev.Type {
@@ -61,6 +63,8 @@ func sseData(ev chats.Event) any {
 		return SSEMessageRemoved(ev.Data)
 	case "run":
 		return SSERun(ev.Data)
+	case "activity":
+		return SSEActivity(ev.Data)
 	default:
 		return SSEBot(ev.Data)
 	}
@@ -96,7 +100,7 @@ func (a *App) stream(ctx context.Context, topic string, send sse.Sender) {
 
 func (a *App) registerChats(api huma.API) {
 	// Event names come from the Go type of the data.
-	types := map[string]any{"message": SSEMessage{}, "delta": SSEDelta{}, "message_removed": SSEMessageRemoved{}, "run": SSERun{}, "bot": SSEBot{}}
+	types := map[string]any{"message": SSEMessage{}, "delta": SSEDelta{}, "message_removed": SSEMessageRemoved{}, "run": SSERun{}, "bot": SSEBot{}, "activity": SSEActivity{}}
 
 	huma.Register(api, op("list-chats", http.MethodGet, "/spaces/{space}/chats", "List the chats of a space", "chats"), func(ctx context.Context, in *SpacePath) (*struct {
 		Body struct {
@@ -252,7 +256,7 @@ func (a *App) registerChats(api huma.API) {
 		SpacePath
 		Card string `path:"card"`
 		Body struct {
-			Action string `json:"action" enum:"allow,always,deny,answer,continue,stop,add_budget,done,not_done,dismiss,accept,retry,pass,fail,create,decline,skip,apply"`
+			Action string `json:"action" enum:"allow,always,deny,answer,continue,stop,add_budget,done,not_done,dismiss,accept,retry,pass,fail,create,decline,skip,apply,opened"`
 			Value  string `json:"value,omitempty" maxLength:"20000"`
 		}
 	}) (*struct{ Body agent.MessageView }, error) {

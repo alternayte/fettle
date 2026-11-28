@@ -15,6 +15,10 @@ type (
 	evRunStarted struct {
 		Step string `json:"step"`
 		Goal string `json:"goal"`
+		// QueueMS is the wait from the run's creation to its first claim by a worker.
+		QueueMS int64 `json:"queue_ms,omitempty"`
+		// RouterMS is the time of the router call.
+		RouterMS int64 `json:"router_ms,omitempty"`
 	}
 	evModelTurn struct {
 		Text      string            `json:"text"`
@@ -27,6 +31,9 @@ type (
 		MessageID string            `json:"message_id,omitempty"`
 		Request   string            `json:"request"`
 		Duration  int64             `json:"duration_ms"`
+		// FirstTokenMS is the time from the call to the first streamed text, 0 when no
+		// text streamed.
+		FirstTokenMS int64 `json:"first_token_ms,omitempty"`
 	}
 	evTool struct {
 		CallID string          `json:"call_id"`

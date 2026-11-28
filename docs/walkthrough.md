@@ -95,7 +95,8 @@ Chief starts with a short interview about your work. Answer it, or write your fi
 
 2. Press Enter.
 3. Watch the run line under the reply. It shows the step, the helpers, the time, the cost and the state.
-4. Select the run line to open the run in the side panel.
+   While Chief works, a live line under the run line shows the current step, for example **Reading docs.test**, and how many seconds it takes. The live line goes away when the reply is complete.
+4. Select the run line or the live line to open the run in the side panel.
 
 ![The chat with Chief. Chief answers with a table of three desks with a price, a weight and a source link for each. The side panel shows the timeline of the run: the route, three helpers and their results, the check and the finish.](images/chat-desks.png)
 
@@ -111,6 +112,7 @@ Each fact in the answer links to its source. The verifier checks the result agai
 ![The timeline of the verified run. The helper result for the Beta Desk is open and shows its summary, two findings and their source.](images/run-timeline.png)
 
 The timeline is the journal of the run. Each step of the run is one row, in order.
+The bar **Where the time went** at the top shows the wait for a worker, the router, the model turns and the tools, and the time to the first token. Use it to find out if the model or Fettle makes a run slow.
 Fettle keeps the journal after a restart, so a run continues from its last step.
 
 ## 8. Approve an action

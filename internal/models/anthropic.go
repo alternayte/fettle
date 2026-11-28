@@ -61,8 +61,16 @@ func (anthropic) body(req Request) map[string]any {
 		maxTokens = 8192
 	}
 	b := map[string]any{"model": req.Model, "messages": msgs, "stream": true, "max_tokens": maxTokens}
+	// The stable start of the prompt (tools, then the system blocks) is cached.
+	var system []map[string]any
 	if req.System != "" {
-		b["system"] = req.System
+		system = append(system, map[string]any{"type": "text", "text": req.System, "cache_control": ephemeral})
+	}
+	if req.SystemTail != "" {
+		system = append(system, map[string]any{"type": "text", "text": "\n\n" + req.SystemTail})
+	}
+	if len(system) > 0 {
+		b["system"] = system
 	}
 	if req.Temperature != nil {
 		b["temperature"] = *req.Temperature
@@ -70,6 +78,9 @@ func (anthropic) body(req Request) map[string]any {
 	tools := []map[string]any{}
 	for _, t := range req.Tools {
 		tools = append(tools, map[string]any{"name": t.Name, "description": t.Description, "input_schema": t.Schema})
+	}
+	if n := len(tools); n > 0 {
+		tools[n-1]["cache_control"] = ephemeral
 	}
 	if req.Output != nil {
 		tools = append(tools, map[string]any{"name": outputTool, "description": "Return the answer in this structure.", "input_schema": req.Output.Schema})

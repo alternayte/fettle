@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError, errorText } from "@/api/client";
 import { answerCard, fetchMessages, keys, LIVE_STATES, postMessage, setReaction, type CardAction } from "@/api/hooks";
-import type { SchemaMessagePage, SchemaMessageView, SchemaRunLine } from "@/api/schema";
+import type { SchemaActivity, SchemaMessagePage, SchemaMessageView, SchemaRunLine } from "@/api/schema";
 import { useEventStream } from "@/api/sse";
 import { t } from "@/lib/copy";
 import type { CardAnswer } from "./CardView";
@@ -28,7 +28,8 @@ type Action =
   | { type: "upsert"; m: SchemaMessageView }
   | { type: "deltas"; d: Map<string, string> }
   | { type: "remove"; id: string }
-  | { type: "run"; line: SchemaRunLine };
+  | { type: "run"; line: SchemaRunLine }
+  | { type: "activity"; act: SchemaActivity };
 
 const initial: State = { list: [], runs: {}, next: "", loaded: false, loadingOlder: false, error: null };
 
@@ -103,7 +104,37 @@ function reducer(s: State, a: Action): State {
       return { ...s, list: s.list.filter((m) => m.id !== a.id) };
     case "run":
       return { ...s, runs: { ...s.runs, [a.line.envelope_id]: a.line } };
+    case "activity": {
+      // The live line of a run. An empty label clears it. A run line that comes later
+      // carries the activity of its own time.
+      const line = s.runs[a.act.envelope_id];
+      if (!line) {
+        if (!a.act.label) return s;
+        return { ...s, runs: { ...s.runs, [a.act.envelope_id]: placeholderLine(a.act) } };
+      }
+      const activity = a.act.label ? a.act : undefined;
+      if (!activity && !line.activity) return s;
+      return { ...s, runs: { ...s.runs, [a.act.envelope_id]: { ...line, activity } } };
+    }
   }
+}
+
+/** placeholderLine is the line of a run whose run line has not arrived yet. */
+function placeholderLine(act: SchemaActivity): SchemaRunLine {
+  return {
+    run_id: act.run_id,
+    envelope_id: act.envelope_id,
+    bot_id: act.bot_id,
+    step: "single",
+    label: "",
+    helpers: 0,
+    duration_ms: 0,
+    cost_usd: 0,
+    tokens: 0,
+    state: "running",
+    verified: null,
+    activity: act,
+  };
 }
 
 /** SendOptions are the parts of a message besides its text. */
@@ -179,6 +210,9 @@ export function useChat(space: string, chat: string, userId: string) {
         const line = data as SchemaRunLine;
         dispatch({ type: "run", line });
         void qc.invalidateQueries({ queryKey: keys.run(space, line.run_id) });
+      },
+      activity: (data: unknown) => {
+        dispatch({ type: "activity", act: data as SchemaActivity });
       },
     }),
     [flush, qc, space],
